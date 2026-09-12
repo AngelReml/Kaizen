@@ -63,7 +63,7 @@ coste             Muestra el coste de la sesión actual y el acumulado.
 cubos             Catalogo de cubos con contrato canonico.
 director          Panel del Director, solo lectura.
 export-context    Genera el bloque de arranque para pegar en una sesión nueva.
-forense           Verificación forense.
+forense diario    Verificación forense.
 mesa              Mesa del Jefe: bandeja de decisiones (propuestas).
 migrar-knowledge  Migra los leads del knowledge al esquema unificado.
 opengravity       Verificación por comité multi-agente y salud del sistema.
