@@ -23,7 +23,7 @@ de HEAD siempre cubre la historia completa.
 ## §1. Estado vigente
 
 - Rama: **main** · HEAD: `3d172bb`
-- Linea base de tests (R6, solo sube): ****1344 passed / 7 skipped / 0 failed** (2026-08-07)**
+- Linea base de tests: **1343 passed / 8 skipped / 0 failed** (2026-09-12, clon limpio)
 - Ramas locales: `main 3d172bb`
 - Cambios sin commit: ninguno (arbol limpio).
 

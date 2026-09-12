@@ -114,10 +114,12 @@ en un directorio hermano que resuelve `core/rutas.py`; nunca se commitean.
 pytest -q
 ```
 
-Medido hoy: **1344 passed, 7 skipped, 0 failed**, ~23 s. Los 7 saltados
-requieren credenciales LLM reales (`ANTHROPIC_API_KEY` + `KAIZEN_TEST_LLM_REAL=1`)
-o backends reales (`REDIS_URL`/`NEO4J_URI`/`DATABASE_URL`) no configurados por
-defecto. `pytest.ini` limita la recolección a `tests/`.
+Medido en un clon limpio el 12 de septiembre de 2026: **1343 passed, 8
+skipped, 0 failed**, 25,81 s. Los 8 saltados requieren una raíz de datos
+externa, credenciales LLM reales (`ANTHROPIC_API_KEY` +
+`KAIZEN_TEST_LLM_REAL=1`), el flag `KAIZEN_TEST_LLM=1` o backends reales
+(`REDIS_URL`/`NEO4J_URI`/`DATABASE_URL`) no configurados por defecto.
+`pytest.ini` limita la recolección a `tests/`.
 
 `.github/workflows/tests.yml` corre exactamente esta misma suite en cada
 `push`/`pull request` — instala dependencias en limpio y ejecuta `pytest -q`

@@ -13,7 +13,7 @@ echo   VERIFICACION DE E0-E1  (lo construido esta sesion)
 echo ============================================================
 echo.
 echo [1/5] SUITE COMPLETA — no debe haber NINGUN rojo (FAILED).
-echo       Esperado: "... passed, 7 skipped"  y  0 failed.
+echo       Esperado: "... passed, 8 skipped"  y  0 failed.
 echo ------------------------------------------------------------
 python -m pytest -q
 echo.
