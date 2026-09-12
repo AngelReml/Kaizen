@@ -1,0 +1,15 @@
+{
+  "cubo": "marketing",
+  "version": "1.0.0",
+  "descripcion": "Marketing: borradores de contenido; publicar de verdad exige gate",
+  "produce": [
+    "kaizen.marketing.borrador_generado.v1",
+    "kaizen.marketing.publicacion_realizada.v1"
+  ],
+  "consume": [],
+  "nivel_autonomia_defecto": "BAJA",
+  "acciones_irreversibles": [
+    "publicacion_externa_real"
+  ],
+  "requiere": []
+}

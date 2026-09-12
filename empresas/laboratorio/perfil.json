@@ -1,0 +1,11 @@
+{
+  "empresa": "laboratorio",
+  "version": "1.0",
+  "actualizado": "2026-08-03",
+  "sintetico": true,
+  "nombre": "Laboratorio KAIZEN",
+  "producto_clave": "producto de pruebas del laboratorio",
+  "descripcion_breve": "Tenant SINTETICO para ensayar el circuito completo de KAIZEN sin tocar a ningun tercero real. Todos sus leads son inventados y sus emails apuntan a dominios .invalid o a buzones propios del operador.",
+  "sede": "Laboratorio (no existe)",
+  "zona_distribucion_principal": "Entorno de pruebas"
+}

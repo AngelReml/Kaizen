@@ -1,0 +1,12 @@
+# Scripts de Windows: SIEMPRE con saltos CRLF en el working tree.
+# cmd.exe parsea mal los .bat/.cmd con saltos LF (Unix), así que esto
+# garantiza que el launcher arranque al doble clic en cualquier checkout.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binarios: nunca aplicar conversión de saltos de línea.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.docx binary

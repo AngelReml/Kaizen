@@ -1,0 +1,71 @@
+{
+ "tanda": "S-3 + S-1",
+ "ts": "2026-07-10T17:11:42.123799+00:00",
+ "gasto_eur": 0.0,
+ "pasos": [
+  {
+   "paso": "presupuesto",
+   "tope_eur": 10.0,
+   "fichero": "sesion_20260710.json"
+  },
+  {
+   "paso": "S-3a backup crudo",
+   "sha256": "d8591c4cf09b65791be95504d5c759fe96dab0c4755453b313cfcbed38d6d64b",
+   "bytes": 1468218
+  },
+  {
+   "paso": "S-3b snapshot laboratorio",
+   "sha256": "5bdbc42f066bcc0e5ecd6cbafed3b9a29b6f02bb9e26a4aeba1e667bfd1335a4",
+   "tipos": {
+    "lead": 466,
+    "email_pendiente_aprobacion": 2,
+    "llamada": 2
+   }
+  },
+  {
+   "paso": "S-3b snapshot segundo_tenant",
+   "sha256": "fc845abeccd998586bd4077b5e2a801019b53e20eb3edec5f135174205f65b94",
+   "tipos": {
+    "lead": 28
+   }
+  },
+  {
+   "paso": "S-1 migracion",
+   "resumen": {
+    "laboratorio": {
+     "total": 466,
+     "con_procedencia_completa": 0,
+     "sin_procedencia": 466,
+     "por_estado_canon": {
+      "COLD": 466
+     },
+     "cadena": {
+      "integra": true,
+      "eventos": 466
+     },
+     "cadena_tras_persistir": {
+      "integra": true,
+      "eventos": 466
+     }
+    },
+    "segundo_tenant": {
+     "total": 28,
+     "con_procedencia_completa": 0,
+     "sin_procedencia": 28,
+     "por_estado_canon": {
+      "COLD": 28
+     },
+     "cadena": {
+      "integra": true,
+      "eventos": 28
+     },
+     "cadena_tras_persistir": {
+      "integra": true,
+      "eventos": 28
+     }
+    }
+   },
+   "sha256_post": "d8c6cf4c5642aaef22a628e75f537f62a0b354e3a9072f378b6ae23eab8bfef9"
+  }
+ ]
+}

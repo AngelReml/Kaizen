@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="es" data-theme="hiru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAIZEN · 改善</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── Paleta del ecosistema ZapWeave: Hiru (día) / Yoru (noche) ── */
+  :root[data-theme="hiru"]{
+    --bg:#F2ECE4; --elevated:#EBE4D8; --text:#2C2C2C; --accent:#8B2C20;
+    --border:#C8BFA8; --muted:#9E9589;
+  }
+  :root[data-theme="yoru"]{
+    --bg:#1A1612; --elevated:#221D18; --text:#E8E0D0; --accent:#C84134;
+    --border:#3A3328; --muted:#6B6158;
+  }
+  * { box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif; font-size:14px; line-height:1.55;
+    transition:background .4s, color .4s;
+  }
+  h1,h2,.serif{ font-family:'Cormorant Garamond',Georgia,serif; }
+  .mono{ font-family:'JetBrains Mono',monospace; }
+
+  /* ── Cabecera ── */
+  header{
+    display:flex; align-items:center; gap:16px; padding:14px 22px;
+    background:var(--elevated); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+  .brand .enso{ width:34px; height:34px; color:var(--text); object-fit:contain; }
+  /* En Yoru la tinta negra del logo se invierte a blanca para que sea legible sobre fondo oscuro */
+  :root[data-theme="yoru"] .brand .enso,
+  :root[data-theme="yoru"] #vacio .wm{ filter:brightness(0) invert(1); }
+  .brand h1{ margin:0; font-size:24px; font-weight:600; letter-spacing:2px; }
+  .brand .kanji{ color:var(--muted); font-size:18px; }
+  .spacer{ flex:1; }
+  select, input{
+    background:transparent; color:var(--text); border:1px solid var(--border);
+    border-radius:5px; padding:7px 11px; font:inherit;
+  }
+  select:focus, input:focus{ outline:none; border-color:var(--accent); }
+  #intent{ width:min(420px,40vw); }
+  input::placeholder{ color:var(--muted); }
+  /* Sin botones con fondo: texto con subrayado de tinta en hover */
+  .lnk{
+    background:none; border:none; color:var(--text); font:inherit; cursor:pointer;
+    padding:6px 4px; border-bottom:1.5px solid transparent;
+  }
+  .lnk:hover{ border-bottom-color:var(--accent); }
+  .toggle{ font-size:17px; }
+
+  /* ── Disposición ── */
+  main{ display:grid; grid-template-columns:300px 1fr; gap:0; height:calc(100vh - 63px); }
+  aside{ border-right:1px solid var(--border); padding:16px 18px; overflow-y:auto; background:var(--elevated); }
+  .feedwrap{ position:relative; overflow-y:auto; padding:20px 26px; }
+
+  aside h2{ font-size:15px; margin:2px 0 10px; letter-spacing:.5px; }
+  aside .sub{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin:18px 0 8px; }
+
+  /* ── Tarjetas de departamento ── */
+  .depts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .dept{
+    border:1px solid var(--border); border-radius:6px; padding:9px 10px; background:var(--bg);
+  }
+  .dept .n{ font-size:12.5px; font-weight:500; }
+  .dept .s{ font-size:10.5px; color:var(--muted); margin-top:3px; display:flex; align-items:center; gap:5px; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--muted); }
+  .dept[data-st="ejecutando"] .dot{ background:var(--accent); animation:pulse 1.2s infinite; }
+  .dept[data-st="ejecutando"]{ border-color:var(--accent); }
+  .dept[data-st="vigila"] .dot{ background:var(--muted); box-shadow:0 0 0 2px var(--border); }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* ── Tarjeta Finanzas ── */
+  .card{ border:1px solid var(--border); border-radius:6px; padding:12px 14px; background:var(--bg); }
+  .card .big{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:600; }
+  .bar{ height:5px; background:var(--border); border-radius:3px; margin:8px 0; overflow:hidden; }
+  .bar>div{ height:100%; background:var(--accent); width:0; transition:width .5s; }
+  .card .row{ display:flex; justify-content:space-between; color:var(--muted); font-size:12px; margin-top:4px; }
+  .card .row .mono{ color:var(--text); }
+
+  /* ── Cola de aprobaciones (siempre visible si hay pendientes) ── */
+  #cola{ margin-top:6px; }
+  .aprob{ border:1px solid var(--accent); border-radius:6px; padding:10px; margin-bottom:8px; background:var(--bg); }
+  .aprob .t{ font-size:12px; display:flex; align-items:center; gap:6px; }
+  .aprob .d{ font-size:11.5px; color:var(--muted); margin:6px 0 8px; }
+  /* Única excepción a "sin botones con fondo": aprobar acción irreversible */
+  .btn-aprobar{
+    background:var(--accent); color:#F2ECE4; border:none; border-radius:5px;
+    padding:6px 12px; font:inherit; font-weight:500; cursor:pointer;
+  }
+
+  /* ── Feed (sin burbujas: el texto fluye sobre el papel) ── */
+  .ev{ margin:0 0 16px; max-width:760px; }
+  .ev.op{ margin-left:auto; text-align:right; max-width:560px; color:var(--text); }
+  .ev.op .who{ color:var(--muted); }
+  /* Filete bermellón: 2px que se dibuja antes del texto, solo en salidas del sistema */
+  .ev.sys{ padding-left:14px; position:relative; }
+  .ev.sys::before{
+    content:""; position:absolute; left:0; top:2px; bottom:2px; width:2px; background:var(--accent);
+    transform:scaleY(0); transform-origin:top; animation:filete .3s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes filete{ to{ transform:scaleY(1); } }
+  .ev .who{ font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+  .ev .tx{ margin-top:2px; animation:aparece .4s ease .12s both; white-space:pre-wrap; }
+  .ev .tx.warn{ color:var(--accent); }
+  @keyframes aparece{ from{opacity:0} to{opacity:1} }
+  .ev .meta{ font-size:11px; color:var(--muted); }
+  .ts{ color:var(--muted); font-size:10.5px; }
+
+  /* ── Estado vacío: marca de agua del enso al 4% + silencio ── */
+  #vacio{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none; text-align:center; gap:10px;
+  }
+  #vacio .enso{ width:240px; height:240px; color:var(--text); opacity:.04; }
+  #vacio .wm{ width:280px; opacity:.05; }
+  #vacio p{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:21px; color:var(--muted); opacity:.7; max-width:420px; }
+
+  /* Conexión */
+  #dot-conn{ width:8px; height:8px; border-radius:50%; background:var(--accent); }
+  #dot-conn.on{ background:#7a8b5a; }
+  /* +1% (easter egg KAIZEN) */
+  .plus1{ position:fixed; pointer-events:none; font-family:'Cormorant Garamond',serif; font-style:italic;
+          color:var(--accent); font-size:22px; animation:flota 1s ease forwards; z-index:50; }
+  @keyframes flota{ from{opacity:.9; transform:translateY(0)} to{opacity:0; transform:translateY(-40px)} }
+</style>
+</head>
+<body>
+
+<!-- Enso reutilizable (símbolo del ecosistema: círculo a pincel + gota bermellón) -->
+<svg style="display:none"><symbol id="enso" viewBox="0 0 120 120">
+  <path d="M 78 16 A 48 48 0 1 1 54 14" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round"/>
+  <circle cx="60" cy="108" r="5.5" fill="var(--accent)"/>
+</symbol></svg>
+
+<header>
+  <div class="brand" onclick="masUno(event)" title="改善 · +1%">
+    <img src="/assets/Kaizen_logo.png" alt="" class="enso"
+         onerror="this.outerHTML='&lt;svg class=\'enso\'&gt;&lt;use href=\'#enso\'/&gt;&lt;/svg&gt;'">
+    <h1>KAIZEN</h1><span class="kanji">改善</span>
+  </div>
+  <span class="spacer"></span>
+  <span id="dot-conn" title="conexión"></span>
+  <select id="company" onchange="render();loadFinanzas();reconnectWS()" title="Empresa activa"></select>
+  <input id="intent" placeholder="Da una orden al Director…  (Enter o Ctrl+Enter)" onkeydown="if(event.key==='Enter'){event.preventDefault();enviarIntent();}">
+  <button class="lnk" onclick="enviarIntent()">Enviar</button>
+  <button class="lnk toggle" id="tema" onclick="alternarTema()" title="Hiru / Yoru">☀</button>
+  <button class="lnk" onclick="ponerToken()" title="Token de acceso">🔑</button>
+</header>
+
+<main>
+  <aside>
+    <h2 class="serif">Departamentos</h2>
+    <div class="depts" id="depts"></div>
+
+    <div class="sub">Finanzas</div>
+    <div class="card" id="card-fin">
+      <div class="big" id="fin-mes">—</div>
+      <div class="bar"><div id="fin-bar"></div></div>
+      <div class="row"><span>Hoy</span><span class="mono" id="fin-dia">—</span></div>
+      <div class="row"><span>Runway</span><span class="mono" id="fin-runway">—</span></div>
+      <div class="row"><span>Alertas</span><span class="mono" id="fin-alertas">0</span></div>
+    </div>
+
+    <div class="sub">🔒 Cola de aprobaciones</div>
+    <div id="cola"><div style="color:var(--muted);font-size:12px">Sin acciones pendientes.</div></div>
+  </aside>
+
+  <div class="feedwrap">
+    <div id="vacio"><img src="/assets/Kaizen_logo.png" alt="" class="wm"
+         onerror="this.outerHTML='&lt;svg class=\'enso\' style=\'width:240px;height:240px;opacity:.04\'&gt;&lt;use href=\'#enso\'/&gt;&lt;/svg&gt;'">
+      <p>El jardín nunca termina de crecer.</p></div>
+    <div id="feed"></div>
+  </div>
+</main>
+
+<script>
+const DEPTS = [
+  ['prospeccion','Prospección'], ['redaccion','Redacción'], ['legal','Legal'],
+  ['finanzas','Finanzas'], ['qa','QA'], ['ops','Operaciones'],
+];
+const ESTADO_TXT = {dormido:'dormido', ejecutando:'ejecutando', vigila:'vigila'};
+let EVENTS = [];
+let APROB = {};                 // correlation_id -> {texto, company, lead}
+let DEPT_ST = {};               // "company|slug" -> estado
+
+const $ = id => document.getElementById(id);
+const companySel = $('company'), intentEl = $('intent'), feed = $('feed');
+
+// ── Tema Hiru/Yoru: hora local sugiere, el operador puede forzar ──
+function temaInicial(){
+  const guardado = localStorage.getItem('kaizen_tema');
+  if(guardado) return guardado;
+  const h = new Date().getHours();
+  return (h >= 7 && h < 20) ? 'hiru' : 'yoru';
+}
+function aplicarTema(t){
+  document.documentElement.dataset.theme = t;
+  $('tema').textContent = (t === 'hiru') ? '☀' : '☾';
+}
+function alternarTema(){
+  const t = document.documentElement.dataset.theme === 'hiru' ? 'yoru' : 'hiru';
+  localStorage.setItem('kaizen_tema', t); aplicarTema(t);
+}
+
+// ── Auth por token ──
+function token(){ return localStorage.getItem('kaizen_token') || ''; }
+function ponerToken(){
+  const t = prompt('Token de acceso (KAIZEN_TOKEN). Vacío si el panel es abierto:', token());
+  if(t !== null){ localStorage.setItem('kaizen_token', t.trim()); location.reload(); }
+}
+function headers(){ const t = token(); return t ? {'Authorization':'Bearer '+t} : {}; }
+async function post(url){ const r = await fetch(url,{method:'POST',headers:headers()}); if(r.status===401) ponerToken(); return r; }
+// /intent ahora exige el cuerpo como JSON (antes viajaba en la query string,
+// visible en logs de acceso y en el historial del navegador). Body(embed=True)
+// en el servidor espera {"text":..., "company":...}.
+async function postJson(url, cuerpo){
+  const r = await fetch(url, {method:'POST',
+    headers:Object.assign({'Content-Type':'application/json'}, headers()),
+    body: JSON.stringify(cuerpo)});
+  if(r.status===401) ponerToken();
+  return r;
+}
+
+// Escapa texto antes de insertarlo como HTML. El feed muestra payloads del LLM y de webs
+// scrapeadas (nombres de leads, cuerpos de email, snippets): sin esto, un '<img onerror>'
+// o una comilla en un nombre ejecutaría JS en el panel.
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── Departamentos ──
+function pintarDepts(){
+  const comp = companySel.value;
+  $('depts').innerHTML = DEPTS.map(([slug,nombre])=>{
+    const st = DEPT_ST[comp+'|'+slug] || 'dormido';
+    return `<div class="dept" data-st="${st}"><div class="n">${nombre}</div>`
+         + `<div class="s"><span class="dot"></span>${ESTADO_TXT[st]}</div></div>`;
+  }).join('');
+}
+function actualizarDept(ev){
+  const comp = ev.company; const src = ev.source;
+  const slug = DEPTS.find(([s])=>s===src) ? src : (ev.payload && ev.payload.departamento);
+  if(!slug) { if(src==='qa') DEPT_ST[comp+'|qa']='vigila'; return; }
+  if(ev.type==='dept.task_started' || ev.type==='cost.recorded') DEPT_ST[comp+'|'+slug]='ejecutando';
+  else if(ev.type==='dept.task_completed' || ev.type==='dept.task_failed') DEPT_ST[comp+'|'+slug]='dormido';
+}
+
+// ── Cola de aprobaciones ──
+function actualizarAprob(ev){
+  const cid = ev.correlation_id || ev.id;
+  if(ev.type==='approval.requested' || ev.type==='guardian.escalated'){
+    APROB[cid] = {texto: (ev.payload.interpretacion || ev.payload.reason || 'Acción irreversible'),
+                  company: ev.company, lead: ev.payload.lead || null};
+  } else if(ev.type==='approval.granted' || ev.type==='approval.denied'){
+    delete APROB[cid];
+  }
+}
+function pintarCola(){
+  const comp = companySel.value;
+  const items = Object.entries(APROB).filter(([,a])=>a.company===comp);
+  if(!items.length){ $('cola').innerHTML = '<div style="color:var(--muted);font-size:12px">Sin acciones pendientes.</div>'; return; }
+  $('cola').innerHTML = items.map(([cid,a])=>
+    `<div class="aprob"><div class="t">🔒 ${a.lead ? 'Enviar a '+esc(a.lead) : 'Aprobación requerida'}</div>`
+    + `<div class="d">${esc(a.texto)}</div>`
+    + (a.lead ? `<button class="btn-aprobar" data-lead="${esc(a.lead)}" data-cid="${esc(cid)}">Aprobar y enviar</button>` : '')
+    + `</div>`).join('');
+}
+async function aprobarEnvio(lead, cid){
+  const r = await post(`/send?lead=${encodeURIComponent(lead)}&company=${companySel.value}`);
+  if(r.ok){ delete APROB[cid]; pintarCola(); }
+}
+
+// ── Feed ──
+function esOperador(ev){ return ev.type === 'director.intent_received'; }
+function textoEvento(ev){
+  const p = ev.payload || {};
+  switch(ev.type){
+    case 'director.intent_received': return p.intent || '';
+    case 'director.intent_routed': return 'enrutado → ' + (p.departamento||'?');
+    case 'director.result_consolidated': return p.resumen || JSON.stringify(p);
+    case 'dept.task_started': return (p.intent ? 'iniciando · '+p.intent : 'iniciando');
+    case 'dept.task_completed':
+      if(p.cuerpo) return (p.asunto ? 'Asunto: '+p.asunto+'\n\n' : '') + p.cuerpo;
+      return p.resumen || 'completado';
+    case 'dept.task_failed': return p.warning ? p.warning.split('\n')[0] : (p.error || 'fallo');
+    case 'guardian.approved': return 'aprobado · '+(p.reason||'');
+    case 'guardian.blocked': return 'BLOQUEADO · '+(p.reason||p.motivo||'');
+    case 'guardian.escalated': return 'escala a humano · '+(p.reason||'');
+    case 'cost.recorded': return null;   // el coste vive en la tarjeta, no en el feed
+    case 'cost.alert': return 'alerta de coste · '+(p.eur||'')+'€';
+    case 'system.started': return 'sistema iniciado';
+    default: return JSON.stringify(p);
+  }
+}
+function render(){
+  const comp = companySel.value;
+  const vistos = EVENTS.filter(e => !comp || e.company === comp);
+  feed.innerHTML = '';
+  let n = 0;
+  for(const ev of vistos.slice(-200)){
+    const tx = textoEvento(ev);
+    if(tx === null) continue;            // cost.recorded no se pinta
+    n++;
+    const ts = (ev.ts||'').replace('T',' ').slice(11,19);
+    const div = document.createElement('div');
+    if(esOperador(ev)){
+      div.className = 'ev op';
+      div.innerHTML = `<div class="who">operador · <span class="ts">${esc(ts)}</span></div><div class="tx">${esc(tx)}</div>`;
+    } else {
+      const warn = (ev.type==='dept.task_failed' || ev.type==='guardian.blocked' || ev.type==='cost.alert');
+      div.className = 'ev sys';
+      div.innerHTML = `<div class="who">${esc(ev.source)} · <span class="ts">${esc(ts)}</span></div>`
+                    + `<div class="tx${warn?' warn':''}">${esc(tx)}</div>`;
+    }
+    feed.appendChild(div);
+  }
+  $('vacio').style.display = n ? 'none' : 'flex';
+  pintarDepts(); pintarCola();
+}
+
+// ── Finanzas ──
+async function loadFinanzas(){
+  const r = await fetch('/finanzas?company='+companySel.value, {headers:headers()});
+  if(!r.ok) return;
+  const f = await r.json();
+  $('fin-mes').textContent = f.gasto_mes_eur.toFixed(2)+' € / mes';
+  $('fin-dia').textContent = f.gasto_dia_eur.toFixed(4)+' €';
+  $('fin-runway').textContent = f.runway_dias!=null ? f.runway_dias+' días' : '—';
+  $('fin-alertas').textContent = f.alertas;
+  const pct = f.presupuesto_mensual_eur ? Math.min(100, f.gasto_mes_eur/f.presupuesto_mensual_eur*100) : 0;
+  $('fin-bar').style.width = pct+'%';
+}
+
+// ── WebSocket ── (filtrado server-side por empresa; reconecta al cambiarla)
+let WS_ACTUAL = null;
+function reconnectWS(){ if(WS_ACTUAL){ try{WS_ACTUAL.close(1000);}catch(e){} } }
+function connect(){
+  const comp = (companySel && companySel.value) ? `&company=${encodeURIComponent(companySel.value)}` : '';
+  const ws = new WebSocket(`ws://${location.host}/ws?token=${encodeURIComponent(token())}${comp}`);
+  WS_ACTUAL = ws;
+  ws.onopen = ()=> $('dot-conn').classList.add('on');
+  ws.onclose = (e)=>{ $('dot-conn').classList.remove('on'); if(e.code===1008){ ponerToken(); return; } setTimeout(connect,1500); };
+  ws.onmessage = (m)=>{
+    const ev = JSON.parse(m.data);
+    EVENTS.push(ev); actualizarDept(ev); actualizarAprob(ev); render();
+    if((ev.type||'').startsWith('cost.')) loadFinanzas();
+  };
+}
+
+// ── Empresas / orden / easter egg ──
+async function loadCompanies(){
+  const r = await fetch('/companies',{headers:headers()});
+  if(r.status===401){ ponerToken(); return; }
+  const cs = await r.json();
+  companySel.innerHTML = cs.map(c=>`<option value="${esc(c.slug)}">${esc(c.nombre)}</option>`).join('');
+  loadFinanzas();
+}
+async function enviarIntent(){
+  const t = intentEl.value.trim(); if(!t) return; intentEl.value='';
+  await postJson('/intent', {text: t, company: companySel.value});
+}
+// Factor +1%: micro-retroalimentación al tocar el logo (mejora acumulada literalizada)
+function masUno(e){
+  const s = document.createElement('div'); s.className='plus1'; s.textContent='+1%';
+  s.style.left=(e.clientX-10)+'px'; s.style.top=(e.clientY-10)+'px';
+  document.body.appendChild(s); setTimeout(()=>s.remove(),1000);
+  document.documentElement.style.setProperty('--tick', Date.now());  // gesto
+}
+
+// Aprobación de envío por delegación (el botón ya no lleva onclick inline con el lead).
+$('cola').addEventListener('click', e=>{
+  const b = e.target.closest('.btn-aprobar'); if(!b) return;
+  aprobarEnvio(b.dataset.lead, b.dataset.cid);
+});
+
+aplicarTema(temaInicial());
+loadCompanies();
+connect();
+</script>
+</body>
+</html>

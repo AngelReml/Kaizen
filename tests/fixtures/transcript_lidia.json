@@ -1,0 +1,72 @@
+{
+  "conversation_id": "conv_3201ksjr0472f5gssmkcpw0mrjqj",
+  "fecha_llamada_utc": "2026-05-26T17:16:33+00:00",
+  "duracion_s": 89,
+  "transcript": [
+    {
+      "hablante": "agente",
+      "ts": 1.0,
+      "texto": "Buenas, soy Iván, de Repostería Laboratorio en Cieza. Obrador familiar centenario. La llamada podría ser grabada. ¿Está el encargado?"
+    },
+    {
+      "hablante": "cliente",
+      "ts": 13.0,
+      "texto": "No, ahora no está. ¿Hola?"
+    },
+    {
+      "hablante": "agente",
+      "ts": 22.0,
+      "texto": "Disculpe, ¿con quién tengo el gusto de hablar? Quería saber si le podría dejar un recado para el encargado."
+    },
+    {
+      "hablante": "cliente",
+      "ts": 29.0,
+      "texto": "Mi nombre es Lidia."
+    },
+    {
+      "hablante": "agente",
+      "ts": 31.0,
+      "texto": "Encantado, Lidia. Mira, somos un obrador artesanal de Cieza, Repostería Laboratorio, y nos gustaría explorar si nuestros productos podrían encajar en su negocio. Llevamos más de cien años haciendo repostería tradicional murciana en horno de leña. ¿Podría indicarme cuándo sería un buen momento para hablar con el encargado?"
+    },
+    {
+      "hablante": "cliente",
+      "ts": 50.0,
+      "texto": "Mañana por la mañana."
+    },
+    {
+      "hablante": "agente",
+      "ts": 57.0,
+      "texto": "Perfecto, Lidia. ¿Podría indicarme una franja horaria aproximada para mañana por la mañana? Así me aseguro de llamar en el momento más conveniente para el encargado."
+    },
+    {
+      "hablante": "cliente",
+      "ts": 66.0,
+      "texto": "Entre las 10 y las 11."
+    },
+    {
+      "hablante": "agente",
+      "ts": 69.0,
+      "texto": "De acuerdo, Lidia. Mañana entre las diez y las once de la mañana llamaré para hablar con el encargado. Muchas gracias por su tiempo y amabilidad. Hasta mañana."
+    },
+    {
+      "hablante": "cliente",
+      "ts": 80.0,
+      "texto": "Hasta mañana."
+    },
+    {
+      "hablante": "agente",
+      "ts": 82.0,
+      "texto": "Hasta mañana."
+    },
+    {
+      "hablante": "cliente",
+      "ts": 85.0,
+      "texto": "No cuelga solo."
+    },
+    {
+      "hablante": "agente",
+      "ts": 87.0,
+      "texto": "Disculpe, parece que ha ha..."
+    }
+  ]
+}

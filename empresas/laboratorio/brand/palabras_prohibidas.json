@@ -1,0 +1,25 @@
+{
+  "empresa": "laboratorio",
+  "version": "1.0",
+  "comentario": "Regla dura del Brand Guardian: se comparan en minusculas contra el cuerpo del mensaje. Lista sintetica.",
+  "palabras": [
+    "barato",
+    "barata",
+    "gratis",
+    "milagroso",
+    "garantizado",
+    "insuperable",
+    "unico",
+    "revolucionario",
+    "increible",
+    "espectacular",
+    "chollo",
+    "oferta irrepetible",
+    "sin riesgo",
+    "urgente",
+    "ultima oportunidad",
+    "exclusivo",
+    "premium",
+    "lider"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "cubo": "qa",
+  "version": "1.0.0",
+  "descripcion": "Calidad: valida salidas de otros cubos antes de que cuenten",
+  "produce": [
+    "kaizen.qa.validacion_emitida.v1"
+  ],
+  "consume": [
+    "kaizen.comercial.interaccion_registrada.v1"
+  ],
+  "nivel_autonomia_defecto": "CERO",
+  "acciones_irreversibles": [],
+  "requiere": []
+}

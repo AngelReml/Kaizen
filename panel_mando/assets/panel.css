@@ -1,0 +1,129 @@
+/* Centro de Mando Kaizen — D10 v0.2 §9. Marca del manual: bambu #7A8B5A unico
+   acento; primera tinta en dos modos (Hiru dia / Yoru noche); Cormorant Garamond
+   titulos, Inter UI, JetBrains Mono solo en detalle tecnico. Fuentes locales con
+   caida elegante a las del sistema (ficheros de fuente: pendiente de assets). */
+
+:root, html[data-tema="hiru"] {
+  --papel: #f7f3ea;        /* papel calido */
+  --tinta: #26241f;        /* primera tinta */
+  --tinta-suave: #6b675d;
+  --bambu: #7A8B5A;        /* UNICO acento */
+  --ambar: #b08d3f;        /* aviso apagado */
+  --rojo-seco: #9a4632;    /* bloqueo, tinta roja seca */
+  --carta: #fffdf7;
+  --linea: #e3dccb;
+}
+html[data-tema="yoru"] {
+  --papel: #1d1c19;        /* tinta invertida */
+  --tinta: #ece7da;
+  --tinta-suave: #a49d8c;
+  --bambu: #8fa26e;
+  --ambar: #c8a45a;
+  --rojo-seco: #c46a52;
+  --carta: #26241f;
+  --linea: #3a372f;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--papel); color: var(--tinta);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 17px; line-height: 1.55;
+}
+h1, h2, .cifra {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600; letter-spacing: .01em;
+}
+h1 { font-size: 2.1rem; margin: .4em 0 .2em; }
+h2 { font-size: 1.35rem; margin: 1.2em 0 .4em; color: var(--tinta); }
+.mono, .tec, td.mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: .82rem; }
+
+header {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .6rem 1.2rem; border-bottom: 1px solid var(--linea);
+  background: var(--carta); position: sticky; top: 0;
+}
+header .empresa { font-weight: 600; color: var(--bambu); }
+.latido { margin-left: auto; font-size: .8rem; color: var(--tinta-suave); }
+.latido.ok::before { content: "● "; color: var(--bambu); }
+.latido.tarde::before { content: "● "; color: var(--ambar); }
+.latido.parado::before { content: "■ "; color: var(--rojo-seco); }
+
+button.parar {
+  background: transparent; color: var(--rojo-seco);
+  border: 1.5px solid var(--rojo-seco); border-radius: 6px;
+  padding: .35rem .9rem; font: inherit; cursor: pointer;
+  transition: background .15s ease;
+}
+button.parar.armado { background: var(--rojo-seco); color: var(--papel); }
+
+main { max-width: 720px; margin: 0 auto; padding: 1.2rem; }  /* una columna: movil-listo */
+.manana .resumen { margin-bottom: 1rem; }
+.frase a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--linea); }
+.frase a:hover { border-bottom-color: var(--bambu); }
+.vacio { color: var(--tinta-suave); font-style: italic; }
+
+.tarjeta {
+  background: var(--carta); border: 1px solid var(--linea); border-left: 3px solid var(--bambu);
+  border-radius: 8px; padding: 1rem 1.1rem; margin: .8rem 0;
+  animation: llegar .15s ease;                       /* ≤150 ms */
+}
+@keyframes llegar { from { opacity: 0; transform: translateY(4px); } }
+.tarjeta h3 { margin: 0 0 .3rem; font-size: 1.05rem; }
+.empresa-tag { font-size: .75rem; color: var(--bambu); text-transform: uppercase; letter-spacing: .08em; margin: 0; }
+.consecuencia { color: var(--tinta); margin: .4rem 0 .1rem; }
+.caducidad { color: var(--tinta-suave); font-size: .85rem; margin: 0; }
+.botones { display: flex; gap: .8rem; margin-top: .7rem; }
+button.si {
+  background: var(--bambu); color: var(--papel); border: none; border-radius: 6px;
+  padding: .55rem 1.2rem; font: inherit; cursor: pointer;
+}
+button.si:active { filter: brightness(.9); }
+button.no {
+  background: transparent; color: var(--tinta-suave); border: 1px solid var(--linea);
+  border-radius: 6px; padding: .55rem 1.2rem; font: inherit; cursor: pointer;
+}
+.mecha { height: 4px; background: var(--linea); border-radius: 2px; overflow: hidden; }
+.mecha > span { display: block; height: 100%; background: var(--ambar);
+  animation: consumirse 60s linear forwards; }      /* la unica animacion larga permitida */
+@keyframes consumirse { from { width: 100%; } to { width: 0; } }
+
+.escudo { border-left: 3px solid var(--bambu); background: var(--carta);
+  padding: .7rem 1rem; border-radius: 6px; }
+.escudo::before { content: "🛡 "; }
+
+.sello-tinta { color: var(--bambu); cursor: help; position: relative; }
+.sello-tinta:hover::after {
+  content: "sello de integridad — este paso esta encadenado al anterior";
+  position: absolute; left: 0; top: 1.4em; background: var(--tinta); color: var(--papel);
+  padding: .3rem .6rem; border-radius: 4px; font-size: .72rem; white-space: nowrap;
+}
+
+.selector a { margin-right: .6rem; color: var(--tinta-suave); text-decoration: none; }
+.selector a.activa { color: var(--bambu); font-weight: 600; border-bottom: 2px solid var(--bambu); }
+.pestanas a { margin-right: 1rem; color: var(--bambu); text-decoration: none; }
+.historia { background: var(--carta); border: 1px solid var(--linea); border-radius: 8px;
+  padding: .6rem .9rem; margin: .5rem 0; }
+.historia summary { cursor: pointer; }
+.aviso-ajustes { color: var(--ambar); }
+table { border-collapse: collapse; width: 100%; background: var(--carta); }
+td, th { border-bottom: 1px solid var(--linea); padding: .35rem .5rem; text-align: left; font-size: .85rem; }
+.ir-sala a { color: var(--bambu); text-decoration: none; font-weight: 600; }
+
+.cubo { background: var(--carta); border: 1px solid var(--linea); border-left: 3px solid var(--bambu);
+  border-radius: 8px; padding: .7rem 1rem; margin: .6rem 0; }
+.cubo h3 { margin: 0 0 .2rem; font-size: 1rem; }
+.cubo .actividad { color: var(--tinta-suave); font-size: .85rem; margin: 0 0 .5rem; }
+.cubo .controles { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; }
+.control-pastilla { font-size: .75rem; color: var(--bambu); border: 1px solid var(--bambu);
+  border-radius: 999px; padding: .15rem .65rem; }
+
+.salud { font-weight: 600; }
+.salud.pendiente { color: var(--tinta-suave); font-weight: 400; font-style: italic; }
+.salud.ok::before { content: "● "; color: var(--bambu); }
+.salud.mal::before { content: "■ "; color: var(--rojo-seco); }
+button.comprobar {
+  background: transparent; color: var(--bambu); border: 1.5px solid var(--bambu);
+  border-radius: 6px; padding: .45rem 1.1rem; font: inherit; cursor: pointer;
+}
+button.comprobar:active { filter: brightness(.9); }

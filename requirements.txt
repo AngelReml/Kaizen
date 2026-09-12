@@ -1,0 +1,31 @@
+anthropic>=0.30.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+rich>=13.7.0
+click>=8.1.7
+ddgs>=9.0.0
+
+# Sistema Operativo Empresarial — capas nuevas
+redis>=5.0.0          # bus de mensajes (Redis Streams)
+neo4j>=5.0.0          # grafo de conocimiento por empresa
+psycopg2-binary>=2.9.0  # persistencia de configuración (PostgreSQL)
+fastapi>=0.110.0      # backend del panel
+uvicorn[standard]>=0.29.0  # servidor ASGI + WebSocket
+httpx>=0.27.0         # cliente HTTP (tests del panel)
+
+# Router multi-modelo (opcional; carga perezosa — solo si se invocan modelos reales)
+langchain-anthropic>=0.2.0
+langchain-openai>=0.2.0   # cubre los 6 providers OpenAI-compatibles (glm/gemini/deepseek/hf/openrouter)
+langchain-groq>=0.2.0
+
+# Requerido por api/server.py (webhooks Twilio form-encoded); faltaba declararlo (bug B0/D14)
+python-multipart>=0.0.9
+
+# Base de datos de zonas horarias. Windows NO trae una, así que sin este paquete
+# `ZoneInfo("Europe/Madrid")` lanza ZoneInfoNotFoundError EN TIEMPO DE IMPORT en:
+#   core/briefing.py, core/compromisos.py, core/reintentos.py,
+#   departments/comercial/dashboard_director.py, panel/director.py y
+#   departments/comercial/sdr/voz_conversacional/pre_flight.py  <- franja comercial
+# Faltaba declararlo (auditoría 2026-08-02, A-08).
+tzdata>=2024.1; sys_platform == "win32"

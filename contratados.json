@@ -1,0 +1,12 @@
+{
+  "comercial": true,
+  "brand": true,
+  "marketing": false,
+  "customer_success": false,
+  "inteligencia": false,
+  "finanzas": false,
+  "legal": false,
+  "ops": false,
+  "qa": false,
+  "rrhh": false
+}

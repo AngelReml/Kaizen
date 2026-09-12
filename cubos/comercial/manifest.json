@@ -1,0 +1,16 @@
+{
+  "cubo": "comercial",
+  "version": "1.0.0",
+  "descripcion": "Departamento Comercial HORECA",
+  "produce": [
+    "kaizen.comercial.lead_actualizado.v1",
+    "kaizen.comercial.interaccion_registrada.v1",
+    "kaizen.comercial.compromiso_creado.v1",
+    "kaizen.comercial.compromiso_vencido.v1",
+    "kaizen.comercial.pedido_registrado.v1"
+  ],
+  "consume": [],
+  "nivel_autonomia_defecto": "BAJA",
+  "acciones_irreversibles": ["contacto_saliente_ia", "envio_email_real", "compromiso_ante_cliente"],
+  "requiere": []
+}

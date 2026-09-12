@@ -1,0 +1,14 @@
+{
+  "cubo": "finanzas",
+  "version": "1.0.0",
+  "descripcion": "Finanzas: registra y reporta; JAMAS ejecuta pagos (solo humano)",
+  "produce": [
+    "kaizen.finanzas.movimiento_registrado.v1"
+  ],
+  "consume": [
+    "kaizen.comercial.pedido_registrado.v1"
+  ],
+  "nivel_autonomia_defecto": "BAJA",
+  "acciones_irreversibles": [],
+  "requiere": []
+}

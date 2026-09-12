@@ -1,0 +1,20 @@
+[
+  {"patron": "responsabilidad ilimitada", "gravedad": "alta",
+   "motivo": "Responsabilidad ilimitada: exposicion financiera sin tope.",
+   "referencia": "art. 1101 CC (responsabilidad por danos)"},
+  {"patron": "sin limite de responsabilidad", "gravedad": "alta",
+   "motivo": "Sin limite de responsabilidad.", "referencia": null},
+  {"patron": "exclusividad indefinida", "gravedad": "alta",
+   "motivo": "Exclusividad sin plazo: dificil de revertir.", "referencia": null},
+  {"patron": "cesion de todos los derechos", "gravedad": "alta",
+   "motivo": "Cesion total de derechos de propiedad intelectual.", "referencia": "art. 43 LPI"},
+  {"patron": "no competencia", "gravedad": "media",
+   "motivo": "Pacto de no competencia: revisar duracion y ambito.",
+   "referencia": "art. 21 ET / jurisprudencia sobre no concurrencia"},
+  {"patron": "penalizacion", "gravedad": "media",
+   "motivo": "Clausula penal: revisar proporcionalidad.", "referencia": "art. 1152 CC"},
+  {"patron": "renovacion automatica", "gravedad": "media",
+   "motivo": "Renovacion automatica: vigilar el preaviso de baja.", "referencia": null},
+  {"patron": "jurisdiccion extranjera", "gravedad": "media",
+   "motivo": "Sumision a tribunales extranjeros: coste y complejidad de litigio.", "referencia": null}
+]

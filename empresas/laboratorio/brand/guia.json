@@ -1,0 +1,41 @@
+{
+  "empresa": "laboratorio",
+  "version": "1.0",
+  "actualizado": "2026-08-03",
+  "posicionamiento": "Empresa sintetica de pruebas: mensajes claros, honestos y sin promesas.",
+  "valores": [
+    "honestidad",
+    "claridad",
+    "cero promesas",
+    "sobriedad"
+  ],
+  "tono": {
+    "descripcion": "Directo y sobrio, sin superlativos.",
+    "voz": [
+      "claro",
+      "concreto",
+      "cercano",
+      "verificable"
+    ],
+    "anti_voz": [
+      "grandilocuente",
+      "publicitario",
+      "vago",
+      "urgente",
+      "adulador"
+    ]
+  },
+  "que_decir": [
+    "lo que el producto hace",
+    "plazos reales",
+    "condiciones sin letra pequena",
+    "quien firma el mensaje"
+  ],
+  "que_no_decir": [
+    "precio",
+    "descuento",
+    "garantizado",
+    "sin compromiso"
+  ],
+  "cliente_ideal": "Negocio sintetico del area de ensayo; no existe ninguno real detras."
+}

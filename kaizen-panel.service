@@ -1,0 +1,26 @@
+[Unit]
+Description=Kaizen - Centro de Mando (panel 8600) y Mesa del Jefe
+Documentation=file:DESPLIEGUE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Ajustar a la ruta real del repo en el VPS/mini-PC y al usuario sin privilegios.
+User=kaizen
+WorkingDirectory=/opt/kaizen
+# python -m panel_mando carga .env (R-01) y arranca uvicorn en 127.0.0.1:8600.
+ExecStart=/usr/bin/env python3 -X utf8 -m panel_mando
+Restart=always
+RestartSec=3
+# Endurecimiento minimo (sin romper escritura de state/ y ledger):
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+# Variables de produccion (o usar EnvironmentFile=/opt/kaizen/.env.produccion):
+Environment=KAIZEN_CSRF_ESTRICTO=true
+Environment=KAIZEN_VOZ_DE_BAJA=true
+Environment=KAIZEN_ENVIO_HABILITADO=false
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,45 @@
+{
+ "tenant": "plataforma",
+ "ts": "2026-07-10T17:12:36.101369+00:00",
+ "obligaciones": 4,
+ "piezas": [
+  {
+   "obligacion": "0019f4d044e4d59458af4ed",
+   "evidencia": "0019f4d044ecbf1d769f9d7",
+   "sha256": "1c90a1a10dc59cb562024dfe411f6a80224aab73bc7690eb67f9a2a418969353"
+  },
+  {
+   "obligacion": "0019f4d044e4d59458af4ed",
+   "evidencia": "0019f4d044ee7cb5a6c5e21",
+   "sha256": "d298d27a781c357f902b362e64047113a5b86173b020b366bc018d6c5607c7f7"
+  },
+  {
+   "obligacion": "0019f4d044e4d59458af4ed",
+   "evidencia": "0019f4d044f07a0d8f65d03",
+   "sha256": "6b2173a7bc36f0c7854d6de1f3d78115431c238c84c1060f0575d41a9784d2a7"
+  },
+  {
+   "obligacion": "0019f4d044e4d59458af4ed",
+   "evidencia": "0019f4d044f278df7d883b4",
+   "sha256": "82757fed3f0ec3ed378f4390297d29bbbb8678b909955b8d0febdb0c0de7c07e"
+  },
+  {
+   "obligacion": "0019f4d044e4d59458af4ed",
+   "evidencia": "0019f4d044f4742ba68a748",
+   "sha256": "a930098e022a97361ffc29000d3119efab511b585829804a836da643c8c860d0"
+  },
+  {
+   "obligacion": "0019f4d044e4d59458af4ed",
+   "evidencia": "0019f4d044f6b5be85a6f68",
+   "sha256": "13db7c53fff664e43e4615337715e513ddb8a327839d5a36f2a820cd963ecd8e"
+  },
+  {
+   "obligacion": "0019f4d044e4d59458af4ed",
+   "evidencia": "0019f4d044f8c48a127a2e9",
+   "sha256": "d62706edf0bddbf36b479841c160b113fbe5748002a543858b411f913a0f2104"
+  }
+ ],
+ "faltantes": [],
+ "integro": true,
+ "hash_manifest": "f5c6549164faf25e2b94fb2135f1925d7e548810a8585109648809d980e90935"
+}

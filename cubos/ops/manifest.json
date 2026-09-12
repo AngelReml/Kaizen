@@ -1,0 +1,14 @@
+{
+  "cubo": "ops",
+  "version": "1.0.0",
+  "descripcion": "Operaciones: tareas y compromisos internos de entrega",
+  "produce": [
+    "kaizen.ops.tarea_completada.v1"
+  ],
+  "consume": [
+    "kaizen.comercial.compromiso_creado.v1"
+  ],
+  "nivel_autonomia_defecto": "BAJA",
+  "acciones_irreversibles": [],
+  "requiere": []
+}

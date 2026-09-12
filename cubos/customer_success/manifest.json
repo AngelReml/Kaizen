@@ -1,0 +1,14 @@
+{
+  "cubo": "customer_success",
+  "version": "1.0.0",
+  "descripcion": "Postventa: seguimiento de clientes e incidencias",
+  "produce": [
+    "kaizen.customer_success.incidencia_registrada.v1"
+  ],
+  "consume": [
+    "kaizen.comercial.pedido_registrado.v1"
+  ],
+  "nivel_autonomia_defecto": "BAJA",
+  "acciones_irreversibles": [],
+  "requiere": []
+}

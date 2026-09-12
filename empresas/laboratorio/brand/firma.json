@@ -1,0 +1,10 @@
+{
+  "empresa": "laboratorio",
+  "version": "1.0",
+  "remitente_nombre": "Equipo del Laboratorio",
+  "remitente_cargo": "Ensayo sintetico",
+  "remitente_empresa": "Laboratorio Sintetico S.L. (no existe)",
+  "telefono": "968000000",
+  "email": "equipo@laboratorio.invalid",
+  "cierre_sugerido": "Un saludo,\nEquipo del Laboratorio"
+}

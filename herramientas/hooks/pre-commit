@@ -1,0 +1,42 @@
+#!/bin/sh
+# KAIZEN — hook pre-commit (fail-closed, dos guardias en este orden):
+#   1) CENTINELA DE DATOS: ningun dato de tercero, PII ni secreto entra al
+#      commit (R-REV-1 pieza 1). Corre PRIMERO: si bloquea, se aborta antes
+#      de tocar nada, incluido el mapa.
+#   2) MAPA VIVO obligatorio: regenera docs/MAPA_VIVO.md con la historia completa
+#      + el commit en curso y lo añade al indice (L2: nada invisible).
+# Instalado/reparado por "MAPA VIVO.cmd" y "COMMIT LOCAL.cmd".
+
+# --- 0/2 · Interprete -------------------------------------------------------
+# Se resuelve UNA vez. Antes se reintentaba con "py -3" ante cualquier rc!=0,
+# lo que volvia a lanzar la herramienta cuando esta ya habia dicho que NO y
+# enmascaraba su codigo de salida con el de un lanzador roto. Fail-closed: sin
+# interprete no hay commit.
+if command -v python >/dev/null 2>&1; then
+  PY="python"
+elif command -v py >/dev/null 2>&1; then
+  PY="py -3"
+else
+  echo "[HOOK] No encuentro un interprete de Python. Commit ABORTADO (fail-closed)."
+  exit 1
+fi
+
+# --- 1/2 · CENTINELA DE DATOS ------------------------------------------------
+$PY -X utf8 herramientas/centinela_datos.py --staged
+if [ "$?" != "0" ]; then
+  echo "[CENTINELA] COMMIT ABORTADO: hay datos, PII o secretos en el indice."
+  echo "[CENTINELA] Saca esos ficheros con: git restore --staged <ruta>"
+  echo "[CENTINELA] Si estas seguro y quieres dejar constancia, repite el commit con:"
+  echo "[CENTINELA]   CENTINELA_OVERRIDE=\"motivo\" git commit ..."
+  exit 1
+fi
+
+# --- 2/2 · MAPA VIVO ---------------------------------------------------------
+$PY -X utf8 herramientas/mapa_vivo.py --pre-commit
+if [ "$?" != "0" ]; then
+  echo "[MAPA VIVO] ACTUALIZACION OBLIGATORIA FALLIDA. Commit ABORTADO."
+  echo "[MAPA VIVO] Arregla el generador o ejecuta MAPA VIVO.cmd y reintenta."
+  exit 1
+fi
+git add docs/MAPA_VIVO.md
+exit 0

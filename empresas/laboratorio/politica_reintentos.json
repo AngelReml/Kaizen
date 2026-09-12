@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "empresa": "laboratorio",
+  "actualizado": "2026-08-03",
+  "default_max_intentos": 5,
+  "franjas_horarias_es": [
+    "10-13",
+    "16-19"
+  ],
+  "dias_laborables": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "tz": "Europe/Madrid",
+  "reglas": {
+    "no_answer": {
+      "intervalo_min_horas": 2,
+      "intervalo_max_horas": 4,
+      "max_intentos": 3,
+      "ventana_dias": 7
+    },
+    "no_buen_momento_sin_fecha": {
+      "espera_dias": 7
+    },
+    "no_interesa_ahora": {
+      "espera_meses": 3
+    },
+    "no_interesa": {
+      "transicion": "lost",
+      "razon": "cliente expresó no interés"
+    },
+    "opt_out": {
+      "transicion": "do_not_call",
+      "razon": "cliente pidió no más llamadas"
+    },
+    "callback_pactado": {
+      "tolerancia_min": 15
+    },
+    "contacted_no_decisor": {
+      "intervalo_min_horas": 2,
+      "intervalo_max_horas": 4,
+      "max_intentos": 3,
+      "ventana_dias": 7
+    },
+    "engaged_pide_muestra": {
+      "transicion": "sample_requested",
+      "crear_compromiso_envio_dias": 2
+    }
+  },
+  "categorias_override": {
+    "hotel_boutique_con_desayuno": {
+      "no_answer": {
+        "max_intentos": 5
+      },
+      "contacted_no_decisor": {
+        "max_intentos": 5
+      }
+    },
+    "gasolinera_con_cafeteria": {
+      "no_answer": {
+        "max_intentos": 1
+      }
+    },
+    "residencia_u_hospital": {
+      "no_answer": {
+        "max_intentos": 2
+      }
+    }
+  },
+  "sintetico": true
+}

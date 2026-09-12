@@ -1,0 +1,136 @@
+{
+  "empresa": "laboratorio",
+  "version": "1.0",
+  "actualizado": "2026-08-03",
+  "fuente": "generado por generar_tenant_laboratorio.py — SINTETICO",
+  "notas": "Geografia y marcas inventadas. Ningun negocio real referenciado.",
+  "geografia": {
+    "origen": {
+      "lat": 38.24,
+      "lon": -1.42,
+      "nombre": "Villa Sintetica"
+    },
+    "max_anillo_activo": 1,
+    "anillos": {
+      "0": [
+        "Villa Sintetica"
+      ],
+      "1": [
+        "Aldea Sintetica"
+      ],
+      "2": [
+        "Comarca Sintetica"
+      ],
+      "3": []
+    }
+  },
+  "tipos_incluidos": [
+    {
+      "categoria": "hotel_boutique_con_desayuno",
+      "prioridad": "ALTA",
+      "place_types": [
+        "lodging"
+      ],
+      "keywords": [
+        "hotel",
+        "casa rural",
+        "hostal"
+      ],
+      "query_seeds": [
+        "hotel boutique",
+        "casa rural"
+      ],
+      "razon": "Segmento de ensayo: alojamiento con desayuno."
+    },
+    {
+      "categoria": "tienda_gourmet_delicatessen",
+      "prioridad": "ALTA",
+      "place_types": [
+        "deli",
+        "store"
+      ],
+      "keywords": [
+        "gourmet",
+        "delicatessen"
+      ],
+      "query_seeds": [
+        "tienda gourmet"
+      ],
+      "razon": "Segmento de ensayo: tienda gourmet."
+    },
+    {
+      "categoria": "cafeteria_especialidad",
+      "prioridad": "ALTA",
+      "place_types": [
+        "cafe"
+      ],
+      "keywords": [
+        "cafeteria",
+        "tostadero",
+        "cafe"
+      ],
+      "query_seeds": [
+        "cafeteria de especialidad"
+      ],
+      "razon": "Segmento de ensayo: cafeteria de especialidad."
+    },
+    {
+      "categoria": "restaurante_con_postre_artesanal",
+      "prioridad": "MEDIA",
+      "place_types": [
+        "restaurant"
+      ],
+      "keywords": [
+        "restaurante",
+        "meson"
+      ],
+      "query_seeds": [
+        "restaurante"
+      ],
+      "razon": "Segmento de ensayo: restaurante."
+    },
+    {
+      "categoria": "catering_regional_premium",
+      "prioridad": "MEDIA",
+      "place_types": [
+        "catering_service"
+      ],
+      "keywords": [
+        "catering",
+        "eventos"
+      ],
+      "query_seeds": [
+        "catering"
+      ],
+      "razon": "Segmento de ensayo: catering."
+    }
+  ],
+  "tipos_excluidos": [
+    {
+      "categoria": "cadena_sintetica_excluida",
+      "razon": "Cadena inventada: sirve para ejercitar la exclusion por tipo.",
+      "place_types": [
+        "supermarket"
+      ],
+      "keywords": [
+        "cadena sintetica",
+        "supermercado sintetico"
+      ]
+    }
+  ],
+  "marcas_excluidas": [
+    "Marca Sintetica Excluida Uno",
+    "Marca Sintetica Excluida Dos",
+    "Marca Sintetica Excluida Tres"
+  ],
+  "exclusiones_por_patron": [
+    {
+      "patron": "^sintetic[oa] excluid[oa]\\b",
+      "razon": "Patron inventado para ejercitar la exclusion por regex."
+    }
+  ],
+  "criterios_actividad": {
+    "max_dias_sin_actividad": 540,
+    "min_resenas_recientes": 1
+  }
+}

@@ -1,0 +1,41 @@
+{
+ "tanda": "F-3 + Q-1 + Q-2",
+ "ts": "2026-07-10T17:12:35.078427+00:00",
+ "gasto_eur": 0.0,
+ "F3": {
+  "emitidas_ok": 16,
+  "invalidas_rechazadas": 3,
+  "anulaciones": 1,
+  "cadena_clase": {
+   "integra": true,
+   "registros": 17
+  },
+  "verificacion_independiente": true,
+  "registros_totales": 17,
+  "almacen": "sif_sintetico.json"
+ },
+ "Q1": {
+  "obligaciones": 3,
+  "alertas_emitidas_hoy": [
+   {
+    "obligacion": "0019f4d044dcbb45cb0c0da",
+    "aviso": "alerta_30d"
+   },
+   {
+    "obligacion": "0019f4d044e09faeb8f183c",
+    "aviso": "alerta_30d"
+   }
+  ],
+  "bitacora": {
+   "integra": true,
+   "eventos": 8
+  }
+ },
+ "Q2": {
+  "expediente": "COMPLETO",
+  "piezas_defensa": 7,
+  "hash_manifest": "f5c6549164faf25e2b94fb2135f1925d7e548810a8585109648809d980e90935",
+  "hallazgos_auditoria": 1,
+  "fichero": "DEFENSA_SERIE_D_20260710.json"
+ }
+}

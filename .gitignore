@@ -1,0 +1,60 @@
+.env
+.env.*
+*keys*.txt
+*secret*.txt
+.kaizen_cost.json
+.kaizen_cost.json.lock
+state/
+__pycache__/
+*.pyc
+*.pyo
+*.docx
+.claude/
+bitacora/
+*.log
+
+# Pytest
+.pytest_cache/
+
+# _workspace/ — archivos de trabajo y prototipos no integrados al sistema todavía
+_workspace/
+
+# Entorno virtual del launcher
+.venv/
+
+# Accesos directos de Windows (rutas absolutas, específicos de cada máquina)
+*.lnk
+
+# Ficheros de instrucciones de trabajo (transitorios, no forman parte del repo)
+prompt.txt
+promp.txt
+
+# BD del sustrato (Bloque 1) — nunca commitear datos
+data/
+
+# Panel HTML generado (artefacto, se regenera entero)
+panel/director.html
+
+# ─────────────────────────────────────────────────────────────────────────────
+# R-TENANT (2026-08-04): el árbol del producto sabe QUÉ ES un tenant, jamás QUÉ
+# tenant. Los datos de cliente viven FUERA, en la raíz que resuelve
+# `core.rutas.raiz_datos()` (por defecto, el directorio hermano KAIZEN_DATOS/).
+#
+# Se ignora TODO `empresas/` y `diario/` salvo el tenant SINTÉTICO `laboratorio`,
+# que es ficción versionada a propósito (misma allowlist que
+# `herramientas/centinela_datos.py` y `core.rutas.TENANTS_SINTETICOS`).
+# El orden importa: primero se excluye todo, luego se readmite lo sintético.
+# ─────────────────────────────────────────────────────────────────────────────
+empresas/*
+!empresas/laboratorio/
+!empresas/tenants.laboratorio.json
+diario/*
+!diario/laboratorio/
+
+# Material de cliente que vivía suelto en la raíz
+CONTEXTO_TOTAL.txt
+Revision_Llamada_*
+docs/ARGUMENTARIO_*.md
+
+# Configuración de apps personales del operador, no del proyecto (limpieza fase2, lote C)
+.obsidian/

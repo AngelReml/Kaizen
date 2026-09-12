@@ -1,0 +1,33 @@
+{
+  "empresa": "laboratorio",
+  "version": "1.0",
+  "comentario": "Argumentos vetados del tenant sintetico. Los marcados `deteccion: semantica_llm` no generan patron substring.",
+  "argumentos_prohibidos": [
+    {
+      "id": "precio",
+      "patrones_substring": [
+        "le ofrezco un precio",
+        "descuento del",
+        "precio especial",
+        "rebaja"
+      ],
+      "razon": "Prometer precios es competencia exclusiva de un humano."
+    },
+    {
+      "id": "superlativo_absoluto",
+      "patrones_substring": [
+        "el mejor del mundo",
+        "insuperable",
+        "el numero uno",
+        "unico en el mercado"
+      ],
+      "razon": "Superlativo no verificable."
+    },
+    {
+      "id": "comparacion_precio_competencia",
+      "patrones_substring": [],
+      "deteccion": "semantica_llm",
+      "razon": "Comparacion de precio: la juzga el LLM, no la regla dura."
+    }
+  ]
+}

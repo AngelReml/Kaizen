@@ -1,0 +1,29 @@
+{
+  "_doc": "Registro de tenants SINTETICO (R-TENANT). Ninguna ficha sin mandato (D00 §2.3). No contiene ningun tercero real: la ficha describe al tenant de laboratorio, que es ficcion.",
+  "version": 1,
+  "tenants": [
+    {
+      "id": "laboratorio",
+      "razon_social": "Laboratorio Sintetico S.L. (no existe)",
+      "vertical": "ensayo",
+      "estado": "activo",
+      "fecha_alta": "2026-08-03",
+      "partner_id": null,
+      "referencia_credenciales": "fuera del repo",
+      "mandato": {
+        "PROVISIONAL": true,
+        "nivel_por_defecto": "BAJA",
+        "techo_coste_diario_eur": 5.0,
+        "max_emails_dia": 10,
+        "max_llamadas_dia": 25,
+        "horario_contacto": {
+          "inicio": "10:00",
+          "fin": "18:30",
+          "dias": "L-V",
+          "tz": "Europe/Madrid"
+        },
+        "ventana_repeticion_meses": 12
+      }
+    }
+  ]
+}

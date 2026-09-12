@@ -1,0 +1,196 @@
+/* Colmena — chat de directores. Mismo sistema visual que panel.css (D10 §9):
+   papel/tinta, bambu como UNICO acento, temas hiru/yoru via variables. */
+
+#colmena {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: calc(100vh - 3.6rem);           /* debajo de la cabecera pegajosa */
+  max-width: none;
+  border-top: 1px solid var(--linea);
+  background: var(--papel);
+}
+
+/* ── lista de conversaciones (izquierda) ── */
+#col-lista {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--linea); background: var(--carta);
+  min-height: 0;
+}
+.col-cab { display: flex; align-items: baseline; gap: .8rem; padding: .7rem 1rem .5rem; }
+.col-cab h1 { font-size: 1.5rem; margin: 0; }
+.col-volver { font-size: .8rem; color: var(--tinta-suave); text-decoration: none; }
+.col-volver:hover { color: var(--bambu); }
+
+#col-chats { flex: 1; overflow-y: auto; min-height: 0; }
+.col-item {
+  display: grid; grid-template-columns: 2.6rem 1fr auto;
+  gap: .6rem; align-items: center; width: 100%;
+  padding: .55rem .9rem; border: 0; border-bottom: 1px solid var(--linea);
+  background: transparent; color: var(--tinta); text-align: left;
+  font: inherit; cursor: pointer;
+}
+.col-item:hover { background: var(--papel); }
+.col-item.activa { background: var(--papel); box-shadow: inset 3px 0 0 var(--bambu); }
+.col-avatar {
+  width: 2.4rem; height: 2.4rem; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--papel); border: 1.5px solid var(--linea);
+  font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600;
+  position: relative; font-size: 1.05rem;
+}
+.col-item.activa .col-avatar, .col-avatar.sala { border-color: var(--bambu); color: var(--bambu); }
+.col-salud {
+  position: absolute; right: -1px; bottom: -1px;
+  width: .62rem; height: .62rem; border-radius: 50%;
+  border: 2px solid var(--carta); background: var(--tinta-suave);
+}
+.col-salud.ok { background: var(--bambu); }
+.col-salud.degradado { background: var(--ambar); }
+.col-salud.error { background: var(--rojo-seco); }
+.col-item-centro { min-width: 0; }
+.col-item-nombre { font-weight: 600; font-size: .95rem; }
+.col-item-prev {
+  color: var(--tinta-suave); font-size: .8rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.col-item-meta { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
+.col-badge {
+  min-width: 1.25rem; height: 1.25rem; padding: 0 .35rem; border-radius: .7rem;
+  background: var(--bambu); color: var(--papel);
+  font-size: .72rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.col-item-hora { font-size: .7rem; color: var(--tinta-suave); }
+
+#col-pie {
+  display: flex; justify-content: space-between; gap: .6rem;
+  padding: .5rem .9rem; border-top: 1px solid var(--linea);
+  font-size: .75rem; color: var(--tinta-suave);
+}
+#col-sello.ok { color: var(--bambu); }
+#col-sello.mal { color: var(--rojo-seco); font-weight: 600; }
+
+/* ── conversacion (derecha) ── */
+#col-chat { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+#col-chat-cab {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .55rem 1.1rem; border-bottom: 1px solid var(--linea);
+  background: var(--carta); position: static;
+}
+#col-chat-quien { flex: 1; min-width: 0; }
+#col-chat-quien .nombre { font-weight: 600; }
+#col-chat-quien .detalle { font-size: .75rem; color: var(--tinta-suave); }
+#col-chat-quien .detalle .mono { font-size: .72rem; }
+#col-ficha-btn, #col-atras {
+  background: transparent; border: 1px solid var(--linea); border-radius: 6px;
+  color: var(--tinta-suave); font: inherit; font-size: .8rem;
+  padding: .25rem .7rem; cursor: pointer;
+}
+#col-ficha-btn:hover, #col-atras:hover { border-color: var(--bambu); color: var(--bambu); }
+#col-atras { display: none; }
+
+#col-ficha {
+  padding: .8rem 1.2rem; border-bottom: 1px solid var(--linea);
+  background: var(--carta); font-size: .85rem;
+}
+#col-ficha dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .15rem .8rem; }
+#col-ficha dt { color: var(--tinta-suave); }
+#col-ficha dd { margin: 0; }
+
+#col-mensajes { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; min-height: 0; }
+.col-msj { max-width: 46rem; margin: 0 0 .55rem; display: flex; flex-direction: column; }
+.col-msj .col-quien { font-size: .72rem; color: var(--tinta-suave); margin: 0 0 .12rem .35rem; }
+.col-burbuja {
+  padding: .5rem .8rem; border-radius: 10px; border: 1px solid var(--linea);
+  background: var(--carta); white-space: pre-wrap; word-wrap: break-word;
+  width: fit-content; max-width: 100%;
+}
+.col-msj.op { align-items: flex-end; margin-left: auto; }
+.col-msj.op .col-burbuja {
+  background: color-mix(in srgb, var(--bambu) 14%, var(--carta));
+  border-color: color-mix(in srgb, var(--bambu) 35%, var(--linea));
+}
+.col-msj.sis { align-items: center; max-width: none; }
+.col-msj.sis .col-burbuja {
+  background: transparent; border-style: dashed;
+  color: var(--tinta-suave); font-size: .8rem; text-align: center;
+}
+/* distincion honesta entre exito/rechazo/info — antes las tres eran la
+   misma pildora gris y un rechazo se leia igual que una confirmacion */
+.col-msj.sis .col-burbuja.col-sis-exito {
+  border-style: solid; border-color: color-mix(in srgb, var(--bambu) 45%, var(--linea));
+  color: var(--bambu);
+}
+.col-msj.sis .col-burbuja.col-sis-rechazo {
+  border-style: solid; border-color: var(--rojo-seco); color: var(--rojo-seco);
+}
+.col-msj.sis .col-burbuja.col-sis-info { border-style: dashed; }
+.col-msj .col-pie-msj { font-size: .68rem; color: var(--tinta-suave); margin: .12rem .35rem 0; }
+
+/* tarjeta de propuesta dentro del chat */
+.col-tarjeta {
+  border: 1.5px solid var(--linea); border-left: 4px solid var(--ambar);
+  border-radius: 10px; background: var(--carta);
+  padding: .65rem .85rem; width: min(100%, 30rem);
+}
+.col-tarjeta .t-accion { font-weight: 600; }
+.col-tarjeta .t-clase {
+  display: inline-block; font-size: .68rem; letter-spacing: .04em;
+  border: 1px solid var(--linea); border-radius: 4px;
+  padding: .05rem .35rem; margin-left: .4rem; color: var(--tinta-suave);
+  vertical-align: 2px;
+}
+.col-tarjeta .t-clase.irrext { border-color: var(--rojo-seco); color: var(--rojo-seco); }
+.col-tarjeta .t-resumen { margin: .3rem 0 .45rem; font-size: .88rem; }
+.col-tarjeta .t-estado { font-size: .78rem; font-weight: 600; color: var(--tinta-suave); }
+.col-tarjeta .t-estado.pendiente { color: var(--ambar); }
+.col-tarjeta .t-estado.ejecutada, .col-tarjeta .t-estado.aprobada { color: var(--bambu); }
+.col-tarjeta .t-estado.mecha { color: var(--rojo-seco); }
+.col-tarjeta .t-botones { display: flex; gap: .5rem; margin-top: .45rem; }
+.col-tarjeta button {
+  font: inherit; font-size: .82rem; padding: .3rem .8rem;
+  border-radius: 6px; cursor: pointer; border: 1.5px solid var(--linea);
+  background: transparent; color: var(--tinta);
+}
+.col-tarjeta button.t-si { border-color: var(--bambu); color: var(--bambu); }
+.col-tarjeta button.t-si.armado, .col-tarjeta button.t-si:active { background: var(--bambu); color: var(--papel); }
+.col-tarjeta button.t-no { border-color: var(--rojo-seco); color: var(--rojo-seco); }
+.col-tarjeta button.t-deshacer { border-color: var(--rojo-seco); color: var(--rojo-seco); font-weight: 600; }
+.col-tarjeta .t-consecuencia { font-size: .74rem; color: var(--tinta-suave); margin-top: .3rem; }
+
+#col-escribiendo {
+  padding: .15rem 1.35rem .3rem; font-size: .78rem; color: var(--tinta-suave);
+  font-style: italic;
+}
+#col-escribiendo::after { content: "…"; animation: col-puntos 1.2s infinite; }
+@keyframes col-puntos { 0% { content: "."; } 33% { content: ".."; } 66% { content: "..."; } }
+
+#col-form {
+  display: flex; gap: .6rem; align-items: flex-end;
+  padding: .7rem 1.1rem; border-top: 1px solid var(--linea); background: var(--carta);
+}
+#col-texto {
+  flex: 1; resize: none; font: inherit; color: var(--tinta);
+  background: var(--papel); border: 1px solid var(--linea); border-radius: 8px;
+  padding: .5rem .7rem; max-height: 9rem; min-height: 2.4rem;
+}
+#col-texto:focus { outline: none; border-color: var(--bambu); }
+#col-enviar {
+  font: inherit; padding: .5rem 1.1rem; border-radius: 8px; cursor: pointer;
+  border: 1.5px solid var(--bambu); background: var(--bambu); color: var(--papel);
+}
+#col-enviar:disabled { opacity: .45; cursor: not-allowed; }
+.col-aviso {
+  margin: 0; padding: .4rem 1.2rem; font-size: .8rem;
+  color: var(--rojo-seco); background: var(--carta);
+  border-top: 1px dashed var(--rojo-seco);
+}
+
+/* ── movil: una columna, con boton volver ── */
+@media (max-width: 720px) {
+  #colmena { grid-template-columns: 1fr; }
+  #colmena.ver-chat #col-lista { display: none; }
+  #colmena:not(.ver-chat) #col-chat { display: none; }
+  #colmena.ver-chat #col-atras { display: inline-block; }
+  .col-msj { max-width: 100%; }
+}

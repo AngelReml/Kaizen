@@ -1,0 +1,12 @@
+{
+  "cubo": "brand",
+  "version": "1.0.0",
+  "descripcion": "Guardian de marca: revisa borradores y tono; asesor, no ejecutor",
+  "produce": [
+    "kaizen.brand.revision_emitida.v1"
+  ],
+  "consume": [],
+  "nivel_autonomia_defecto": "BAJA",
+  "acciones_irreversibles": [],
+  "requiere": []
+}

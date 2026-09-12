@@ -1,0 +1,33 @@
+{
+  "empresa": "laboratorio",
+  "version": "1.0",
+  "actualizado": "2026-08-03",
+  "comentario": "Manifiesto sintetico: ningun asset real referenciado.",
+  "paleta": {
+    "primario": "#1F2933",
+    "secundario": "#7B8794",
+    "acento": "#C13B2F",
+    "texto": "#111827",
+    "comentario": "Colores inventados para el ensayo."
+  },
+  "tipografias": {
+    "titulares": "Sintetica Display",
+    "cuerpo": "Sintetica Text",
+    "comentario": "Tipografias inexistentes, a proposito."
+  },
+  "logos": [
+    {
+      "id": "logo_principal",
+      "version": "1.0",
+      "ruta": "empresas/laboratorio/brand/logo_sintetico.svg",
+      "estado": "placeholder"
+    }
+  ],
+  "plantillas": [
+    {
+      "id": "email_presentacion",
+      "version": "1.0",
+      "descripcion": "Plantilla sintetica de email de presentacion."
+    }
+  ]
+}

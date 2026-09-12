@@ -1,0 +1,177 @@
+{
+  "version": "1.0",
+  "empresa": "laboratorio",
+  "actualizado": "2026-08-03",
+  "fuente": "generado por generar_tenant_laboratorio.py — SINTETICO, sin tercero detras",
+  "argumentos_funcionan": [
+    {
+      "prioridad": 1,
+      "id": "margen_sintetico",
+      "texto": "Margen del 70% sobre PVP recomendado en el producto sintetico de ensayo.",
+      "porque": "Cifra inventada; existe para ejercitar el orden por prioridad."
+    },
+    {
+      "prioridad": 2,
+      "id": "entrega_sintetica",
+      "texto": "Entrega en 24h en el area sintetica de ensayo.",
+      "porque": "Ficcion coherente con los leads del tenant laboratorio."
+    },
+    {
+      "prioridad": 3,
+      "id": "sin_minimo_sintetico",
+      "texto": "Sin pedido minimo durante el ensayo.",
+      "porque": "Ficcion; ningun compromiso real detras."
+    },
+    {
+      "prioridad": 4,
+      "id": "formato_sintetico",
+      "texto": "Formato de prueba pensado para el circuito de laboratorio.",
+      "porque": "Ficcion; cierra la lista en cuatro como un tenant real."
+    }
+  ],
+  "argumentos_prohibidos": [
+    {
+      "id": "superlativo_absoluto",
+      "texto_ejemplo": "El mejor producto sintetico del mundo.",
+      "patrones_substring": [
+        "el mejor del mundo",
+        "insuperable",
+        "el numero uno",
+        "unico en el mercado"
+      ],
+      "razon": "Superlativo no verificable: regla dura, se detecta por substring."
+    },
+    {
+      "id": "promesa_de_resultado",
+      "texto_ejemplo": "Garantizamos que duplicas ventas.",
+      "patrones_substring": [
+        "garantizamos que",
+        "duplicas ventas",
+        "resultados garantizados",
+        "sin riesgo alguno"
+      ],
+      "razon": "Promesa de resultado: regla dura, se detecta por substring."
+    },
+    {
+      "id": "comparacion_precio_competencia",
+      "texto_ejemplo": "Somos mas baratos que el de al lado.",
+      "patrones_substring": [],
+      "deteccion": "semantica_llm",
+      "razon": "Comparacion de precio: depende del contexto, la juzga el LLM."
+    }
+  ],
+  "segmentos_diana": [
+    {
+      "prioridad": 1,
+      "id": "cafeteria_especialidad",
+      "nombre": "Cafeteria de especialidad (sintetica)",
+      "razon": "Segmento de ensayo; coincide con los leads generados."
+    },
+    {
+      "prioridad": 2,
+      "id": "tienda_gourmet_delicatessen",
+      "nombre": "Tienda gourmet / delicatessen (sintetica)",
+      "razon": "Segmento de ensayo; coincide con los leads generados."
+    },
+    {
+      "prioridad": 3,
+      "id": "hotel_boutique_con_desayuno",
+      "nombre": "Hotel boutique con desayuno (sintetico)",
+      "razon": "Segmento de ensayo; coincide con los leads generados."
+    },
+    {
+      "prioridad": 4,
+      "id": "restaurante_con_postre_artesanal",
+      "nombre": "Restaurante con postre artesanal (sintetico)",
+      "razon": "Segmento de ensayo; coincide con los leads generados."
+    }
+  ],
+  "competencia": [
+    {
+      "id": "competidor_sintetico_1",
+      "nombre": "Competidor Sintetico 1",
+      "ubicacion": "Area sintetica de ensayo",
+      "rol": "obrador",
+      "fortaleza": "Fortaleza inventada nº 1.",
+      "amenaza": "Amenaza inventada nº 1."
+    },
+    {
+      "id": "competidor_sintetico_2",
+      "nombre": "Competidor Sintetico 2",
+      "ubicacion": "Area sintetica de ensayo",
+      "rol": "industrial",
+      "fortaleza": "Fortaleza inventada nº 2.",
+      "amenaza": "Amenaza inventada nº 2."
+    },
+    {
+      "id": "competidor_sintetico_3",
+      "nombre": "Competidor Sintetico 3",
+      "ubicacion": "Area sintetica de ensayo",
+      "rol": "distribuidor",
+      "fortaleza": "Fortaleza inventada nº 3.",
+      "amenaza": "Amenaza inventada nº 3."
+    },
+    {
+      "id": "competidor_sintetico_4",
+      "nombre": "Competidor Sintetico 4",
+      "ubicacion": "Area sintetica de ensayo",
+      "rol": "mayorista",
+      "fortaleza": "Fortaleza inventada nº 4.",
+      "amenaza": "Amenaza inventada nº 4."
+    }
+  ],
+  "precios_competencia_uso_interno": {
+    "_aviso": "USO INTERNO. NUNCA se pasa al transcript ni al email saliente. Cifras inventadas del tenant sintetico.",
+    "moneda": "EUR",
+    "referencias": [
+      {
+        "id": "ref_sintetica_1",
+        "producto": "Magdalena sintetica",
+        "precio_eur": 0.3,
+        "iva_incluido": true,
+        "nota": "Anomalia sintetica a proposito: precio por debajo del resto."
+      },
+      {
+        "id": "ref_sintetica_2",
+        "producto": "Croissant sintetico",
+        "precio_eur": 1.1,
+        "iva_incluido": true,
+        "nota": "Referencia inventada."
+      },
+      {
+        "id": "ref_sintetica_3",
+        "producto": "Tarta sintetica (racion)",
+        "precio_eur": 2.75,
+        "iva_incluido": true,
+        "nota": "Referencia inventada."
+      },
+      {
+        "id": "ref_sintetica_4",
+        "producto": "Caja surtida sintetica",
+        "precio_eur": 12.5,
+        "iva_incluido": false,
+        "nota": "Referencia inventada."
+      }
+    ]
+  },
+  "distribuidores_logistica_fase1": [
+    {
+      "id": "distribuidor_sintetico_1",
+      "nombre": "Distribuidor Sintetico 1",
+      "ubicacion": "Area sintetica de ensayo",
+      "antiguedad_anos": 6
+    },
+    {
+      "id": "distribuidor_sintetico_2",
+      "nombre": "Distribuidor Sintetico 2",
+      "ubicacion": "Area sintetica de ensayo",
+      "antiguedad_anos": 7
+    },
+    {
+      "id": "distribuidor_sintetico_3",
+      "nombre": "Distribuidor Sintetico 3",
+      "ubicacion": "Area sintetica de ensayo",
+      "antiguedad_anos": 8
+    }
+  ]
+}

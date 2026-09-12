@@ -1,0 +1,40 @@
+# Backends de producción del Sistema Operativo Empresarial.
+# Uso:  docker compose up -d
+# Luego copia .env.example a .env (o exporta las variables) y arranca el panel:
+#   uvicorn api.server:app
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: kaizen-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: kaizen-neo4j
+    ports:
+      - "7474:7474"   # navegador web de Neo4j
+      - "7687:7687"   # bolt (driver)
+    environment:
+      NEO4J_AUTH: neo4j/kaizen-neo4j
+    volumes:
+      - neo4j-data:/data
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: kaizen-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: kaizen
+      POSTGRES_PASSWORD: kaizen
+      POSTGRES_DB: kaizen
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  redis-data:
+  neo4j-data:
+  postgres-data:

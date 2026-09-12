@@ -1,0 +1,13 @@
+{
+  "cubo": "rrhh",
+  "version": "1.0.0",
+  "descripcion": "RRHH sintetico: definicion de puestos/agentes",
+  "produce": [
+    "kaizen.rrhh.puesto_definido.v1"
+  ],
+  "consume": [],
+  "nivel_autonomia_defecto": "CERO",
+  "acciones_irreversibles": [],
+  "requiere": [],
+  "nota_estado": "pospuesto por decision del operador (docs/DESARROLLO_RRHH_POSPONER.md)"
+}

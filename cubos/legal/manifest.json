@@ -1,0 +1,23 @@
+{
+  "cubo": "legal",
+  "version": "1.0.0",
+  "descripcion": "Legal y Cumplimiento: dictamina riesgos, gestiona el calendario de obligaciones y compila defensa documental; no ejecuta acciones externas",
+  "produce": [
+    "kaizen.legal.dictamen_emitido.v1"
+  ],
+  "produce_rue": [
+    "cumplimiento.obligacion.registrada",
+    "cumplimiento.obligacion.asignada",
+    "cumplimiento.evidencia.aportada",
+    "cumplimiento.obligacion.cumplida",
+    "cumplimiento.obligacion.incumplida",
+    "cumplimiento.alerta.plazo",
+    "cumplimiento.expediente.validado",
+    "cumplimiento.auditoria.ejecutada",
+    "cumplimiento.defensa.preparada"
+  ],
+  "consume": [],
+  "nivel_autonomia_defecto": "BAJA",
+  "acciones_irreversibles": [],
+  "requiere": []
+}
