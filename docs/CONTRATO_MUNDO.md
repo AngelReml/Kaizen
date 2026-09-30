@@ -181,3 +181,19 @@ El juego lo dibuja en las bocamangas (veterano = 30 dias de alta; experto y mejo
 campo lo dice) y en la ficha del director. Ademas, en cada sala hay un orbe luminoso por evento de las
 ultimas 24 h del cubo (hasta 8) y un halo que crece con esa cuenta: es `salud.eventos_24h`, dato real.
 
+## Tesorería (sala de Finanzas): qué es cada cosa y de dónde sale
+
+Nada está puesto porque sí; cada objeto dice algo verdadero o es un adorno declarado:
+
+| Objeto | Qué muestra | Origen |
+|---|---|---|
+| Fuente con anillo de 12 gemas | gasto de hoy frente al tope diario: cada gema es 1/12 del tope; verde, ámbar desde el 70 %, rojo desde el tope o en modo ahorro | `dinero.gasto_eur`, `dinero.tope_eur`, `dinero.modo_ahorro` |
+| Rótulo «hoy X de Y» | las mismas cifras en euros | `dinero` |
+| Cofre «sin atribuir X» | gasto de la plataforma que no es de ningún cubo (se muestra, no se esconde) | `dinero.sin_atribuir_eur` |
+| Estantería de libros de cuentas | un lomo por cada día desde el alta de Finanzas (hasta 28) | `cubos[finanzas].ts_alta` |
+| Ábaco | las cuentas se deslizan cuando llega un evento de Finanzas | evento con `cubo = finanzas` |
+| Daruma | lleva un ojo; se pinta el segundo cuando entra un cobro mientras miras (solo en esta sesión) | evento `finanzas.cobro.registrado` |
+| Lluvia de monedas | un cobro real o un pedido atribuido | `finanzas.cobro.registrado`, `comercial.pedido.atribuido` |
+| Orbes y halo de la sala | un orbe por evento de las últimas 24 h del cubo | `salud.eventos_24h` |
+| Maneki-neko, medallón de parqué, mostrador en media luna, barandilla baja | adorno (la barandilla deja ver la sala desde el pasillo) | — |
+

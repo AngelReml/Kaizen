@@ -244,7 +244,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       <button class="link stop" id="b-stop" type="button" title="Mantén pulsado 2 segundos">PARAR TODO</button><span class="sep">·</span>
       <button class="link" id="b-q" type="button">Nitidez</button><span class="sep">·</span>
       <button class="link" id="b-snd" type="button">Sonido</button><span class="sep">·</span>
-      <span class="link" id="b-rin" style="cursor:default">✦ 0/21</span><span class="sep">·</span>
+      <span class="link" id="b-rin" style="cursor:default">✦ 0/25</span><span class="sep">·</span>
       <button class="link" id="b-mode" type="button">Yoru</button><span class="sep">·</span>
       <button class="link" id="b-zout" type="button" aria-label="Alejar">−</button>
       <button class="link" id="b-home" type="button" aria-label="Volver a la vista general">⌂</button>
@@ -610,6 +610,13 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       }
     }
   }
+  // medallón de parqué en Tesorería: anillos concéntricos de maderas y radios con una guarda dorada
+  function paintFinanzasFloor(g) {
+    const cx = 8.5, cy = 2.6, cols = [R.wood[1], R.wood[4], R.wood[2], R.wood[5], R.wood[3]];
+    for (let i = 0; i < cols.length; i++) poly(g, cols[i], ellipsePts(cx, cy, 2.35 - i * .42, 2.25 - i * .4, 48));
+    for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283; isoLine(g, R.wood[0], P(cx + Math.cos(a) * .55, cy + Math.sin(a) * .5), P(cx + Math.cos(a) * 2.3, cy + Math.sin(a) * 2.2), 1); }
+    isoEllipse(g, R.gold[2], cx, cy, 2.05, 1.97, 1); isoEllipse(g, R.gold[1], cx, cy, 2.12, 2.04, 1); isoEllipse(g, R.gold[3], cx, cy, .5, .47, 1);
+  }
   function paintGenkan(g) {
     for (let x = 15.6; x < 18; x += .4) for (let y = 5; y < 7; y += .4) { const p = P(x + .2, y + .2); poly(g, R.stone[2], tile(x, y, .4, .4)); blob(g, p[0], p[1], 5, 2, [R.stone[2], R.stone[3], R.stone[4], R.stone[5]]); }
   }
@@ -691,7 +698,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
   }
   function paintWalls(g) {
     const H = 34;
-    paintRun(g, WRUN, H, (w, i) => w.a[0] >= 4 && w.b[0] <= 6 && w.a[1] === 0 && w.b[1] === 0 ? 'toko' : i % 6 === 2 ? 'bell' : i === 15 || i === 21 ? 'moon' : null);
+    paintRun(g, WRUN, H, (w, i) => w.a[0] >= 4 && w.b[0] <= 6 && w.a[1] === 0 && w.b[1] === 0 ? 'toko' : w.a[1] === 0 && w.a[0] === 8 ? 'moon' : i % 6 === 2 ? 'bell' : i === 15 || i === 21 ? 'moon' : null);
     // rollo colgado en el tokonoma
     { const s = P(5, 0), sx = s[0] - 4, sy = s[1] - 30; rect(g, R.wood[1], sx - 1, sy - 2, 10, 2); rect(g, R.paper, sx, sy, 8, 20); rect(g, R.wood[1], sx - 1, sy + 20, 10, 2); line(g, R.stone[2], sx + 1, sy + 13, sx + 4, sy + 6); line(g, R.stone[2], sx + 4, sy + 6, sx + 7, sy + 12); line(g, R.stone[3], sx + 2, sy + 15, sx + 6, sy + 15); rect(g, R.red[2], sx + 6, sy + 17, 1, 2); }
     paintEave(g, WRUN, H);
@@ -742,7 +749,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     clr(tg); clr(mg);
     LOTS.forEach(l => paintPath(tg, l.path));
     paintEngawa(tg);
-    clipTo(tg, footprint(0), () => { ROOMS.forEach(r => { if (!r.annex) paintFloor(tg, r); }); paintGenkan(tg); });
+    clipTo(tg, footprint(0), () => { ROOMS.forEach(r => { if (!r.annex) paintFloor(tg, r); }); paintGenkan(tg); const fr = room('finanzas'); if (fr && !fr.locked) paintFinanzasFloor(tg); });
     ROOMS.forEach(r => { if (r.annex) paintAnnex(tg, r); });
     paintWalls(tg);
   }
@@ -1206,6 +1213,13 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       if (fus) { poly(g, mix(R.shoji[0], R.stone[2], .35), [a, b, up(b, 20), up(a, 20)]); const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; line(g, R.stone[2], a[0] + 2, a[1] - 7, m[0], m[1] - 14); line(g, R.stone[2], m[0], m[1] - 14, b[0] - 2, b[1] - 8); line(g, R.indigo[2], a[0] + 3, a[1] - 4, b[0] - 3, b[1] - 4); rect(g, R.gold[1], m[0] - 1, m[1] - 10, 2, 2); isoLine(g, R.lacq[1], up(a, 20), up(b, 20)); isoLine(g, R.lacq[1], a, b); line(g, R.lacq[1], a[0], a[1], a[0], a[1] - 20); line(g, R.lacq[1], b[0], b[1], b[0], b[1] - 20); }
       else { shoji(g, a, b, 20, false); dome(g, a, b, 20); poly(mg, rgba('#ffd28a', 1), [up(a, 7), up(b, 7), up(b, 20), up(a, 20)]); }
     });
+    // barandilla baja de Tesorería: deja ver la fuente y el mostrador desde el pasillo (celosía con pasamanos curvo)
+    const wallLow = (Y, x) => addStatic(x + .5 + Y + .01, fp(x, Y, 1, 0, 14), g => {
+      const a = P(x, Y), b = P(x + 1, Y); poly(g, R.wood[2], [a, b, up(b, 8), up(a, 8)]);
+      for (let i = 1; i < 5; i++) { const q = [a[0] + (b[0] - a[0]) * i / 5, a[1] + (b[1] - a[1]) * i / 5]; line(g, R.wood[0], q[0], q[1] - 1, q[0], q[1] - 7); }
+      isoLine(g, R.wood[0], up(a, 4), up(b, 4));
+      const N = 8; for (let i = 0; i < N; i++) { const t0 = i / N, t1 = (i + 1) / N, p0 = [a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0 - 8 - Math.sin(t0 * Math.PI) * 2], p1 = [a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1 - 8 - Math.sin(t1 * Math.PI) * 2]; line(g, R.lacq[3], p0[0], p0[1], p1[0], p1[1], 2 * Math.max(1, S - 1)); line(g, R.gold[2], p0[0], p0[1] - 1, p1[0], p1[1] - 1, Math.max(1, S - 1)); }
+    });
     const wallY = (X, y) => addStatic(X + y + .5 + .01, fp(X, y, 0, 1, 24), g => { const a = P(X, y), b = P(X, y + 1); shoji(g, a, b, 20, false); dome(g, a, b, 20); g.globalAlpha = .1; poly(g, R.ink, [a, b, up(b, 20), up(a, 20)]); g.globalAlpha = 1; });
     const archOver = (x, Y) => addStatic(x + .5 + Y + .03, fp(x, Y, 1, 0, 40), g => {
       const a = P(x, Y), b = P(x + 1, Y), N = 14, top = [], bot = [];
@@ -1220,7 +1234,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     });
     const posts = (x, Y) => { archOver(x, Y); addStatic(x + Y + .02, fp(x, Y, 0, 0, 24), g => { const a = P(x, Y); rect(g, R.wood[1], a[0], a[1] - 22, 2, 22); rect(g, R.wood[3], a[0], a[1] - 22, 1, 22); }); addStatic(x + 1 + Y + .02, fp(x + 1, Y, 0, 0, 24), g => { const b = P(x + 1, Y); rect(g, R.wood[1], b[0] - 1, b[1] - 22, 2, 22); rect(g, R.wood[3], b[0] - 1, b[1] - 22, 1, 22); }); };
     const fin = room('finanzas');
-    for (let x = 0; x < 18; x++) { if (x === 8 && fin.locked) wallX(5, x, true); else if ([3, 8, 14].includes(x)) { posts(x, 5); norenAt(x, 5, x === 8 ? ACC.finanzas : x === 3 ? '#b8341f' : '#33437a'); } else wallX(5, x, false); }
+    for (let x = 0; x < 18; x++) { if (x === 8 && fin.locked) wallX(5, x, true); else if ([3, 8, 14].includes(x)) { posts(x, 5); norenAt(x, 5, x === 8 ? ACC.finanzas : x === 3 ? '#b8341f' : '#33437a'); } else if (x >= 6 && x < 11 && !fin.locked) wallLow(5, x); else wallX(5, x, false); }
     const BOT = ROOMS.filter(r => r.cubo && !r.annex && r.y0 === 7);
     for (let x = 0; x < 18; x++) { const r = BOT.find(q => x >= q.x0 && x < q.x1); if (r && !r.locked && x === r.door) { posts(x, 7); norenAt(x, 7, ACC[r.cubo] || '#c0407a'); } else wallX(7, x, !!(r && r.locked)); }
     for (let y = 0; y < 5; y++) { wallY(6, y); wallY(11, y); }
@@ -1233,10 +1247,62 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     andon(1.3, 1.2); andon(5.9, 3.9);
     // Finanzas (Tesorería): mesa con ábaco, balanza y cofre; cerrada mientras su director no esté dado de alta
     if (fin.locked) dormMarks(fin, true); else {
-    addStatic(8.3 + 2.4, fp(7.3, 1.85, 1.1, .55, 16), g => { boxR(g, 7.3, 1.85, 1.1, .55, 9, R.wood); const p = P(7.75, 2.05); rect(g, R.lacq[1], p[0] - 7, p[1] - 13, 13, 5); for (let r = 0; r < 3; r++) for (let i = 0; i < 6; i++) rect(g, r === 1 ? R.cream : R.red[2], p[0] - 6 + i * 2, p[1] - 12 + r * 1.3, 1, 1); const q = P(8.2, 2.1); line(g, R.gold[2], q[0], q[1] - 16, q[0], q[1] - 10); line(g, R.gold[2], q[0] - 4, q[1] - 16, q[0] + 4, q[1] - 16); rect(g, R.gold[1], q[0] - 5, q[1] - 15, 3, 1); rect(g, R.gold[1], q[0] + 3, q[1] - 15, 3, 1); });
+    // mostrador en media luna alrededor del director: madera lacada con incrustación dorada, ábaco y balanza encima
+    addStatic(7.9 + 2.3, [P(6.2, 1.2)[0] - 6, P(7.9, .3)[1] - 26, P(9.6, 2.4)[0] + 6, P(7.9, 2.4)[1] + 6], g => {
+      const cx = 7.9, cy = 1.25, N = 26, H_ = 9, out = [], inn = [];
+      for (let i = 0; i <= N; i++) { const t = Math.PI * i / N; out.push([cx + Math.cos(t) * 1.65, cy + Math.sin(t) * 1.05]); inn.push([cx + Math.cos(t) * 1.25, cy + Math.sin(t) * .7]); }
+      for (let i = 0; i < N; i++) { const a_ = P(out[i][0], out[i][1]), b_ = P(out[i + 1][0], out[i + 1][1]), sh = i / N; poly(g, mix(R.lacq[2], R.lacq[0], Math.abs(.5 - sh) * .8), [a_, b_, up(b_, H_), up(a_, H_)]); }
+      poly(g, R.lacq[3], out.map(q => up(P(q[0], q[1]), H_)).concat(inn.slice().reverse().map(q => up(P(q[0], q[1]), H_))));
+      for (let i = 0; i < N; i++) { const a_ = up(P(out[i][0], out[i][1]), H_), b_ = up(P(out[i + 1][0], out[i + 1][1]), H_); line(g, R.lacq[4], a_[0], a_[1], b_[0], b_[1], Math.max(1, S - 1)); const m_ = up(P((out[i][0] + inn[i][0]) / 2, (out[i][1] + inn[i][1]) / 2), H_), n_ = up(P((out[i + 1][0] + inn[i + 1][0]) / 2, (out[i + 1][1] + inn[i + 1][1]) / 2), H_); line(g, R.gold[2], m_[0], m_[1], n_[0], n_[1], Math.max(1, S - 1)); }
+      // balanza a un lado del arco (el ábaco es animado: ver más abajo)
+      const q = P(8.95, 1.75); line(g, R.gold[2], q[0], q[1] - 18, q[0], q[1] - 10); line(g, R.gold[2], q[0] - 5, q[1] - 18, q[0] + 5, q[1] - 18); rect(g, R.gold[1], q[0] - 6, q[1] - 17, 3, 1); rect(g, R.gold[1], q[0] + 4, q[1] - 17, 3, 1); rect(g, R.gold[3], q[0] - 1, q[1] - 20, 3, 2);
+    });
       zabuton(7.8, 2.9, [R.red[0], R.red[1], R.red[2], R.red[3], R.red[4]]);
       addStatic(10.05 + .95, fp(9.6, .4, .85, .65, 16), g => { const m = boxR(g, 9.6, .4, .85, .65, 13, R.lacq); [m.D, m.C].forEach(p => { rect(g, R.gold[2], p[0] - 1, p[1] - 13, 2, 13); }); isoLine(g, R.gold[2], up(m.D, 7), up(m.C, 7)); const c = [(m.D[0] + m.C[0]) / 2, (m.D[1] + m.C[1]) / 2]; rect(g, R.gold[3], c[0] - 2, c[1] - 9, 4, 4); rect(g, R.lacq[0], c[0] - 1, c[1] - 8, 2, 2); });
-      andon(6.5, .5); andon(10.3, 3.6);
+      andon(10.6, 4.3); andon(6.5, 4.3);
+      // estantería de libros de cuentas: un lomo por cada día desde el alta de Finanzas (hasta 28); así se ve cuánto lleva la tesorería llevando las cuentas
+      addStatic(6.95 + .8, fp(6.3, .3, 1.3, .5, 42), g => { const m = boxR(g, 6.3, .3, 1.3, .5, 32, R.wood.slice(0, 5).map((c, j) => j ? c : R.wood[0])); for (let r = 0; r < 4; r++) isoLine(g, R.wood[1], up(m.D, 8 * r + 4), up(m.C, 8 * r + 4)); });
+      add(6.95 + .85, (g, T) => {
+        const c = CUBES.finanzas, t0 = c && Date.parse(c.ts_alta), dias = t0 ? Math.max(0, Math.min(28, Math.floor((Date.now() - t0) / 864e5))) : 0, D = P(6.3, .8), cols = [R.red[2], R.indigo[3], R.moss[3], R.gold[2], R.lacq[3], R.pink[2], R.cream];
+        for (let i = 0; i < 28; i++) { const r = Math.floor(i / 7), cc = i % 7, px = D[0] + 2 + cc * 3, py = D[1] - 8 * r - 11 + cc * 1.5; if (i < dias) { rect(g, cols[i % 7], px, py - 2, 2, 6); rect(g, R.gold[2], px, py, 2, 1); } else rect(g, R.wood[1], px, py + 2, 2, 2); }
+      });
+      // ábaco: las cuentas se deslizan cuando Finanzas hace algo de verdad
+      add(7.9 + 1.95 + .2, (g, T) => {
+        const p = P(7.9, 1.95); rect(g, R.lacq[1], p[0] - 7, p[1] - 14, 13, 5); const mv = abacusT > 0 && !reduce;
+        for (let r = 0; r < 3; r++) for (let i = 0; i < 6; i++) rect(g, r === 1 ? R.cream : R.red[2], p[0] - 6 + i * 2 + (mv ? Math.round(Math.sin(abacusT * 18 + i + r) * 1) : 0), p[1] - 13 + r * 1.3, 1, 1);
+      });
+      // maneki-neko sobre el mostrador: la pata saluda; trae suerte a las cuentas
+      add(9.25 + 1.55 + .3, (g, T) => {
+        const q = P(9.25, 1.55), x = Math.round(q[0]), y = Math.round(q[1]) - 9, w = reduce ? 0 : Math.sin(T * (4 + nekoT * 6)) * 2;
+        blob(g, x, y - 4, 4, 4.5, ['#d8d0c0', '#ece6d8', '#f8f4ea', '#ffffff']); blob(g, x, y - 10, 4, 3.5, ['#d8d0c0', '#ece6d8', '#f8f4ea', '#ffffff']);
+        rect(g, '#f4b8c0', x - 4, y - 14, 2, 2); rect(g, '#f4b8c0', x + 3, y - 14, 2, 2); rect(g, R.ink, x - 2, y - 10, 2, 1); rect(g, R.ink, x + 1, y - 10, 2, 1); rect(g, '#f08a8a', x - 3, y - 8, 1, 1); rect(g, '#f08a8a', x + 3, y - 8, 1, 1);
+        rect(g, R.red[2], x - 3, y - 7, 7, 1); rect(g, R.gold[3], x, y - 6, 2, 2);
+        line(g, '#f8f4ea', x - 3, y - 6, x - 6, y - 11 + Math.round(w), 2); rect(g, '#f4b8c0', x - 7, y - 13 + Math.round(w), 2, 2);
+        rect(g, R.gold[2], x + 4, y - 8, 3, 5); rect(g, R.gold[3], x + 4, y - 8, 1, 5); rect(g, R.ink, x + 5, y - 6, 1, 2);
+      });
+      // daruma: lleva un ojo pintado desde que se marca la meta; el otro se pinta cuando entra un cobro mientras miras
+      add(6.55 + 1.55 + .3, (g, T) => {
+        const q = P(6.55, 1.55), x = Math.round(q[0]), y = Math.round(q[1]) - 9;
+        blob(g, x, y - 5, 5, 5.5, [R.red[0], R.red[1], R.red[2], R.red[3]]); blob(g, x, y - 7, 3.4, 2.6, ['#e8dcc8', '#f4ead8', '#fff8ec', '#ffffff']);
+        rect(g, R.gold[2], x - 2, y - 2, 5, 1); rect(g, R.ink, x - 3, y - 10, 3, 1); rect(g, R.ink, x + 1, y - 10, 3, 1);
+        rect(g, R.ink, x - 2, y - 8, 2, 2); if (cobrosVistos > 0) rect(g, R.ink, x + 1, y - 8, 2, 2); else rect(g, '#d8cfb8', x + 1, y - 8, 2, 2);
+        line(g, R.ink, x - 2, y - 5, x - 1, y - 4); line(g, R.ink, x + 2, y - 5, x + 1, y - 4);
+      });
+      // fuente-medidor: el anillo de gemas se enciende según el gasto de hoy frente al tope diario (datos reales); el agua vira a ámbar y rojo al acercarse al tope o en modo ahorro
+      const fc = [10.0, 2.75], fb = P(fc[0], fc[1]);
+      add(fc[0] + fc[1] + .3, (g, T) => {
+        const d = BK.dinero, k = d && d.tope_eur > 0 ? Math.min(1.2, d.gasto_eur / d.tope_eur) : 0, hot = !!(d && d.modo_ahorro) || k >= 1, warm = k >= .7;
+        const ring = (rx, col, dy) => poly(g, col, ellipsePts(fc[0], fc[1], rx, rx, 40).map(q => [q[0], q[1] + (dy || 0)]));
+        ring(.92, R.stone[0], 5); ring(.92, R.stone[2], 0); ring(.8, R.stone[4], -1); ring(.73, R.stone[1], 0);
+        const wat = hot ? ['#7a2a24', '#b8453a', '#e06a52', '#f8a088'] : warm ? ['#8a6418', '#c89a2c', '#e8c25a', '#fbe8a0'] : [R.water[1], R.water[2], R.water[3], R.water[4]];
+        ring(.66, wat[0], 0); ring(.56, wat[1], 0); ring(.4, wat[2], -.5);
+        for (let i = 0; i < 9; i++) { const a = i * 2.4, q = P(fc[0] + Math.cos(a) * .4, fc[1] + Math.sin(a) * .4); rect(g, R.gold[1 + (i % 2)], q[0], q[1] + 1, 2, 1); }   // monedas en el fondo
+        for (let i = 0; i < 3; i++) { const t = reduce ? 0 : (T * .4 + i * .33) % 1; isoEllipse(g, wat[3], fc[0], fc[1], .1 + t * .5, .1 + t * .5, 2); }
+        const n = 12, lit = Math.round(Math.min(1, k) * n) + (gemFlash > 0 ? Math.round(gemFlash * n) : 0);
+        for (let i = 0; i < n; i++) { const a = i / n * 6.283 - 1.57, q = P(fc[0] + Math.cos(a) * .83, fc[1] + Math.sin(a) * .83), on = i < lit, col = hot ? '#ff6a4a' : warm ? '#ffc94a' : '#7af0b0';
+          rect(g, on ? col : R.stone[1], q[0] - 1, q[1] - 3, 3, 3); if (on) rect(g, '#ffffff', q[0], q[1] - 3, 1, 1);
+          if (on) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .55; g.drawImage(glowOf(col), Math.round(q[0] - 6), Math.round(q[1] - 8), 12, 10); g.restore(); } }
+      });
     }
     // Registro: estantes de rollos y libros, y el gran libro de cuentas
     [11.4, 12.5, 16.3].forEach((x, i) => addStatic(x + .45 + .8, fp(x, .3, .9, .5, 42), g => { const m = boxR(g, x, .3, .9, .5, 38, R.wood.slice(0, 5).map((c, j) => j ? c : R.wood[0])); for (let r = 0; r < 5; r++) { isoLine(g, R.wood[1], up(m.D, 7 * r + 4), up(m.C, 7 * r + 4)); for (let c = 0; c < 5; c++) { const px = m.D[0] + 2 + c * 3, py = m.D[1] - 7 * r - 10 + c * 1.5; if ((r + c + i) % 3 === 0) { rect(g, R.cream, px, py, 2, 2); rect(g, [R.red[2], R.indigo[3], R.gold[2]][c % 3], px, py + 1, 2, 1); } else rect(g, [R.red[1], R.indigo[2], R.moss[3], R.gold[1], R.lacq[3]][(r * 5 + c + i) % 5], px, py - 2, 2, 4); } } }));
@@ -1387,7 +1453,8 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     if (a && a.state !== 'rest') { say(a, short(ev.frase, 64), 6); a.emote = { e: '*', t: 1.2 }; a.last = ev.frase; a.tasks++; }
     const from = a ? { pos: a.pos.slice(), cur: a.cur } : { pos: [18.4, 6.0], cur: 'pasillo' };
     if (reduce || DROPS.length >= 40) sealed(); else DROPS.push({ pos: from.pos, path: route({ cur: from.cur }, REG_TARGET, 'registro'), trail: [] });   // en una ráfaga no se dibujan mil gotas: se sellan igual
-    if (/^(finanzas\.cobro\.registrado|comercial\.pedido\.atribuido)/.test(ev.tipo)) celebrate();
+    if (ev.cubo === 'finanzas') abacusT = 1;
+    if (/^(finanzas\.cobro\.registrado|comercial\.pedido\.atribuido)/.test(ev.tipo)) { if (/^finanzas\./.test(ev.tipo)) cobrosVistos++; celebrate(); }
   }
 
   // ============================================================ cielo
@@ -1709,8 +1776,10 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     });
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
+  let cobrosVistos = 0, abacusT = 0, nekoT = 0, gemFlash = 0;
   function celebrate() {
     if (reduce) return;
+    { const c = P(10.0, 2.75); spawn(c[0], c[1] - 4, 40, { cols: ['#ffd45a', '#fff2a0', '#ffb830'], dir: -1.57, spread: .9, v: 52, g: 70, l: 1.6, w: 12, sz: 2 }); }
     if (darkness(hourOf()) > .8) { fwLeft = 16; fwCd = .3; } else hanabiPending = true;
   }
 
@@ -2324,7 +2393,9 @@ void main(){
     LOTS.forEach(l => { const st = LS[l.id]; if (st.state === 'built') return; const c = P((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2 + 1.2); const nm = st.cubo && CUBES[st.cubo] ? CUBES[st.cubo].nombre : ''; text(st.state === 'obra' ? 'EN OBRA · ' + Math.round(st.p * 100) + ' %' : nm ? 'PABELLÓN · ' + nm.toUpperCase() + ' · SIN DAR DE ALTA' : 'SOLAR LIBRE', c[0], c[1], lab, '600', 'Inter, sans-serif', dk > .45 ? '#bfe3ff' : '#3f6f9c'); });
     if ('letterSpacing' in dc) dc.letterSpacing = '0px';
     const small = Math.max(10, Math.min(14, k / dpr * 4.4));
-    { const c = P(10.02, .72); text(BK.dinero ? eur(BK.dinero.gasto_eur) : '—', c[0], c[1] - 22, small, '500', '"JetBrains Mono", monospace'); }
+    { const fr = room('finanzas'); if (fr && !fr.locked) {
+      const c = P(10.02, .72); text('sin atribuir ' + (BK.dinero ? eur(BK.dinero.sin_atribuir_eur) : '—'), c[0], c[1] - 22, small, '500', '"JetBrains Mono", monospace');
+      const f = P(10.0, 2.75); text('hoy ' + (BK.dinero ? eur(BK.dinero.gasto_eur) : '—') + ' de ' + (BK.dinero && BK.dinero.tope_eur ? eur(BK.dinero.tope_eur) : '—'), f[0], f[1] + 16, small, '500', '"JetBrains Mono", monospace'); } }
     { const c = P(13.1, 2.4); text((BK.events == null ? '—' : BK.events) + ' sellados', c[0], c[1] - 24, small, '500', '"JetBrains Mono", monospace'); }
     const showNames = k / dpr >= 2.6;
     AG.forEach(a => {
@@ -2589,7 +2660,7 @@ void main(){
   const chime = (i, vol, when) => { tone(noteF(i), 1.5, vol || .05, 'sine', when); tone(noteF(i) * 2.005, .7, (vol || .05) * .35, 'sine', when); };
   const arpeggio = (n, base, vol) => { for (let k = 0; k < n; k++) chime(base + k * 2, vol || .04, k * .09); };
   const thock = () => { tone(95, .2, .11, 'triangle'); tone(190, .1, .05, 'square'); };
-  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
+  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
   const FOUND = new Set(); try { JSON.parse(localStorage.getItem('kaizen-rincones') || '[]').forEach(k => { if (RINCONES[k]) FOUND.add(k); }); } catch (e) {}
   function paintBadges() { const b = document.getElementById('b-rin'); if (b) { b.textContent = '✦ ' + FOUND.size + '/' + Object.keys(RINCONES).length; b.title = 'Rincones del jardín que has descubierto (solo adorno: no cuenta nada de tu empresa)'; } const s = document.getElementById('b-snd'); if (s) s.textContent = SND.on ? 'Sonido' : 'Sin sonido'; }
   function discover(k) { if (FOUND.has(k) || !RINCONES[k]) return; FOUND.add(k); try { localStorage.setItem('kaizen-rincones', JSON.stringify([...FOUND])); } catch (e) {} paintBadges(); inscribe('✦ Rincón descubierto: ' + RINCONES[k] + ' · ' + FOUND.size + '/' + Object.keys(RINCONES).length); arpeggio(3, 4, .05); }
@@ -2613,6 +2684,7 @@ void main(){
     FURIN.forEach(f => { if (f.ring > 0) f.ring = Math.max(0, f.ring - dt * .45); });
     AG.forEach(a => { if (a.hop > 0) a.hop = Math.max(0, a.hop - dt * 2.2); });
     if (monteGlow > 0) monteGlow = Math.max(0, monteGlow - dt * .4);
+    if (abacusT > 0) abacusT = Math.max(0, abacusT - dt * 1.4); if (nekoT > 0) nekoT = Math.max(0, nekoT - dt * .5); if (gemFlash > 0) gemFlash = Math.max(0, gemFlash - dt * 1.2);
     // las luciérnagas se acercan con curiosidad al cursor cuando es de noche
     if (cursorW && FLIES.length) FLIES.forEach(f => { const d = Math.hypot(f.hx - cursorW[0], f.hy - cursorW[1]); if (d < 70 && d > 4) { f.hx += (cursorW[0] - f.hx) * dt * .35; f.hy += (cursorW[1] - 6 - f.hy) * dt * .35; } });
   }
@@ -2711,7 +2783,17 @@ void main(){
     });
   }
   function kodamaAt(wx, wy) { for (const k of KODAMA) { if (k.gone > 0) continue; const b = P(k.x, k.y); if (Math.abs(wx - b[0]) < 7 && wy > b[1] - 13 && wy < b[1] + 2) return { x: b[0], y: b[1] - 6, r: 10, act: () => { k.gone = 50; spawn(b[0], b[1] - 6, 26, { cols: ['#ffffff', '#d8ffe8', '#fff6b0'], v: 30, g: 10, l: 1.5 }); ring(b[0], b[1], '#d8ffe8', 20); for (let i = 0; i < 5; i++) tone(700 + i * 90, .07, .04, 'square', i * .05); discover('kodama'); inscribe('Un kodama sacude la cabeza… y se esconde entre las cañas.'); } }; } return null; }
+  function finHot(wx, wy) {
+    const fr = room('finanzas'); if (!fr || fr.locked) return null;
+    const n = P(9.25, 1.55), d = P(6.55, 1.55), f = P(10.0, 2.75), c = P(10.02, .72), din = BK.dinero;
+    if (Math.abs(wx - n[0]) < 8 && wy > n[1] - 26 && wy < n[1] - 5) return { x: n[0], y: n[1] - 16, r: 10, act: () => { nekoT = 1; chime(7, .05); spawn(n[0], n[1] - 16, 14, { cols: ['#ffd45a', '#fff2a0'], v: 26, g: 30, l: 1.2 }); discover('neko'); inscribe('El maneki-neko te saluda con la pata. Adorno de la tesorería.'); } };
+    if (Math.abs(wx - d[0]) < 8 && wy > d[1] - 26 && wy < d[1] - 5) return { x: d[0], y: d[1] - 15, r: 10, act: () => { ring(d[0], d[1] - 10, '#ff8a6a', 18); chime(3, .05); discover('daruma'); inscribe(cobrosVistos > 0 ? 'El daruma tiene los dos ojos pintados: ha entrado un cobro mientras mirabas.' : 'El daruma espera con un ojo: el otro se pinta cuando entre un cobro.'); } };
+    if (Math.hypot((wx - f[0]) / 1.9, (wy - f[1]) * 1.3) < 15) return { x: f[0], y: f[1], r: 24, act: () => { gemFlash = 1; const k = din && din.tope_eur > 0 ? din.gasto_eur / din.tope_eur : 0; spawn(f[0], f[1] - 4, 18, { cols: ['#bfe6ff', '#ffffff', '#7af0b0'], dir: -1.57, spread: 1.2, v: 30, g: 50, l: 1.2, w: 10 }); ring(f[0], f[1], '#bfe6ff', 26); chime(5, .045); discover('fuente'); inscribe(din ? 'Hoy llevas ' + eur(din.gasto_eur) + ' de ' + eur(din.tope_eur) + ' (' + Math.round(k * 100) + ' %)' + (din.modo_ahorro ? ' · modo ahorro' : '') + '. Cada gema es un doceavo del tope.' : 'Sin datos de gasto todavía.'); } };
+    if (Math.abs(wx - c[0]) < 10 && wy > c[1] - 22 && wy < c[1] - 2) return { x: c[0], y: c[1] - 12, r: 12, act: () => { spawn(c[0], c[1] - 12, 14, { cols: ['#ffd45a', '#fff2a0'], v: 24, g: 26, l: 1.1 }); chime(2, .045); discover('cofre'); inscribe('Sin atribuir: ' + (din ? eur(din.sin_atribuir_eur) : '—') + '. Gasto de la plataforma que no es de ningún cubo: se muestra, no se esconde.'); } };
+    return null;
+  }
   function hotAt(wx, wy) {
+    { const fh = finHot(wx, wy); if (fh) return fh; }
     { const ko = kodamaAt(wx, wy); if (ko) return ko; }
     if (CRANE.on && Math.abs(wx - CRANE.x) < 14 && Math.abs(wy - (CRANE.y + EX)) < 10) return { x: CRANE.x, y: CRANE.y + EX, r: 14, act: onCrane };
     for (const f of FURIN) if (Math.abs(wx - f.x) < 7 && wy > f.y - 3 && wy < f.y + 22) return { x: f.x, y: f.y + 8, r: 12, act: () => onFurin(f) };
