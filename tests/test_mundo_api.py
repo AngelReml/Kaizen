@@ -567,3 +567,18 @@ def test_marca_trae_veredictos_y_directrices_solo_como_numeros(entorno):
     assert "SECRETO" not in json.dumps(j)
     ev = [e for e in j["recientes"] if e["tipo"] == "plataforma.verificacion.emitida"]
     assert ev and ev[-1]["veredicto"] == "NO_APTO" and "SECRETO" not in json.dumps(ev)
+
+
+def test_legal_trae_plazos_y_archivo_solo_como_numeros(entorno):
+    from datetime import datetime, timedelta, timezone
+    app, c, b = _montaje()
+    k = b.k; ahora = datetime.now(timezone.utc)
+    for i, (est, dias) in enumerate([("ASIGNADA", 5), ("REGISTRADA", 40), ("CUMPLIDA", -3), ("INCUMPLIDA", -10)]):
+        k.add(EMPRESA, "obligacion", f"o{i}", {"id": f"o{i}", "nombre": "SECRETO-NOMBRE", "area": "SECRETO-AREA", "tipo": "REGULATORIA", "estado": est,
+                                               "fecha_limite": (ahora + timedelta(days=dias, hours=1)).isoformat(), "evidencias": []})
+    k.add(EMPRESA, "evidencia", "e1", {"id": "e1", "nombre_fichero": "SECRETO.pdf"})
+    j = c.get(f"/api/mundo/estado?empresa={EMPRESA}").json()
+    lg = next(x for x in j["cubos"] if x["cubo"] == "legal")["legal"]
+    assert lg["obligaciones"]["ASIGNADA"] == 1 and lg["obligaciones"]["CUMPLIDA"] == 1 and lg["evidencias"] == 1
+    assert [p["dias"] for p in lg["plazos"]] == [-99, 5, 40]                      # la incumplida primero, luego por cercania; la cumplida no es un plazo
+    assert "SECRETO" not in json.dumps(j)

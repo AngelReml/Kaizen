@@ -82,6 +82,19 @@ def crear(datos: Path, mecha_s: int = 6, token: str | None = None):
             k.add(EMPRESA, "directriz", f"d{i}", {"id": f"d{i}", "estado": "ACTIVA"})
         return {"ok": True}
 
+    @app.post("/_e2e/legal")
+    async def e2e_legal(request: Request):
+        """Solo pruebas: obligaciones sinteticas de Legal (sin nombres ni fuentes reales)."""
+        from datetime import datetime, timedelta, timezone
+        d = await request.json()
+        ahora = datetime.now(timezone.utc)
+        for i, (estado, dias) in enumerate(d.get("obligaciones", [])):
+            k.add(EMPRESA, "obligacion", f"o{i}", {"id": f"o{i}", "nombre": f"obligacion {i}", "tipo": "OPERATIVA", "estado": estado,
+                                                   "fecha_limite": (ahora + timedelta(days=dias, hours=1)).isoformat(), "evidencias": []})
+        for i in range(int(d.get("evidencias", 0))):
+            k.add(EMPRESA, "evidencia", f"e{i}", {"id": f"e{i}"})
+        return {"ok": True}
+
     @app.post("/_e2e/bus")
     async def e2e_bus(request: Request):
         d = await request.json()

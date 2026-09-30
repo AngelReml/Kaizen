@@ -38,7 +38,7 @@ existen, todos los cubos salen `alta:false`. Campos:
   `alta`, `uid`/`role_id`/`ts_alta` (null si no hay alta), `salud`
   `{estado, detalle, eventos_24h}` (misma funcion que Colmena; si no se puede
   medir, `SIN DATOS`), `ultimo` `{texto, ts}` del chat individual o null.
-  `rendimiento` (ver «Rendimiento y grados»). Solo el cubo `comercial` trae ademas `pipeline`: `{leads:{COLD, CONTACTADO, CONVERSACION, COMPROMETIDO, PEDIDO, CUSTOMER, DORMIDO, DESCARTADO, EXCLUIDO}, pedidos:{atribuidos, pendientes_validacion}}`. Solo numeros: ningun dato de personas. Solo el cubo `marketing` trae `marketing`: `{campanas:{BORRADOR..CANCELADA}, contenidos:{GENERADO, VALIDADO_POR_BRAND, RECHAZADO, APROBADO, LANZADO, ARCHIVADO}, gasto:[{estado, pct}] (activas y pausadas, hasta 8; pct = gasto reportado / presupuesto), kill_switch_pct}`: sin nombres de campana ni textos. Solo el cubo `brand` trae `marca`: `{veredictos:{APTO, AMBIGUO, NO_APTO} (eventos plataforma.verificacion.emitida de 30 dias), directrices:{estado: n}, ventana_dias}`: ni reglas ni textos. El evento `plataforma.verificacion.emitida` lleva ademas `veredicto` (solo la etiqueta).
+  `rendimiento` (ver «Rendimiento y grados»). Solo el cubo `comercial` trae ademas `pipeline`: `{leads:{COLD, CONTACTADO, CONVERSACION, COMPROMETIDO, PEDIDO, CUSTOMER, DORMIDO, DESCARTADO, EXCLUIDO}, pedidos:{atribuidos, pendientes_validacion}}`. Solo numeros: ningun dato de personas. Solo el cubo `marketing` trae `marketing`: `{campanas:{BORRADOR..CANCELADA}, contenidos:{GENERADO, VALIDADO_POR_BRAND, RECHAZADO, APROBADO, LANZADO, ARCHIVADO}, gasto:[{estado, pct}] (activas y pausadas, hasta 8; pct = gasto reportado / presupuesto), kill_switch_pct}`: sin nombres de campana ni textos. Solo el cubo `brand` trae `marca`: `{veredictos:{APTO, AMBIGUO, NO_APTO} (eventos plataforma.verificacion.emitida de 30 dias), directrices:{estado: n}, ventana_dias}`: ni reglas ni textos. El evento `plataforma.verificacion.emitida` lleva ademas `veredicto` (solo la etiqueta). Solo el cubo `legal` trae `legal`: `{obligaciones:{estado: n}, plazos:[{dias, estado, tipo}] (abiertas por cercania e incumplidas, hasta 8; dias = dias hasta la fecha limite, -99 si esta incumplida), evidencias: n}`: ni nombres, ni areas, ni fuentes, ni ficheros.
 - `dinero`: misma funcion que `/api/dinero/{empresa}` (`frase`, `gasto_eur`,
   `tope_eur`, `sin_atribuir_eur`, `modo_ahorro`).
 - `tarjetas`: `pendientes` (numero; cola en PENDIENTE) y `mechas[]`: las
@@ -230,4 +230,13 @@ Nada está puesto porque sí; cada objeto dice algo verdadero o es un adorno dec
 | Barandilla baja hacia Operaciones | adorno | — |
 
 Los veredictos cuentan solo evaluaciones reales: el servicio emite el evento al evaluar, no cuando responde desde su memoria.
+
+## Legal (pabellón): el calendario de plazos
+
+| Objeto | Qué muestra | Origen |
+|---|---|---|
+| Varillas de incienso (hasta 8) | una por obligación abierta: se consume hacia su fecha límite (más larga = más margen); la etiqueta es verde con margen, ámbar si vence este mes, naranja esta semana y roja hoy, mañana o vencida; con zoom, los días. La incumplida yace partida | `legal.plazos` |
+| Balanza | se inclina hacia lo cumplido (jade: cumplidas, auditadas, cerradas) o hacia lo incumplido (rojo: incumplidas y en acción correctiva) | `legal.obligaciones` |
+| Archivador | un sello rojo por evidencia archivada (hasta 12 cajones) | `legal.evidencias` |
+| Mazo | cae con cada evento real de Legal; las alertas de plazo y las incumplidas hacen parpadear las varillas urgentes | eventos `cumplimiento.*` |
 

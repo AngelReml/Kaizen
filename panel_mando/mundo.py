@@ -298,6 +298,31 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             pass
         return {"veredictos": ver, "directrices": directrices, "ventana_dias": REND.VENTANA_DIAS}
 
+    def _legal(empresa: str) -> dict:
+        """Calendario de obligaciones del cubo Legal, solo numeros: cuenta por estado, los dias que quedan de las
+        abiertas mas proximas (hasta 8; sin nombres, areas ni fuentes) y el total de evidencias archivadas."""
+        est = ("REGISTRADA", "ASIGNADA", "EN_CURSO", "CUMPLIDA", "AUDITADA", "INCUMPLIDA", "ACCION_CORRECTIVA", "CERRADA", "RECHAZADA")
+        cuenta = {e: 0 for e in est}
+        plazos = []
+        ahora = datetime.now(timezone.utc)
+        cerradas = ("CUMPLIDA", "AUDITADA", "CERRADA", "RECHAZADA", "INCUMPLIDA")
+        try:
+            for o in st.k.all(empresa, "obligacion").values():
+                e = o.get("estado")
+                if e in cuenta:
+                    cuenta[e] += 1
+                if e not in cerradas:
+                    lim = REND._ts(o.get("fecha_limite"))
+                    if lim is not None:
+                        plazos.append({"dias": max(-99, min(999, (lim - ahora).days)), "estado": e, "tipo": o.get("tipo")})
+                elif e == "INCUMPLIDA":
+                    plazos.append({"dias": -99, "estado": e, "tipo": o.get("tipo")})
+            evidencias = len(st.k.all(empresa, "evidencia"))
+        except Exception:                                    # noqa: BLE001
+            evidencias = 0
+        plazos.sort(key=lambda p: p["dias"])
+        return {"obligaciones": cuenta, "plazos": plazos[:8], "evidencias": evidencias}
+
     def _marketing(empresa: str) -> dict:
         """Campanas y contenidos del cubo Marketing, solo numeros (sin nombres ni textos): cuenta por estado,
         y por campana el porcentaje de presupuesto gastado (tope 90 % = kill-switch). Como mucho 8 campanas."""
@@ -408,6 +433,8 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                     c["marketing"] = _marketing(empresa)
                 elif c["cubo"] == "brand":
                     c["marca"] = _marca(empresa)
+                elif c["cubo"] == "legal":
+                    c["legal"] = _legal(empresa)
             rend = _rendimiento(empresa, conn, cubos)
             for c in cubos:
                 c["rendimiento"] = rend.get(c["cubo"])

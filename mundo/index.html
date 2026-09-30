@@ -244,7 +244,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       <button class="link stop" id="b-stop" type="button" title="Mantén pulsado 2 segundos">PARAR TODO</button><span class="sep">·</span>
       <button class="link" id="b-q" type="button">Nitidez</button><span class="sep">·</span>
       <button class="link" id="b-snd" type="button">Sonido</button><span class="sep">·</span>
-      <span class="link" id="b-rin" style="cursor:default">✦ 0/42</span><span class="sep">·</span>
+      <span class="link" id="b-rin" style="cursor:default">✦ 0/46</span><span class="sep">·</span>
       <button class="link" id="b-mode" type="button">Yoru</button><span class="sep">·</span>
       <button class="link" id="b-zout" type="button" aria-label="Alejar">−</button>
       <button class="link" id="b-home" type="button" aria-label="Volver a la vista general">⌂</button>
@@ -1454,7 +1454,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     const from = a ? { pos: a.pos.slice(), cur: a.cur } : { pos: [18.4, 6.0], cur: 'pasillo' };
     if (reduce || DROPS.length >= 40) sealed(); else DROPS.push({ pos: from.pos, path: route({ cur: from.cur }, REG_TARGET, 'registro'), trail: [] });   // en una ráfaga no se dibujan mil gotas: se sellan igual
     if (ev.cubo === 'finanzas') abacusT = 1;
-    comercialEv(ev); marketingEv(ev); brandEv(ev);
+    comercialEv(ev); marketingEv(ev); brandEv(ev); legalEv(ev);
     if (/^(finanzas\.cobro\.registrado|comercial\.pedido\.atribuido)/.test(ev.tipo)) { if (/^finanzas\./.test(ev.tipo)) cobrosVistos++; celebrate(); }
   }
 
@@ -1866,6 +1866,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     roomDecor(r);
     if (r.tpl === 'comercial') comercialDecor(r);
     if (r.tpl === 'marketing') marketingDecor(r);
+    if (r.tpl === 'legal') legalDecor(r);
     if (r.tpl === 'brand') { r.w_ = r.x1 - r.x0; brandDecor(r); }
     const x0 = r.x0, y0 = r.y0, x1 = r.x1, w = x1 - x0, d = r.y1 - r.y0, tpl = ({ ops: 'taller', comercial: 'tienda', customer_success: 'archivo' })[r.tpl] || r.tpl;
     const bench = Math.min(3.4, w - 1.0);
@@ -1950,8 +1951,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
         boxR(g, mx, y0 + .9, 1.6, .8, 9, R.wood);
         const p = P(mx + .5, y0 + 1.2);
         rect(g, R.paper, p[0] - 6, p[1] - 11, 8, 3); rect(g, R.red[2], p[0] + 4, p[1] - 12, 4, 3); rect(g, R.wood[1], p[0] + 5, p[1] - 15, 2, 3);
-        const q = P(mx + 1.2, y0 + 1.1);
-        line(g, R.gold[2], q[0], q[1] - 21, q[0], q[1] - 11); line(g, R.gold[2], q[0] - 5, q[1] - 21, q[0] + 5, q[1] - 21); rect(g, R.gold[1], q[0] - 6, q[1] - 20, 3, 1); rect(g, R.gold[1], q[0] + 4, q[1] - 20, 3, 1);
+
       });
     } else if (tpl === 'qa') {
       // banco de inspección con lupa y un tablero de comprobación (verde y rojo)
@@ -2397,6 +2397,7 @@ void main(){
     LOTS.forEach(l => { const st = LS[l.id]; if (st.state === 'built') return; const c = P((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2 + 1.2); const nm = st.cubo && CUBES[st.cubo] ? CUBES[st.cubo].nombre : ''; text(st.state === 'obra' ? 'EN OBRA · ' + Math.round(st.p * 100) + ' %' : nm ? 'PABELLÓN · ' + nm.toUpperCase() + ' · SIN DAR DE ALTA' : 'SOLAR LIBRE', c[0], c[1], lab, '600', 'Inter, sans-serif', dk > .45 ? '#bfe3ff' : '#3f6f9c'); });
     if ('letterSpacing' in dc) dc.letterSpacing = '0px';
     const small = Math.max(10, Math.min(14, k / dpr * 4.4));
+    { const lr = room('legal'); if (lr && !lr.locked && k / dpr >= 2.6) lgPlazos().forEach((p_, i) => { const q = P(...stickAt(lr, i)); if (p_.estado !== 'INCUMPLIDA') text(String(p_.dias), q[0], q[1] - stickH(p_) - 18, small, '600', '"JetBrains Mono", monospace'); }); }
     { const br = room('brand'); if (br && !br.locked && k / dpr >= 2.6) VERD.forEach((v, i) => { const n = vN(v[0]), q = P(...lampAt(br, i)); if (n) text(String(n), q[0], q[1] - 42, small, '600', '"JetBrains Mono", monospace'); }); }
     { const mr = room('marketing'); if (mr && !mr.locked && k / dpr >= 2.6) mkKites().forEach((kk, i) => { const kt = kiteAt(mr, i, T); text(Math.round(kk.pct * 100) + ' %', kt.x, kt.paused ? kt.y - 12 : kt.y - 14, small, '600', '"JetBrains Mono", monospace'); }); }
     { const cr = room('comercial'); if (cr && !cr.locked && k / dpr >= 2.6) { comSt(cr).forEach(st => { const n = comN(st.k), p = P(st.x, st.y); if (n) text(String(n), p[0], p[1] - 36, small, '600', '"JetBrains Mono", monospace'); });
@@ -2510,7 +2511,7 @@ void main(){
     if (!paused) { if (ev.canal === 'chat') onChat(ev); else onEvento(ev); }
     if (ev.tipo && /^plataforma\.aprobacion\./.test(ev.tipo)) { pollEstado(false); if (!drawer.hidden) renderDrawer(); }
     if (tab === 'reg' && ev.canal === 'rue') renderTab();
-    if (/^plataforma\./.test(ev.tipo) || /^kaizen\.colmena\./.test(ev.tipo) || /^comercial\./.test(ev.tipo) || /^marketing\./.test(ev.tipo)) scheduleRefresh();      // alta, parada, gasto, aprobaciones: cambian la foto; el resto lo recoge el sondeo de 12 s
+    if (/^plataforma\./.test(ev.tipo) || /^kaizen\.colmena\./.test(ev.tipo) || /^comercial\./.test(ev.tipo) || /^marketing\./.test(ev.tipo) || /^cumplimiento\./.test(ev.tipo)) scheduleRefresh();      // alta, parada, gasto, aprobaciones: cambian la foto; el resto lo recoge el sondeo de 12 s
   }
   // se vuelve a pedir la foto tras los eventos que la cambian, agrupando ráfagas
   let refreshT = null;
@@ -2668,7 +2669,7 @@ void main(){
   const chime = (i, vol, when) => { tone(noteF(i), 1.5, vol || .05, 'sine', when); tone(noteF(i) * 2.005, .7, (vol || .05) * .35, 'sine', when); };
   const arpeggio = (n, base, vol) => { for (let k = 0; k < n; k++) chime(base + k * 2, vol || .04, k * .09); };
   const thock = () => { tone(95, .2, .11, 'triangle'); tone(190, .1, .05, 'square'); };
-  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', embudo: 'una estación del embudo', cesta: 'la cesta de los dormidos', papelera: 'la papelera', sellado: 'el sello de no contactar', campanilla: 'la campanilla', linterna_marca: 'una linterna de veredicto', enso: 'el ensō', libro_estilo: 'el libro de estilo', cometa: 'una cometa de campaña', carrete: 'un carrete', bandeja: 'la mesa de tinta', sello_marca: 'el sello de Marca', gong: 'el gong', caja: 'la caja de pedidos', pilas: 'las pilas de ROI', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
+  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', embudo: 'una estación del embudo', cesta: 'la cesta de los dormidos', papelera: 'la papelera', sellado: 'el sello de no contactar', campanilla: 'la campanilla', incienso: 'una varilla de plazo', balanza_legal: 'la balanza de Legal', archivo: 'el archivador', mazo: 'el mazo', linterna_marca: 'una linterna de veredicto', enso: 'el ensō', libro_estilo: 'el libro de estilo', cometa: 'una cometa de campaña', carrete: 'un carrete', bandeja: 'la mesa de tinta', sello_marca: 'el sello de Marca', gong: 'el gong', caja: 'la caja de pedidos', pilas: 'las pilas de ROI', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
   const FOUND = new Set(); try { JSON.parse(localStorage.getItem('kaizen-rincones') || '[]').forEach(k => { if (RINCONES[k]) FOUND.add(k); }); } catch (e) {}
   function paintBadges() { const b = document.getElementById('b-rin'); if (b) { b.textContent = '✦ ' + FOUND.size + '/' + Object.keys(RINCONES).length; b.title = 'Rincones del jardín que has descubierto (solo adorno: no cuenta nada de tu empresa)'; } const s = document.getElementById('b-snd'); if (s) s.textContent = SND.on ? 'Sonido' : 'Sin sonido'; }
   function discover(k) { if (FOUND.has(k) || !RINCONES[k]) return; FOUND.add(k); try { localStorage.setItem('kaizen-rincones', JSON.stringify([...FOUND])); } catch (e) {} paintBadges(); inscribe('✦ Rincón descubierto: ' + RINCONES[k] + ' · ' + FOUND.size + '/' + Object.keys(RINCONES).length); arpeggio(3, 4, .05); }
@@ -2693,6 +2694,7 @@ void main(){
     AG.forEach(a => { if (a.hop > 0) a.hop = Math.max(0, a.hop - dt * 2.2); });
     if (monteGlow > 0) monteGlow = Math.max(0, monteGlow - dt * .4);
     Object.keys(brFlash).forEach(k => { if (brFlash[k] > 0) brFlash[k] = Math.max(0, brFlash[k] - dt * 1.1); });
+    if (gavelT > 0) gavelT = Math.max(0, gavelT - dt * 1.6); if (plazoFlash > 0) plazoFlash = Math.max(0, plazoFlash - dt * .5);
     if (gongT > 0) gongT = Math.max(0, gongT - dt * .6); if (hankoT > 0) hankoT = Math.max(0, hankoT - dt * 1.8);
     if (bellC > 0) bellC = Math.max(0, bellC - dt * .7); if (cajaT > 0) cajaT = Math.max(0, cajaT - dt * 1.6);
     if (abacusT > 0) abacusT = Math.max(0, abacusT - dt * 1.4); if (nekoT > 0) nekoT = Math.max(0, nekoT - dt * .5); if (gemFlash > 0) gemFlash = Math.max(0, gemFlash - dt * 1.2);
@@ -2969,6 +2971,56 @@ void main(){
     { const p = P(br.x0 + 3.3, br.y0 + 1.7); if (Math.abs(wx - p[0]) < 8 && wy > p[1] - 22 && wy < p[1] - 6) return { x: p[0], y: p[1] - 12, r: 9, act: () => { chime(2, .04); spawn(p[0], p[1] - 14, 10, { cols: ['#fff2c0', '#ffffff'], v: 18, g: 6, l: 1 }); discover('libro_estilo'); const n = d && d.directrices ? (d.directrices.ACTIVA || 0) : 0; inscribe('Libro de estilo: ' + n + (n === 1 ? ' directriz activa' : ' directrices activas') + ', un marcador por cada una. Las reglas no se muestran aquí.'); } }; }
     return null;
   }
+  // ============================================================ Legal: el calendario de plazos
+  // Una varilla de incienso por obligación abierta (hasta 8): se consume hacia su fecha límite y su etiqueta pasa de verde a ámbar, naranja y roja; la vencida yace
+  // partida. La balanza se inclina hacia lo cumplido o lo incumplido; el archivador tiene un sello por cada evidencia. Solo numeros: sin nombres, areas ni fuentes.
+  let gavelT = 0, plazoFlash = 0;
+  const lgData = () => (CUBES.legal || {}).legal || null;
+  const lgCnt = ks => { const d = lgData(); return d && d.obligaciones ? ks.reduce((a, k) => a + (d.obligaciones[k] || 0), 0) : 0; };
+  const lgPlazos = () => { const d = lgData(); return d && d.plazos ? d.plazos.slice(0, 8) : []; };
+  const urg = d => d <= 1 ? ['#ff5a4a', 'vence hoy, mañana o ya venció'] : d <= 7 ? ['#ff9a3a', 'vence esta semana'] : d <= 30 ? ['#ffd45a', 'vence este mes'] : ['#7af0a0', 'con margen'];
+  const stickAt = (r, i) => [r.x0 + 1.25 + i * .5, r.y0 + 4.15];
+  const stickH = p_ => 12 + Math.round(Math.min(60, Math.max(0, p_.dias)) / 60 * 22);
+  function legalDecor(r) {
+    const sb = P(r.x0 + 3.0, r.y0 + 4.15), tb = P(r.x1 - .8, r.y0 + 3), sc = P(r.x0 + 4.6 + 1.2, r.y0 + 1.1), gv = P(r.x0 + 4.9, r.y0 + 1.6);
+    addStatic(r.x0 + 3.0 + r.y0 + 4.15 + .1, [sb[0] - 50, sb[1] - 50, sb[0] + 50, sb[1] + 12], g => { boxR(g, r.x0 + 1.0, r.y0 + 3.9, 4.0, .5, 4, R.lacq); });
+    addStatic(r.x1 - .8 + r.y0 + 3 + .1, [tb[0] - 24, tb[1] - 50, tb[0] + 24, tb[1] + 10], g => { boxR(g, r.x1 - 1.0, r.y0 + 2.2, .6, 1.6, 26, R.wood.slice(0, 5).map((c, j) => j ? c : R.wood[0])); });
+    add(r.x0 + 3.0 + r.y0 + 4.3, (g, T) => {
+      const pz = lgPlazos();
+      pz.forEach((p_, i) => {
+        const q = P(...stickAt(r, i)), x = Math.round(q[0]), y = Math.round(q[1]) - 4, u = urg(p_.dias);
+        if (p_.estado === 'INCUMPLIDA') { line(g, R.ink, x - 3, y - 1, x + 2, y - 2, 1); line(g, R.ink, x + 2, y - 2, x + 5, y, 1); rect(g, '#ff5a4a', x + 5, y - 1, 1, 1); return; }
+        const h = stickH(p_), ft = plazoFlash > 0 && p_.dias <= 7 ? 1 : 0;
+        rect(g, R.wood[1], x - 1, y - h, 3, h); rect(g, R.wood[3], x - 1, y - h, 1, h); rect(g, u[0], x - 2, y - h - 2, 5, 3);
+        const glow = .55 + (reduce ? 0 : Math.sin(T * 3 + i) * .2) + ft * .4; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.min(1, glow); g.drawImage(glowOf(p_.dias <= 7 ? '#ff7a3a' : '#ffb060'), x - 8, y - h - 9, 16, 16); g.restore(); rect(g, '#ffe0b0', x, y - h - 3, 1, 1);
+        if (!reduce) for (let k = 0; k < 3; k++) { const t = (T * .35 + k * .33 + i * .17) % 1; g.globalAlpha = (1 - t) * .4; rect(g, '#e8e4ee', x + Math.sin(t * 7 + i + k) * 2, y - h - 3 - t * 16, 1, 1); } g.globalAlpha = 1;
+      });
+      // balanza: se inclina hacia lo cumplido (jade) o hacia lo incumplido (rojo)
+      const okN = lgCnt(['CUMPLIDA', 'AUDITADA', 'CERRADA']), malN = lgCnt(['INCUMPLIDA', 'ACCION_CORRECTIVA']), tilt = (okN + malN) ? (okN - malN) / (okN + malN) : 0, dy = Math.round(tilt * 4);
+      const cx = Math.round(sc[0]), cy = Math.round(sc[1]);
+      line(g, R.gold[2], cx, cy - 22, cx, cy - 10, 2); line(g, R.gold[2], cx - 7, cy - 22 + dy, cx + 7, cy - 22 - dy, 1); rect(g, R.gold[3], cx - 1, cy - 25, 3, 3);
+      [[cx - 7, cy - 22 + dy, okN, '#5fd8a0'], [cx + 7, cy - 22 - dy, malN, '#ff6a5a']].forEach(([px, py, n, col]) => { line(g, R.gold[1], px, py, px - 2, py + 5, 1); line(g, R.gold[1], px, py, px + 2, py + 5, 1); rect(g, R.gold[2], px - 3, py + 5, 7, 1); for (let k = 0; k < Math.min(n, 4); k++) rect(g, col, px - 2 + (k % 2) * 3, py + 3 - Math.floor(k / 2) * 2, 2, 2); });
+      // archivador: un sello por evidencia (hasta 12 cajones)
+      const ev = (lgData() || {}).evidencias || 0;
+      for (let i = 0; i < 12; i++) { const col = i % 3, row = Math.floor(i / 3), u = (col + .5) / 3, q = P(r.x1 - 1.0 + .6, r.y0 + 2.2 + u * 1.6), x = Math.round(q[0]), y = Math.round(q[1]) - 4 - row * 6 - 2; rect(g, R.wood[1], x - 2, y - 4, 5, 5); rect(g, R.wood[4], x - 2, y - 4, 5, 1); rect(g, R.gold[2], x, y - 2, 1, 1); if (i < ev) { rect(g, R.red[2], x - 1, y - 3, 3, 1); } }
+      // mazo: cae con cada hecho real de Legal
+      const gx = Math.round(gv[0]), gy = Math.round(gv[1]) - 9, sw = Math.round(Math.sin(Math.min(1, gavelT) * Math.PI) * 5);
+      rect(g, R.wood[1], gx - 3, gy, 7, 2); rect(g, R.wood[3], gx - 3, gy, 7, 1); line(g, R.wood[2], gx + 3, gy - 1, gx + 7, gy - 7 + sw, 1); rect(g, R.wood[0], gx + 5, gy - 9 + sw, 5, 3);
+    });
+  }
+  function legalEv(ev) {
+    if (ev.cubo !== 'legal') return; const lr = room('legal'); if (!lr || lr.locked) return;
+    gavelT = 1; thock(); if (/alerta\.plazo|incumplida/.test(ev.tipo || '')) plazoFlash = 1;
+    const p = P(lr.x0 + 4.9, lr.y0 + 1.6); spawn(p[0], p[1] - 10, 10, { cols: ['#ffe28a', '#ffffff'], v: 20, g: 14, l: 1 });
+  }
+  function lgHot(wx, wy) {
+    const lr = room('legal'); if (!lr || lr.locked) return null; const pz = lgPlazos();
+    for (let i = 0; i < pz.length; i++) { const q = P(...stickAt(lr, i)); if (Math.abs(wx - q[0]) < 5 && wy > q[1] - stickH(pz[i]) - 8 && wy < q[1] - 2) return { x: q[0], y: q[1] - 14, r: 8, act: () => { const p_ = pz[i]; chime(i + 2, .04); spawn(q[0], q[1] - 20, 8, { cols: ['#ffd09a', '#ffffff'], v: 14, g: -6, l: 1.1 }); discover('incienso'); inscribe(p_.estado === 'INCUMPLIDA' ? 'Una varilla partida: una obligación incumplida. Ya no se quema: hay que actuar.' : 'Una obligación ' + (p_.dias <= 0 ? 'que vence hoy' : 'a ' + p_.dias + (p_.dias === 1 ? ' día' : ' días')) + ' (' + urg(p_.dias)[1] + '). La varilla se consume hacia su fecha límite.'); } }; }
+    { const p = P(lr.x0 + 5.8, lr.y0 + 1.1); if (Math.abs(wx - p[0]) < 12 && wy > p[1] - 30 && wy < p[1] - 8) return { x: p[0], y: p[1] - 20, r: 12, act: () => { chime(6, .04); discover('balanza_legal'); inscribe('Balanza: ' + lgCnt(['CUMPLIDA', 'AUDITADA', 'CERRADA']) + ' cumplidas frente a ' + lgCnt(['INCUMPLIDA', 'ACCION_CORRECTIVA']) + ' incumplidas. Se inclina hacia donde pesa más.'); } }; }
+    { const p = P(lr.x1 - .8, lr.y0 + 3); if (Math.abs(wx - p[0]) < 12 && wy > p[1] - 38 && wy < p[1] - 2) return { x: p[0], y: p[1] - 18, r: 12, act: () => { chime(1, .04); discover('archivo'); inscribe('Archivador: ' + ((lgData() || {}).evidencias || 0) + ' evidencias guardadas; cada cajón con sello rojo es una.'); } }; }
+    { const p = P(lr.x0 + 4.9, lr.y0 + 1.6); if (Math.abs(wx - p[0]) < 9 && wy > p[1] - 22 && wy < p[1] - 4) return { x: p[0], y: p[1] - 12, r: 10, act: () => { gavelT = 1; thock(); discover('mazo'); inscribe('El mazo cae con cada hecho real de Legal.'); } }; }
+    return null;
+  }
   function finHot(wx, wy) {
     const fr = room('finanzas'); if (!fr || fr.locked) return null;
     const n = P(9.25, 1.55), d = P(6.55, 1.55), f = P(10.0, 2.75), c = P(10.02, .72), din = BK.dinero;
@@ -2979,7 +3031,7 @@ void main(){
     return null;
   }
   function hotAt(wx, wy) {
-    { const fh = finHot(wx, wy) || comHot(wx, wy) || mkHot(wx, wy) || brHot(wx, wy); if (fh) return fh; }
+    { const fh = finHot(wx, wy) || comHot(wx, wy) || mkHot(wx, wy) || brHot(wx, wy) || lgHot(wx, wy); if (fh) return fh; }
     { const ko = kodamaAt(wx, wy); if (ko) return ko; }
     if (CRANE.on && Math.abs(wx - CRANE.x) < 14 && Math.abs(wy - (CRANE.y + EX)) < 10) return { x: CRANE.x, y: CRANE.y + EX, r: 14, act: onCrane };
     for (const f of FURIN) if (Math.abs(wx - f.x) < 7 && wy > f.y - 3 && wy < f.y + 22) return { x: f.x, y: f.y + 8, r: 12, act: () => onFurin(f) };
