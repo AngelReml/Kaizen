@@ -4,7 +4,8 @@
 tenant sintético `laboratorio`) y recorre el juego con un navegador: arranque vacío, alta de
 directores, eventos de la bitácora y del bus, chat de la Colmena, texto hostil, ventanilla (SÍ
 mantenido, mecha, deshacer, NO), gasto y modo ahorro, PARAR TODO, sello íntegro y roto, caída y
-vuelta del backend, recarga y un cubo nuevo.
+vuelta del backend, recarga, un cubo nuevo y los «rincones» (cada clic de adorno hace algo sin tocar
+el estado de la empresa).
 
 `servidor_e2e.py` añade rutas `/_e2e/*` **solo en ese proceso de prueba** para provocar hechos por los
 caminos reales del backend. Nada de eso existe en el producto.
