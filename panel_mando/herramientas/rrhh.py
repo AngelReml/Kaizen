@@ -131,19 +131,24 @@ def _cubos_dados_de_alta(tenant: str) -> set[str]:
         conn.close()
 
 
+def mapa_desde(catalogo, dados_de_alta) -> dict:
+    """Funcion PURA del mapa: `catalogo` (cubos instalados) frente a los cubos con director
+    dado de alta. La usan tanto la herramienta de RRHH como el Mundo (panel_mando/mundo.py),
+    para que el juego cuente exactamente lo mismo que el cubo RRHH y no una copia."""
+    catalogo_set, alta = set(catalogo), set(dados_de_alta)
+    presentes = sorted(alta & catalogo_set)
+    faltantes = sorted(catalogo_set - alta)
+    fuera_de_catalogo = sorted(alta - catalogo_set)
+    cobertura = round(len(presentes) / len(catalogo_set), 3) if catalogo_set else 0.0
+    return {"catalogo": sorted(catalogo_set), "presentes": presentes, "faltantes": faltantes,
+            "fuera_de_catalogo": fuera_de_catalogo, "cobertura": cobertura}
+
+
 def _mapa_real(tenant: str) -> dict:
     """Mismo contrato que RRHHDepartment.mapa()/h.mapa_capacidades(): dict
     con catalogo/presentes/faltantes/fuera_de_catalogo/cobertura — pero con
     datos reales y persistentes en vez de un bus desechable vacio."""
-    catalogo = sorted(manifiestos_instalados())   # los 10 cubos reales en disco
-    dados_de_alta = _cubos_dados_de_alta(tenant)
-    catalogo_set = set(catalogo)
-    presentes = sorted(dados_de_alta & catalogo_set)
-    faltantes = sorted(catalogo_set - dados_de_alta)
-    fuera_de_catalogo = sorted(dados_de_alta - catalogo_set)
-    cobertura = round(len(presentes) / len(catalogo), 3) if catalogo else 0.0
-    return {"catalogo": catalogo, "presentes": presentes, "faltantes": faltantes,
-            "fuera_de_catalogo": fuera_de_catalogo, "cobertura": cobertura}
+    return mapa_desde(manifiestos_instalados(), _cubos_dados_de_alta(tenant))
 
 
 # ── LECTURA ──────────────────────────────────────────────────────────────
@@ -175,8 +180,8 @@ def _fn_rendimiento(*, k, tenant, bitacora=None, **kw) -> dict:
     }
 
 
-def _fn_propuestas(*, k, tenant, bitacora=None, **kw) -> dict:
-    mapa = _mapa_real(tenant)
+def propuestas_desde(mapa: dict) -> list[str]:
+    """Propuestas de RRHH a partir del mapa (funcion pura; ver mapa_desde)."""
     propuestas: list[str] = []
     if mapa["faltantes"]:
         siguiente = mapa["faltantes"][0]
@@ -192,7 +197,11 @@ def _fn_propuestas(*, k, tenant, bitacora=None, **kw) -> dict:
         "Sin datos de rendimiento observables fuera del proceso vivo del panel "
         "(ver herramienta 'rendimiento'): no se proponen acciones de rendimiento "
         "por falta de fuente persistente, no porque no haga falta revisarlo.")
-    return {"propuestas": propuestas}
+    return propuestas
+
+
+def _fn_propuestas(*, k, tenant, bitacora=None, **kw) -> dict:
+    return {"propuestas": propuestas_desde(_mapa_real(tenant))}
 
 
 def _fn_mapa_capacidades(*, k, tenant, bitacora=None, activos: str, **kw) -> dict:

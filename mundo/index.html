@@ -35,6 +35,8 @@ body { background: var(--bg); color: var(--text); font: 400 14px/1.55 var(--f-bo
 .stats { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-left: auto; align-items: baseline; }
 .stat small { display: block; font: 500 10.5px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .stat b { font: 500 15px var(--f-data); font-variant-numeric: tabular-nums; }
+.stat b.hot { color: var(--accent); }
+.stat select { font: 500 15px var(--f-data); background: transparent; color: var(--text); border: 0; border-bottom: 1px solid var(--border); padding: 0 2px; max-width: 160px; }
 .alive { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; }
 .alive i { width: 8px; height: 8px; border-radius: 50%; background: var(--bambu); display: inline-block; }
 .alive[data-s="off"] i { background: var(--muted); }
@@ -1134,6 +1136,16 @@ body.muda .side, body.muda .cmd, body.muda .stats { display: none !important; }
   function say(a, text, secs) { a.say = { text, t: secs }; }
   function sealed() { if (!reduce && darkness(hourOf()) > .85 && FWS.length < 3) launchShell(); flip = 1; stamp = .9; growQueue++; }
   const REG_TARGET = [13.1, 2.9];
+  const MEET = [[2.2, 3.7], [3.5, 3.8], [5.0, 3.7], [5.2, 2.4], [2.0, 1.5], [3.1, 1.4], [4.2, 1.4], [1.7, 2.5]];
+  // lo que un director dice en el chat de la Colmena: en su mesa si habla a solas contigo; en la Sala de Reunión si habla en grupo
+  function onChat(ev) {
+    const a = ev.cubo ? agent(ev.cubo) : null; if (!a || a.state === 'rest' || !/\.director$/.test(ev.tipo)) return;
+    a.last = ev.frase; a.tasks++;
+    if (/^colmena\.sala\./.test(ev.tipo) && a.cur !== 'reunion' && a.state !== 'walk') {
+      const spot = MEET[Math.floor(rnd() * MEET.length)];
+      go(a, spot, 'reunion', () => { a.state = 'stand'; a.dir = 'back'; a.timer = 14; a.returnTo = true; say(a, short(ev.frase, 80), 10); a.emote = { e: '…', t: 2 }; });
+    } else { say(a, short(ev.frase, 80), 10); a.emote = { e: '…', t: 2 }; }
+  }
   function onEvento(ev) {
     const a = ev.cubo ? agent(ev.cubo) : null;
     if (a && a.state !== 'rest') { say(a, short(ev.frase, 64), 6); a.emote = { e: '*', t: 1.2 }; a.last = ev.frase; a.tasks++; }
@@ -1415,7 +1427,7 @@ body.muda .side, body.muda .cmd, body.muda .stats { display: none !important; }
   // ============================================================ crecimiento
   // El edificio es el backend. Cada cubo instalado tiene su sala (en la casa o en un pabellón del jardín); la abre el alta de su director en la
   // Colmena; su salud la desgasta; los solares libres son sitio para cubos que aún no existen. Aquí no hay guion: todo entra por applyEstado().
-  const HS = [[9.85, 6], [9.85, 7.6], [9.85, 11.9], [9.3, 12.9], [9.3, 14.2]];   // del pasillo al jardín, por la sala de descanso
+  const HS = [[17.5, 6], [18.3, 6.3], [18.3, 13.3], [9.3, 13.3], [9.3, 14.2]];    // del pasillo al jardín del sur: por la entrada, rodeando la casa por el porche
   const EAST = [[17.5, 6], [18.7, 6], [21.6, 6]];                                    // del pasillo al camino del este, por la ventanilla
   const mkLot = (id, name, x0, y0, x1, y1, px, py, side, chain, path) => { const dx = px + 3.5; const o = side === 'n' ? [[dx, py - .55], [dx, py + .9]] : [[dx, py + 5.7], [dx, py + 4.2]]; return { id, name, x0, y0, x1, y1, px, py, dx, side, chain, outer: o[0], inner: o[1], path }; };
   const LOTS = [
@@ -2018,12 +2030,12 @@ void main(){
   }
   function feedEvent(ev, at) {
     const c = ev.cubo && CUBES[ev.cubo];
-    feedItems.unshift({ t: hhmm(at || ev.ts), who: c ? c.nombre : 'Kaizen', text: ev.frase, tipo: ev.tipo, tag: ev.canal === 'rue' ? 'sellado' : 'sustrato', dir: !ev.cubo });
+    feedItems.unshift({ t: hhmm(at || ev.ts), who: c ? c.nombre : ev.canal === 'chat' ? 'Colmena' : 'Kaizen', text: ev.frase, tipo: ev.tipo, tag: ev.canal === 'rue' ? 'sellado' : ev.canal === 'chat' ? 'colmena' : 'sustrato', dir: ev.canal === 'chat' ? /\.director$/.test(ev.tipo) : !ev.cubo });
     if (feedItems.length > 60) feedItems.pop(); if (tab === 'sala') renderFeedList();
   }
 
   // ---- conexión con el backend: mismo origen, misma sesión. Lo que se ve es lo que el backend dice; si no hay conexión, se dice.
-  const BK = { empresa: (new URLSearchParams(location.search).get('empresa') || ''), online: null, parado: false, dinero: null, sello: null, tenant: '', events: null, tarjetas: { pendientes: 0, mechas: [] }, cur: { rue: -1, bus: -1 }, es: null, retry: 0, seen: new Set(), empresas: [], loaded: false };
+  const BK = { empresa: (new URLSearchParams(location.search).get('empresa') || ''), online: null, parado: false, dinero: null, sello: null, tenant: '', events: null, tarjetas: { pendientes: 0, mechas: [] }, cur: { rue: -1, bus: -1, chat: -1 }, rrhh: null, es: null, retry: 0, seen: new Set(), empresas: [], loaded: false };
   const csrf = () => { const m = document.cookie.match(/(?:^|;\s*)kz_csrf=([^;]*)/); return m ? decodeURIComponent(m[1]) : ''; };
   async function getJSON(url) {
     const r = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
@@ -2053,17 +2065,22 @@ void main(){
     if (tab === 'caja') renderTab();
   }
   function topbar() {
-    document.getElementById('st-empresa').textContent = BK.empresa || '—';
-    document.getElementById('st-gasto').textContent = BK.dinero ? eur(BK.dinero.gasto_eur) : '—';
+    const se = document.getElementById('st-empresa');
+    if (BK.empresas.length > 1) { const sig = BK.empresas.join('|') + '#' + BK.empresa; if (se.dataset.sig !== sig) { se.dataset.sig = sig; se.innerHTML = '<select id="sel-emp" aria-label="Empresa">' + BK.empresas.map(x => '<option value="' + esc(x) + '"' + (x === BK.empresa ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select>'; document.getElementById('sel-emp').addEventListener('change', e => { location.search = '?empresa=' + encodeURIComponent(e.target.value); }); } }
+    else se.textContent = BK.empresa || '—';
+    { const g = document.getElementById('st-gasto'); g.textContent = BK.dinero ? eur(BK.dinero.gasto_eur) : '—'; g.classList.toggle('hot', !!(BK.dinero && BK.dinero.modo_ahorro)); }
     document.getElementById('st-tope').textContent = BK.dinero && BK.dinero.tope_eur ? eur(BK.dinero.tope_eur) : '—';
     document.getElementById('st-events').textContent = BK.events == null ? '—' : String(BK.events);
     document.getElementById('win-n').textContent = String((BK.tarjetas.pendientes || 0) + (BK.tarjetas.mechas || []).length);
   }
   function applyEstado(e, first) {
+    const prevAhorro = !!(BK.dinero && BK.dinero.modo_ahorro);
     BK.empresa = e.empresa; BK.empresas = e.empresas || []; BK.dinero = e.dinero || null; BK.sello = e.sello || null; BK.tenant = (e.tenant || {}).estado || '';
     BK.tarjetas = e.tarjetas || { pendientes: 0, mechas: [] };
+    if (BK.loaded && e.dinero && !!e.dinero.modo_ahorro !== prevAhorro) inscribe(e.dinero.modo_ahorro ? 'Modo ahorro: se llegó al tope de gasto del día.' : 'Fin del modo ahorro.');
     BK.events = e.sello ? e.sello.pasos : null;
-    if (first && e.cursores) { BK.cur.rue = e.cursores.rue; BK.cur.bus = e.cursores.bus; }
+    BK.rrhh = e.rrhh || null;
+    if (first && e.cursores) { BK.cur.rue = e.cursores.rue; BK.cur.bus = e.cursores.bus; BK.cur.chat = e.cursores.chat == null ? -1 : e.cursores.chat; }
     setParado(!!e.parado);
     (e.cubos || []).forEach(c => { CUBES[c.cubo] = c; });
     if (first) (e.recientes || []).forEach(ev => feedEvent(ev));
@@ -2079,19 +2096,20 @@ void main(){
   }
   function openStream() {
     if (BK.es) BK.es.close();
-    const u = '/api/mundo/rio?empresa=' + encodeURIComponent(BK.empresa) + '&desde_rue=' + BK.cur.rue + '&desde_bus=' + BK.cur.bus;
+    const u = '/api/mundo/rio?empresa=' + encodeURIComponent(BK.empresa) + '&desde_rue=' + BK.cur.rue + '&desde_bus=' + BK.cur.bus + '&desde_chat=' + BK.cur.chat;
     const es = new EventSource(u); BK.es = es;
     es.onopen = () => { BK.retry = 0; setOnline(true); };
     es.onmessage = m => { let ev; try { ev = JSON.parse(m.data); } catch (x) { return; } handleEvento(ev); };
     es.onerror = () => { es.close(); if (BK.es === es) BK.es = null; setOnline(false); setTimeout(openStream, Math.min(15000, 1000 * Math.pow(2, BK.retry++))); };
   }
   function handleEvento(ev) {
-    if (!ev || typeof ev.frase !== 'string' || (ev.canal !== 'rue' && ev.canal !== 'bus')) return;
+    if (!ev || typeof ev.frase !== 'string' || (ev.canal !== 'rue' && ev.canal !== 'bus' && ev.canal !== 'chat')) return;
     const k = ev.canal + ':' + ev.id; if (BK.seen.has(k)) return; BK.seen.add(k); if (BK.seen.size > 800) BK.seen.delete(BK.seen.values().next().value);
     if (ev.id > BK.cur[ev.canal]) BK.cur[ev.canal] = ev.id;
+    if (ev.canal === 'bus' && /colmena\.mensaje_registrado/.test(ev.tipo)) return;     // el mensaje ya llega por el canal del chat
     if (ev.canal === 'rue') { BK.events = (BK.events || 0) + 1; topbar(); }
     feedEvent(ev, ev.ts);
-    if (!paused) onEvento(ev);
+    if (!paused) { if (ev.canal === 'chat') onChat(ev); else onEvento(ev); }
     if (ev.tipo && /^plataforma\.aprobacion\./.test(ev.tipo)) { pollEstado(false); if (!drawer.hidden) renderDrawer(); }
     if (tab === 'reg' && ev.canal === 'rue') renderTab();
     scheduleRefresh();
@@ -2101,9 +2119,16 @@ void main(){
   function scheduleRefresh() { if (refreshT) return; refreshT = setTimeout(() => { refreshT = null; pollEstado(false); }, 1200); }
 
   const body = document.getElementById('tabbody');
-  const stateWord = a => BK.parado ? 'parado por orden tuya' : a.state === 'walk' ? 'en camino' : a.state === 'sit' ? 'ejecutando' : 'vigila';
+  const stateWord = a => BK.parado ? 'parado por orden tuya' : BK.dinero && BK.dinero.modo_ahorro ? 'en modo ahorro: se llegó al tope del día' : a.state === 'walk' ? 'en camino' : a.state === 'sit' ? 'ejecutando' : 'vigila';
   const saludDot = st => st === 'OK' ? 'ok' : st === 'DEGRADADO' ? 'warn' : st === 'ERROR' ? 'bad' : '';
   const cubeList = () => Object.values(CUBES).sort((a, b) => (CUBE_ORDER.indexOf(a.cubo) + 100 * (CUBE_ORDER.indexOf(a.cubo) < 0)) - (CUBE_ORDER.indexOf(b.cubo) + 100 * (CUBE_ORDER.indexOf(b.cubo) < 0)));
+  // RRHH (el cubo real): qué directores hay y cuáles faltan; dar de alta a los que faltan es lo que hace abrir el chat de la Colmena
+  async function darDeAlta() {
+    try { await getJSON('/api/colmena/agentes?empresa=' + encodeURIComponent(BK.empresa)); inscribe('Directores dados de alta. Llegan al edificio.'); } catch (e) { inscribe('No se pudo dar de alta a los directores.'); }
+    pollEstado(false);
+  }
+  const rrhhBlock = () => { const r = BK.rrhh; if (!r) return ''; const m = r.mapa; return '<div class="box" style="margin-bottom:14px"><h3><span>RRHH</span><span class="mono">' + Math.round(m.cobertura * 100) + ' %</span></h3><div style="font-size:13px">' + esc((r.propuestas || [])[0] || '') + '</div>' + (m.faltantes.length ? '<div><button class="link" type="button" id="alta-btn">Dar de alta a los directores</button></div>' : '') + '</div>'; };
+  function wireAlta(root) { const b = (root || document).querySelector('#alta-btn'); if (b) b.addEventListener('click', darDeAlta); }
   function siteCentre(cubo) { const r = room(cubo); if (r) return [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2]; const l = lotForCubo(cubo); return l ? [l.px + 3.5, l.py + 2.5] : null; }
   function renderTab() {
     if (tab === 'sala') {
@@ -2112,8 +2137,8 @@ void main(){
       renderFeedList();
     } else if (tab === 'cubos') {
       const L = cubeList(), alta = L.filter(c => c.alta).length;
-      body.innerHTML = '<h3 class="h">Cubos</h3><div class="sub">' + alta + ' de ' + L.length + ' con director dado de alta</div><ul class="feed">' + (L.map(c => '<li><span class="who"><span class="dot ' + (c.alta ? saludDot(c.salud && c.salud.estado) : '') + '"></span>' + esc(c.nombre) + '</span> ' + (c.alta ? esc((c.salud && c.salud.estado) || 'SIN DATOS') + ' · ' + esc(c.salud && c.salud.detalle || '') : 'sin director dado de alta') + '<div class="meta">autonomía ' + esc(c.autonomia) + '<button class="link" type="button" style="margin-left:10px" data-look="' + esc(c.cubo) + '">Verlo</button></div></li>').join('') || '<li class="empty">Sin datos todavía.</li>') + '</ul>';
-      body.querySelectorAll('[data-look]').forEach(b => b.addEventListener('click', () => { const p = siteCentre(b.dataset.look); if (p) camGoto(P(p[0], p[1]), 2.6); }));
+      body.innerHTML = '<h3 class="h">Cubos</h3><div class="sub">' + alta + ' de ' + L.length + ' con director dado de alta</div>' + rrhhBlock() + '<ul class="feed">' + (L.map(c => '<li><span class="who"><span class="dot ' + (c.alta ? saludDot(c.salud && c.salud.estado) : '') + '"></span>' + esc(c.nombre) + '</span> ' + (c.alta ? esc((c.salud && c.salud.estado) || 'SIN DATOS') + ' · ' + esc(c.salud && c.salud.detalle || '') : 'sin director dado de alta') + '<div class="meta">autonomía ' + esc(c.autonomia) + '<button class="link" type="button" style="margin-left:10px" data-look="' + esc(c.cubo) + '">Verlo</button></div></li>').join('') || '<li class="empty">Sin datos todavía.</li>') + '</ul>';
+      body.querySelectorAll('[data-look]').forEach(b => b.addEventListener('click', () => { const p = siteCentre(b.dataset.look); if (p) camGoto(P(p[0], p[1]), 2.6); })); wireAlta(body);
     } else if (tab === 'obras') {
       const L = cubeList(), houses = L.filter(c => ROOMS.some(r => r.cubo === c.cubo && !r.annex)), annexes = L.filter(c => !houses.includes(c));
       body.innerHTML = '<h3 class="h">Edificio</h3><div class="sub">Crece con los cubos del backend</div><dl class="kv"><dt>Casa</dt><dd>' + houses.filter(c => c.alta).length + ' de ' + houses.length + ' salas abiertas</dd><dt>Pabellones</dt><dd>' + annexes.filter(c => LS[(lotForCubo(c.cubo) || {}).id] && LS[lotForCubo(c.cubo).id].state === 'built').length + ' de ' + annexes.length + ' construidos</dd><dt>Solares libres</dt><dd>' + LOTS.filter(l => LS[l.id].state === 'free' && !LS[l.id].cubo).length + ', con camino y cuerda puestos</dd><dt>Directores</dt><dd>' + AG.length + '</dd></dl><ul class="feed" style="margin-top:14px">' + LOTS.map(l => { const st = LS[l.id], c = st.cubo && CUBES[st.cubo]; return '<li><span class="who">' + esc(l.name) + '</span> ' + (st.state === 'built' ? esc(c ? c.nombre : '') : st.state === 'obra' ? 'en obra, ' + Math.round(st.p * 100) + ' %' : c ? 'reservado para ' + esc(c.nombre) + ', sin director dado de alta' : 'libre') + '<div class="meta"><button class="link" type="button" data-lot="' + esc(l.id) + '">Verlo</button></div></li>'; }).join('') + '</ul><p class="note" style="margin-top:10px">Un cubo nuevo en el catálogo pide su sitio; cuando su director se da de alta, se levanta su sala. Los solares libres esperan.</p>';
@@ -2137,7 +2162,7 @@ void main(){
       const a = agent(id), c = CUBES[id] || {}, sl = c.salud || {};
       prof.innerHTML = '<div class="profile"><div class="pf-top"><div class="portrait"><canvas width="18" height="30" id="pf-c"></canvas></div><div><h2 class="h">' + esc(a.name) + '</h2><div class="sub" style="margin:0">Director · uid ' + esc(a.uid || '—') + '</div><div class="state">' + esc(stateWord(a)) + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div>' +
         '<div class="box"><h3><span>Misión</span></h3><div style="font-size:13px">' + esc(c.mision || '') + '</div></div>' +
-        '<dl class="kv"><dt>Salud</dt><dd><span class="dot ' + saludDot(sl.estado) + '"></span>' + esc(sl.estado || 'SIN DATOS') + (sl.detalle ? ' · ' + esc(sl.detalle) : '') + '</dd><dt>Autonomía</dt><dd>' + esc(c.autonomia || '—') + '</dd><dt>Eventos 24 h</dt><dd class="mono">' + esc(sl.eventos_24h == null ? '—' : sl.eventos_24h) + '</dd>' + ((c.irreversibles || []).length ? '<dt>Puede pedir</dt><dd>' + esc(c.irreversibles.join(', ')) + '</dd>' : '') + '</dl>' +
+        '<dl class="kv"><dt>Salud</dt><dd><span class="dot ' + saludDot(sl.estado) + '"></span>' + esc(sl.estado || 'SIN DATOS') + (sl.detalle ? ' · ' + esc(sl.detalle) : '') + '</dd><dt>Autonomía</dt><dd>' + esc(c.autonomia || '—') + '</dd>' + (a.cubo === 'rrhh' && BK.rrhh ? '<dt>Cobertura</dt><dd>' + Math.round(BK.rrhh.mapa.cobertura * 100) + ' % de los cubos con director' + (BK.rrhh.mapa.faltantes.length ? ' · faltan ' + esc(BK.rrhh.mapa.faltantes.join(', ')) : '') + '</dd>' : '') + '<dt>Eventos 24 h</dt><dd class="mono">' + esc(sl.eventos_24h == null ? '—' : sl.eventos_24h) + '</dd>' + ((c.irreversibles || []).length ? '<dt>Puede pedir</dt><dd>' + esc(c.irreversibles.join(', ')) + '</dd>' : '') + '</dl>' +
         '<div class="box"><h3><span>Último hecho</span></h3><div style="font-size:13px">' + esc(a.last || (c.ultimo && c.ultimo.texto) || 'Nada desde que abriste esta ventana.') + '</div></div>' +
         '<div class="acts"><button class="link" id="pf-chat" type="button">Hablar con el director</button><button class="link" id="pf-look" type="button">Seguir con la cámara</button></div></div>';
       const pcv = document.getElementById('pf-c'); pcv.width = 18 * S; pcv.height = 30 * S; const pc = pcv.getContext('2d'); pc.imageSmoothingEnabled = false; pc.drawImage(charSprite(a.id, 'stand', 0), 0, 0, 18 * S, 30 * S);
@@ -2145,13 +2170,14 @@ void main(){
       document.getElementById('pf-look').addEventListener('click', () => { follow = follow === a.id ? null : a.id; inscribe(follow ? 'La cámara sigue a ' + a.name + '.' : 'La cámara vuelve a ser tuya.'); });
     } else if (kind === 'lot') {
       const l = lotOf(id), st = LS[id], c = st.cubo && CUBES[st.cubo];
-      prof.innerHTML = '<div class="profile"><div class="pf-top" style="grid-template-columns:minmax(0,1fr) auto"><div><h2 class="h">' + esc(l.name) + '</h2><div class="sub" style="margin:0">' + (st.state === 'obra' ? 'En obra · ' + Math.round(st.p * 100) + ' %' : c ? 'Reservado para ' + esc(c.nombre) : 'Solar libre') + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div><p style="margin:0;font-size:13px">' + (c ? 'El cubo ya está en el catálogo pero su director no está dado de alta. Cuando lo esté, aquí se levanta su pabellón.' : 'Aquí puede crecer KAIZEN: tiene camino hasta la casa y sitio para un pabellón de 7 × 5 esteras. Se ocupa cuando entra un cubo nuevo en el catálogo.') + '</p></div>';
+      prof.innerHTML = '<div class="profile"><div class="pf-top" style="grid-template-columns:minmax(0,1fr) auto"><div><h2 class="h">' + esc(l.name) + '</h2><div class="sub" style="margin:0">' + (st.state === 'obra' ? 'En obra · ' + Math.round(st.p * 100) + ' %' : c ? 'Reservado para ' + esc(c.nombre) : 'Solar libre') + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div><p style="margin:0;font-size:13px">' + (c ? 'El cubo ya está en el catálogo pero su director no está dado de alta. Cuando lo esté, aquí se levanta su pabellón.' : 'Aquí puede crecer KAIZEN: tiene camino hasta la casa y sitio para un pabellón de 7 × 5 esteras. Se ocupa cuando entra un cubo nuevo en el catálogo.') + '</p>' + (c ? '<p><button class="link" type="button" id="alta-btn">Dar de alta a los directores</button></p>' : '') + '</div>';
+      wireAlta(prof);
     } else {
       const r = id === 'ventanilla' ? VENTANILLA : room(id), c = r.cubo && CUBES[r.cubo];
       const who = AG.filter(a => a.cur === r.id).map(a => esc(a.name)).join(', ');
       const kind2 = r.id === 'ventanilla' ? 'Solo tú' : r.service ? 'Servicio de la plataforma' : r.locked ? 'Sin director dado de alta' : 'Sala de cubo';
-      prof.innerHTML = '<div class="profile"><div class="pf-top" style="grid-template-columns:minmax(0,1fr) auto"><div><h2 class="h">' + esc(r.name) + '</h2><div class="sub" style="margin:0">' + esc(kind2) + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div><p style="margin:0;font-size:13px">' + esc(c ? c.mision : r.info || '') + '</p>' + (who ? '<dl class="kv"><dt>Aquí ahora</dt><dd>' + who + '</dd></dl>' : '') + (r.id === 'ventanilla' ? '<p><button class="link" type="button" id="pf-win">Abrir tu ventanilla</button></p>' : '') + '</div>';
-      const w = document.getElementById('pf-win'); if (w) w.addEventListener('click', openWin);
+      prof.innerHTML = '<div class="profile"><div class="pf-top" style="grid-template-columns:minmax(0,1fr) auto"><div><h2 class="h">' + esc(r.name) + '</h2><div class="sub" style="margin:0">' + esc(kind2) + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div><p style="margin:0;font-size:13px">' + esc(c ? c.mision : r.info || '') + '</p>' + (who ? '<dl class="kv"><dt>Aquí ahora</dt><dd>' + who + '</dd></dl>' : '') + (r.id === 'ventanilla' ? '<p><button class="link" type="button" id="pf-win">Abrir tu ventanilla</button></p>' : '') + (r.locked ? '<p><button class="link" type="button" id="alta-btn">Dar de alta a los directores</button></p>' : '') + '</div>';
+      const w = document.getElementById('pf-win'); if (w) w.addEventListener('click', openWin); wireAlta(prof);
     }
     document.getElementById('pf-x').addEventListener('click', () => { prof.hidden = true; selected = null; follow = null; });
   }

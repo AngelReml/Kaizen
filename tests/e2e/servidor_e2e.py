@@ -32,7 +32,7 @@ def crear(datos: Path, mecha_s: int = 6):
     from sustrato import bus
 
     k = JsonKnowledge(datos / "knowledge.json")          # persistente: el backend se puede reiniciar sin perder la cadena
-    app = crear_app(k, mecha_s=mecha_s)
+    app = crear_app(k, mecha_s=mecha_s, ruta_ledger=datos / "ledger.jsonl")     # ledger de coste activo (si no, queda inerte)
     st = app.state
 
     def bitacora() -> Bitacora:
@@ -77,6 +77,43 @@ def crear(datos: Path, mecha_s: int = 6):
         ev["payload"] = {"manipulado": True}
         k.add(EMPRESA, "evento", clave, ev)
         return {"ok": True, "clave": clave}
+
+    @app.post("/_e2e/coste")
+    async def e2e_coste(request: Request):
+        """Gasto de hoy en el contador del sustrato (limite propio de los cubos, 16 € por defecto): lleva su salud a DEGRADADO."""
+        from sustrato import coste
+        d = await request.json()
+        conn = bus.conexion()
+        try:
+            coste.instalar(conn)
+            coste.registrar(conn, "otro", "e2e", 1, float(d["eur"]))
+        finally:
+            conn.close()
+        return {"ok": True}
+
+    @app.post("/_e2e/gasto")
+    async def e2e_gasto(request: Request):
+        """Gasto de hoy en el ledger de coste del tenant (el que ve la Tesorería y el que activa el modo ahorro)."""
+        d = await request.json()
+        st.ledger.asentar(EMPRESA, cubo="comercial", rol="director_comercial", clase="herramienta_aprobada",
+                          proveedor="anthropic", coste_eur=float(d["eur"]), causa_id="e2e")
+        return {"ok": True}
+
+    @app.post("/_e2e/chat")
+    async def e2e_chat(request: Request):
+        """Un mensaje en el chat de la Colmena (sala si `cubo` es null), por el camino real que sella en el bus."""
+        from panel_mando import colmena as CLM
+        d = await request.json()
+        conn = CLM._conn()
+        try:
+            tipo, cubo = ("sala", "") if not d.get("cubo") else ("individual", d["cubo"])
+            ses = conn.execute("SELECT id FROM colmena_sesiones WHERE empresa=? AND tipo=? AND cubo=?", (EMPRESA, tipo, cubo)).fetchone()[0]
+            autor = d.get("autor", "director")
+            aid = ("director_" + d["cubo"]) if autor == "director" and d.get("cubo") else d.get("autor_id", "operador")
+            CLM._insertar_mensaje(conn, ses, autor, aid, d["texto"])
+        finally:
+            conn.close()
+        return {"ok": True}
 
     @app.get("/_e2e/estado")
     async def e2e_estado():

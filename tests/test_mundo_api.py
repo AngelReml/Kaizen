@@ -160,7 +160,7 @@ def test_estado_tenant_vacio(entorno):
     assert j["cubos"] and all(x["alta"] is False and x["uid"] is None for x in j["cubos"])
     assert j["sello"]["integra"] is True and j["sello"]["pasos"] == 0
     assert j["tarjetas"] == {"pendientes": 0, "mechas": []}
-    assert j["cursores"] == {"rue": -1, "bus": 0} and j["recientes"] == []
+    assert j["cursores"] == {"rue": -1, "bus": 0, "chat": 0} and j["recientes"] == []
 
 
 def test_estado_defecto_es_la_primera_empresa(entorno):
@@ -290,7 +290,7 @@ def test_cursores_y_recientes_ordenados_y_acotados(entorno):
     _rue(b, "operacion.pedido.confirmado")
     ultimo_bus = _bus("kaizen.brand.revision_emitida.v1")
     j = _estado(c)
-    assert j["cursores"] == {"rue": 1, "bus": ultimo_bus}
+    assert j["cursores"] == {"rue": 1, "bus": ultimo_bus, "chat": 0}
     assert len(j["recientes"]) == 3
     assert {e["canal"] for e in j["recientes"]} == {"rue", "bus"}
     assert all(set(e) == CLAVES_EVENTO for e in j["recientes"])
@@ -452,3 +452,69 @@ def test_primer_evento_tras_estado_vacio_no_se_pierde(entorno):
     r = c.get(f"/api/mundo/rio?empresa=laboratorio&desde_rue={cur['rue']}&desde_bus={cur['bus']}&ciclos=1")
     datos = [json.loads(l[6:]) for l in r.text.splitlines() if l.startswith("data: ")]
     assert [d["id"] for d in datos if d["canal"] == "rue"] == [0]
+
+
+# ── RRHH: el juego cuenta lo mismo que el cubo RRHH ──────────────────────────
+
+def test_estado_incluye_el_mapa_y_las_propuestas_de_rrhh(entorno):
+    _, c, _ = _montaje()
+    j = _estado(c)
+    m = j["rrhh"]["mapa"]
+    assert len(m["faltantes"]) == len(j["cubos"]) and m["presentes"] == [] and m["cobertura"] == 0.0
+    assert j["rrhh"]["propuestas"][0].startswith("Dar de alta el director de")
+    c.get("/api/colmena/agentes", params={"empresa": EMPRESA})           # alta real de los directores
+    j2 = _estado(c)
+    m2 = j2["rrhh"]["mapa"]
+    assert m2["faltantes"] == [] and m2["cobertura"] == 1.0
+    assert "Sin huecos" in j2["rrhh"]["propuestas"][0]
+    # mismo resultado que la funcion pura de la herramienta de RRHH (no una copia)
+    from panel_mando.herramientas import rrhh as RRHH
+    assert m2 == RRHH.mapa_desde([x["cubo"] for x in j2["cubos"]], [x["cubo"] for x in j2["cubos"] if x["alta"]])
+
+
+# ── chat de la Colmena: los directores hablan en el juego ────────────────────
+
+def _sesion(cubo):
+    conn = CLM._conn()
+    try:
+        tipo, c = ("sala", "") if cubo is None else ("individual", cubo)
+        return conn.execute("SELECT id FROM colmena_sesiones WHERE empresa=? AND tipo=? AND cubo=?",
+                            (EMPRESA, tipo, c)).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _mensaje(cubo, autor_tipo, autor_id, texto):
+    conn = CLM._conn()
+    try:
+        return CLM._insertar_mensaje(conn, _sesion(cubo), autor_tipo, autor_id, texto)
+    finally:
+        conn.close()
+
+
+def test_rio_emite_el_chat_de_directores_y_operador_sin_notas_de_sistema(entorno):
+    _, c, _ = _montaje()
+    c.get("/api/colmena/agentes", params={"empresa": EMPRESA})
+    _mensaje("comercial", "operador", "operador", "como va el pipeline?")
+    m2 = _mensaje("comercial", "director", "director_comercial", "Hay 12 leads en frio.")
+    _mensaje("comercial", "sistema", "colmena", "nota interna")                       # no debe salir
+    m4 = _mensaje(None, "director", "director_marketing", "Propongo pausar la campana.")   # sala
+    evs, _ = _sse(c, desde_chat=-1)
+    chat = [e for e in evs if e["canal"] == "chat"]
+    assert [(e["tipo"], e["cubo"]) for e in chat] == [
+        ("colmena.individual.operador", None),
+        ("colmena.individual.director", "comercial"),
+        ("colmena.sala.director", "marketing")]
+    assert chat[0]["frase"] == "Tu: como va el pipeline?" and chat[1]["frase"] == "Hay 12 leads en frio."
+    assert all(set(e) == CLAVES_EVENTO for e in chat)
+    # el cursor de chat no repite y el de estado empalma sin huecos
+    assert not [e for e in _sse(c, desde_chat=m4)[0] if e["canal"] == "chat"]
+    assert _estado(c)["cursores"]["chat"] == m4
+    assert [e["id"] for e in _sse(c, desde_chat=m2)[0] if e["canal"] == "chat"] == [m4]
+
+
+def test_chat_sin_tablas_de_colmena_no_emite_ni_crea_nada(entorno):
+    _, c, _ = _montaje()
+    evs, _ = _sse(c)
+    assert not [e for e in evs if e["canal"] == "chat"]
+    assert _estado(c)["cursores"]["chat"] == 0 and _filas_agentes() is None

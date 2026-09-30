@@ -63,7 +63,10 @@ const info = page => page.evaluate(() => KAIZEN.info());
   });
 
   await escenario('2 alta de directores: llegan andando y se levantan los pabellones', async () => {
-    await req('GET', '/api/colmena/agentes?empresa=laboratorio');     // alta real (10 directores)
+    await page.click('[data-tab="cubos"]');                            // RRHH propone y el operador da de alta (un clic)
+    ok((await page.textContent('#tabbody')).includes('Dar de alta el director de'), 'RRHH no propone el alta');
+    await page.click('#alta-btn');
+    await page.click('[data-tab="sala"]');
     await until(page, () => KAIZEN.info().agents.length >= 5, null, 15000, 'no llegaron los directores de la casa');
     let i = await info(page);
     ok(i.rooms.filter(r => r.cubo && !r.annex && !r.locked).length === 5, 'salas de la casa abiertas');
@@ -86,6 +89,16 @@ const info = page => page.evaluate(() => KAIZEN.info());
   await escenario('4 evento del bus del sustrato', async () => {
     await post('/_e2e/bus', { topic: 'kaizen.brand.revision_emitida.v1', payload: { x: 1 } });
     await until(page, () => Array.from(document.querySelectorAll('#feedList li')).some(li => li.textContent.includes('Marca: revision emitida')), null, 8000, 'no llegó el evento del bus');
+  });
+
+  await escenario('4b chat de la Colmena: el director habla en su mesa y en la Sala de Reunión', async () => {
+    await post('/_e2e/chat', { cubo: 'marketing', autor: 'operador', texto: 'como va la campana?' });
+    await post('/_e2e/chat', { cubo: 'marketing', autor: 'director', texto: 'Hay dos borradores esperando revision.' });
+    await until(page, () => (KAIZEN.info().agents.find(a => a.id === 'marketing') || {}).say === 'Hay dos borradores esperando revision.', null, 8000, 'el director no habla en su mesa');
+    await post('/_e2e/chat', { cubo: null, autor: 'director', texto: 'Propongo pausar la campana.' });
+    await post('/_e2e/chat', { cubo: 'ops', autor: 'director', texto: 'Yo me ocupo de la capacidad.' });
+    await until(page, () => KAIZEN.info().agents.some(a => a.state === 'walk'), null, 8000, 'nadie va a la Sala de Reunión');
+    ok(await page.evaluate(() => Array.from(document.querySelectorAll('#feedList li')).some(li => li.textContent.includes('Tu: como va la campana'))), 'mensaje del operador en el feed');
   });
 
   await escenario('5 texto hostil en un evento: se muestra literal, no se ejecuta', async () => {
@@ -118,8 +131,25 @@ const info = page => page.evaluate(() => KAIZEN.info());
     return 'corto no aprueba; largo arma mecha; deshacer aborta; interna se ejecuta';
   });
 
-  await escenario('7 PARAR TODO (2 s) y reanudar', async () => {
+  await escenario('6b ventanilla: NO deniega y la tarjeta desaparece', async () => {
+    await post('/_e2e/aprobacion', { cubo: 'legal', accion: 'publicar comunicado', clase: 'IRREVERSIBLE-EXTERNA' });
+    await page.click('#b-win'); await page.waitForSelector('[data-no]', { timeout: 15000 });
+    await page.click('[data-no]');
+    await until(page, () => document.getElementById('win-n').textContent === '0' && !document.querySelector('[data-no]'), null, 15000, 'la tarjeta no desapareció');
+    ok((await req('GET', '/api/tarjetas/laboratorio')).tarjetas.length === 0, 'sigue pendiente en el backend');
     await page.click('#drawer-x');
+  });
+
+  await escenario('6c gasto real: salud DEGRADADA, sala con polvo y modo ahorro visible', async () => {
+    await post('/_e2e/coste', { eur: 13 });                             // ≥ 80 % del límite de los cubos (16 €)
+    await until(page, () => KAIZEN.info().rooms.filter(r => r.cubo && !r.locked).some(r => r.wear === 1), null, 20000, 'la salud DEGRADADA no llega a las salas');
+    await post('/_e2e/gasto', { eur: 5.5 });                            // pasa del tope diario de la empresa (5 €)
+    await until(page, () => document.getElementById('st-gasto').classList.contains('hot'), null, 20000, 'no se marca el modo ahorro');
+    const g = await page.textContent('#st-gasto'); ok(g.includes('5,5'), 'gasto mostrado: ' + g);
+  });
+
+  await escenario('7 PARAR TODO (2 s) y reanudar', async () => {
+    if (await page.locator('#drawer-x').isVisible()) await page.click('#drawer-x');
     const st = page.locator('#b-stop'); const bx = await st.boundingBox();
     await page.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2); await page.mouse.down(); await sleep(700); await page.mouse.up();
     await sleep(500); ok(!(await req('GET', '/latido')).parado, 'un toque corto NO debe parar');

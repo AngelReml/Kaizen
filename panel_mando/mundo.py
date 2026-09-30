@@ -8,7 +8,7 @@ existentes tal cual para actuar (/cmd/aprobar|denegar|deshacer|parar_todo|
 reanudar, /api/csrf, /api/tarjetas, /api/sello, /api/dinero, /latido):
   - GET /mundo               la pagina estatica (se lee de disco en cada peticion).
   - GET /api/mundo/estado    foto completa de una empresa: cubos, dinero, tarjetas...
-  - GET /api/mundo/rio       SSE que une la bitacora RUE y el bus del sustrato.
+  - GET /api/mundo/rio       SSE que une la bitacora RUE, el bus del sustrato y el chat de la Colmena.
 
 Reglas que este fichero se impone:
   * SOLO LECTURA y sin efectos secundarios en `estado`. En particular NO se
@@ -38,6 +38,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from panel_mando import colmena as CLM
 from panel_mando import nucleo as N
+from panel_mando.herramientas import rrhh as RRHH
 from sustrato import bus, coste
 from sustrato.consola import ts_iso8601z
 
@@ -146,6 +147,44 @@ def _ultimo_id_bus(conn) -> int:
     if not _tabla_existe(conn, "bus_eventos"):
         return 0
     return int(conn.execute("SELECT COALESCE(MAX(id),0) FROM bus_eventos").fetchone()[0])
+
+
+def evento_chat(id_: int, ts: str, sala: bool, autor_tipo: str, autor_id: str,
+                cubo_sesion: str, texto: str, ap_id: str | None) -> dict:
+    """Mensaje del chat de la Colmena -> formato unificado. El TIPO lleva quien y donde
+    (`colmena.sala.director`, `colmena.individual.director`, `colmena.individual.operador`,
+    `colmena.sala.operador`); `cubo` solo se rellena para un director (el que habla)."""
+    cubo = None
+    if autor_tipo == "director":
+        c = str(autor_id).removeprefix("director_")
+        cubo = c if c in CLM.NOMBRES else (cubo_sesion or None)
+    frase = texto if autor_tipo == "director" else f"Tu: {texto}"
+    return {"canal": "chat", "id": int(id_), "tipo": f"colmena.{'sala' if sala else 'individual'}.{autor_tipo}",
+            "cubo": cubo, "frase": frase, "ts": ts, "aprobacion": ap_id or None}
+
+
+def _mensajes_chat(conn, empresa: str, *, desde: int, limite: int = LIMITE_POR_CICLO) -> tuple[list[dict], int]:
+    """Mensajes de directores y del operador (no las notas de sistema) con id > `desde`,
+    ascendentes, y el mayor id visto. Sin las tablas de Colmena: nada. Nunca crea nada."""
+    if not (_tabla_existe(conn, "colmena_mensajes") and _tabla_existe(conn, "colmena_sesiones")):
+        return [], max(desde, 0)
+    filas = conn.execute(
+        "SELECT m.id, m.ts, s.tipo, m.autor_tipo, m.autor_id, s.cubo, m.texto, m.ap_id "
+        "FROM colmena_mensajes m JOIN colmena_sesiones s ON s.id=m.sesion_id "
+        "WHERE s.empresa=? AND m.id>? AND m.autor_tipo IN ('director','operador') "
+        "ORDER BY m.id ASC LIMIT ?", (empresa, desde, limite)).fetchall()
+    ultimo = desde
+    out = []
+    for id_, ts, tipo_s, atipo, aid, cubo_s, texto, ap in filas:
+        ultimo = max(ultimo, id_)
+        out.append(evento_chat(id_, ts, tipo_s == "sala", atipo, aid, cubo_s or "", str(texto), ap))
+    return out, ultimo
+
+
+def _ultimo_id_chat(conn) -> int:
+    if not _tabla_existe(conn, "colmena_mensajes"):
+        return 0
+    return int(conn.execute("SELECT COALESCE(MAX(id),0) FROM colmena_mensajes").fetchone()[0])
 
 
 def _agentes_y_ultimos(conn, empresa: str) -> tuple[dict, dict]:
@@ -265,6 +304,7 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                     "ultimo": ultimos.get(cubo),
                 })
             cursor_bus = _ultimo_id_bus(conn)
+            cursor_chat = _ultimo_id_chat(conn)
             recientes = _recientes(empresa, conn)
         finally:
             conn.close()
@@ -280,6 +320,9 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             sello = {"integra": False, "pasos": 0,
                      "mensaje": f"sello no verificable: {type(exc).__name__}"}
 
+        # RRHH: el mapa y las propuestas del cubo RRHH real (panel_mando/herramientas/rrhh.py),
+        # calculados con sus funciones puras sobre estos mismos datos: el juego no reimplementa nada.
+        mapa = RRHH.mapa_desde([c["cubo"] for c in cubos], [c["cubo"] for c in cubos if c["alta"]])
         return JSONResponse({
             "empresa": empresa, "empresas": emps, "ahora": ts_iso8601z(),
             "parado": bool(st.panico.activo),
@@ -288,13 +331,14 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             "dinero": dinero(empresa),
             "tarjetas": _tarjetas(empresa),
             "sello": sello,
-            "cursores": {"rue": _cursor_rue(empresa), "bus": cursor_bus},
+            "rrhh": {"mapa": mapa, "propuestas": RRHH.propuestas_desde(mapa)},
+            "cursores": {"rue": _cursor_rue(empresa), "bus": cursor_bus, "chat": cursor_chat},
             "recientes": recientes,
         })
 
     @app.get("/api/mundo/rio")
     async def mundo_rio(request: Request, empresa: str = "", desde_rue: int = -1,
-                        desde_bus: int = -1, ciclos: int = 0):
+                        desde_bus: int = -1, desde_chat: int = -1, ciclos: int = 0):
         auth(request)
         empresa = empresa_valida(empresa, defecto=empresas()[0])
 
@@ -302,6 +346,13 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             conn = _conn_lectura()
             try:
                 return _eventos_bus(conn, empresa, desde=cursor)
+            finally:
+                conn.close()
+
+        def leer_chat(cursor: int):
+            conn = _conn_lectura()
+            try:
+                return _mensajes_chat(conn, empresa, desde=cursor)
             finally:
                 conn.close()
 
@@ -313,7 +364,7 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             return f"id: {ev['canal']}:{ev['id']}\ndata: {dato}\n\n"
 
         async def gen():
-            c_rue, c_bus = desde_rue, desde_bus
+            c_rue, c_bus, c_chat = desde_rue, desde_bus, desde_chat
             restantes = ciclos if ciclos > 0 else 10 ** 9
             while restantes > 0:
                 restantes -= 1
@@ -333,6 +384,13 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                 except Exception:          # noqa: BLE001 — bus caido: el RUE sigue
                     evs = []
                 for ev in evs:
+                    yield emitir(ev)
+                # Canal chat de la Colmena: lo que dicen los directores y el operador.
+                try:
+                    msgs, c_chat = await asyncio.to_thread(leer_chat, c_chat)
+                except Exception:          # noqa: BLE001 — sin chat, el resto sigue
+                    msgs = []
+                for ev in msgs:
                     yield emitir(ev)
                 yield ": latido\n\n"
                 if restantes > 0:

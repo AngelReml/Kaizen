@@ -46,11 +46,14 @@ def test_arranque_sin_pares_y_salud(nombre, tmp_path):
     cubo.parar()
 
 
-def test_rrhh_declara_su_posposicion(tmp_path):
+def test_rrhh_ya_no_esta_pospuesto(tmp_path):
+    """El operador decidio que RRHH es sustrato (gestion de los agentes propios) y entra en el
+    juego desde el principio: el manifest ya no declara ninguna posposicion."""
     conn = sbus.conexion(tmp_path / "rrhh.db")
     cubo = cubos_base.construir("rrhh", conn=conn)
     cubo.instalar()
-    assert "pospuesto" in cubo.salud()["detalle"]
+    assert "nota_estado" not in cubo.manifest
+    assert "pospuesto" not in cubo.salud()["detalle"]
 
 
 def test_accion_irreversible_de_manifest_exige_alta_y_comite(tmp_path, monkeypatch):
