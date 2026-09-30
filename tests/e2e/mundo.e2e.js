@@ -12,17 +12,18 @@ const DATOS = fs.mkdtempSync(path.join(os.tmpdir(), 'kaizen_e2e_'));
 let srv = null;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-function arrancar() {
-  srv = spawn(PY, [path.join(RAIZ, 'tests/e2e/servidor_e2e.py'), '--puerto', String(PORT), '--datos', DATOS, '--mecha', '40'], { cwd: RAIZ, stdio: ['ignore', 'pipe', 'pipe'] });
+function arrancar(extra, puerto, datos) {
+  srv = spawn(PY, [path.join(RAIZ, 'tests/e2e/servidor_e2e.py'), '--puerto', String(puerto || PORT), '--datos', datos || DATOS, '--mecha', '40'].concat(extra || []), { cwd: RAIZ, stdio: ['ignore', 'pipe', 'pipe'] });
   srv.stderr.on('data', d => { if (process.env.VERBOSO) process.stderr.write(d); });
   return esperarServidor(20000);
 }
-function parar() { return new Promise(res => { if (!srv) return res(); srv.once('exit', () => res()); srv.kill('SIGTERM'); setTimeout(() => { try { srv.kill('SIGKILL'); } catch (e) {} res(); }, 4000); srv = null; }); }
+function parar() { return new Promise(res => { const s = srv; srv = null; if (!s) return res(); s.once('exit', () => res()); s.kill('SIGTERM'); setTimeout(() => { try { s.kill('SIGKILL'); } catch (e) {} res(); }, 4000).unref(); }); }   // el temporizador mata SOLO el proceso que se paró, no uno nuevo
 async function esperarServidor(ms) { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { await req('GET', '/latido'); return; } catch (e) { await sleep(300); } } throw new Error('el servidor de ensayo no arranca'); }
+let BASE_ACTUAL = null;
 function req(method, url, body) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
-    const r = http.request(BASE + url, { method, headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {} }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { resolve(b); } }); });
+    const r = http.request((BASE_ACTUAL || BASE) + url, { method, headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {} }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { resolve(b); } }); });
     r.on('error', reject); r.setTimeout(5000, () => r.destroy(new Error('timeout'))); if (data) r.write(data); r.end();
   });
 }
@@ -30,6 +31,7 @@ const post = (u, b) => req('POST', u, b || {});
 
 const resultados = [];
 async function escenario(nombre, fn) {
+  if (process.env.SOLO && !process.env.SOLO.split(',').some(p => nombre.startsWith(p))) return;      // SOLO=10d,11 para repetir escenarios sueltos
   const t0 = Date.now();
   try { const ev = await fn(); resultados.push([nombre, true]); console.log('PASS  ' + nombre + (ev ? '  · ' + ev : '') + '  (' + ((Date.now() - t0) / 1000).toFixed(1) + ' s)'); }
   catch (e) { resultados.push([nombre, false]); console.log('FAIL  ' + nombre + '  · ' + e.message); }
@@ -216,6 +218,27 @@ const info = page => page.evaluate(() => KAIZEN.info());
     ok(i.drops <= 41, 'gotas sin acotar: ' + i.drops);
     ok((await page.locator('#feedList li').count()) <= 60, 'el feed no está acotado');
     return 'cadena +' + (i.cur.rue - antes) + ', gotas ' + i.drops;
+  });
+
+  // ── segundo servidor, con clave: sesión, cookie y CSRF de verdad ──
+  await escenario('10d modo con clave: sin sesión redirige, con sesión funciona el CSRF y al caducar vuelve al acceso', async () => {
+    await parar(); const P2 = PORT + 1, B2 = 'http://127.0.0.1:' + P2, CLAVE = 'clave-de-ensayo-123';
+    const datos2 = fs.mkdtempSync(path.join(os.tmpdir(), 'kaizen_e2e_clave_'));
+    BASE_ACTUAL = B2; await arrancar(['--token', CLAVE], P2, datos2);
+    const c2 = await b.newContext({ viewport: { width: 1280, height: 900 } }); await c2.addInitScript(() => { try { localStorage.setItem('kaizen-q', '1'); } catch (e) {} });
+    const p2 = await c2.newPage(); await p2.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+    await p2.goto(B2 + '/mundo'); ok(/\/login/.test(p2.url()), 'sin sesión no redirige al acceso: ' + p2.url());
+    await p2.goto(B2 + '/login?token=' + CLAVE + '&ir=/mundo'); await p2.waitForFunction(() => window.KAIZEN && KAIZEN.info().online === true, null, { timeout: 40000 });
+    ok(/\/mundo/.test(p2.url()), 'tras entrar no está en /mundo');
+    await post('/_e2e/aprobacion', { cubo: 'ops', accion: 'ajustar capacidad', clase: 'IRREVERSIBLE-INTERNA' });
+    await p2.waitForFunction(() => document.getElementById('win-n').textContent === '1', null, { timeout: 40000 });
+    await p2.click('#b-win'); await p2.waitForSelector('[data-si]');
+    const bx = await p2.locator('[data-si]').first().boundingBox(); await p2.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2); await p2.mouse.down(); await sleep(1200); await p2.mouse.up();
+    await p2.waitForFunction(() => document.getElementById('win-n').textContent === '0', null, { timeout: 40000 });         // POST con CSRF aceptado
+    await post('/_e2e/caducar_sesiones');
+    await p2.waitForURL(/\/login/, { timeout: 60000 });
+    await c2.close(); await parar(); BASE_ACTUAL = null;
+    return 'redirect, CSRF y caducidad';
   });
 
   await escenario('11 sin errores de JavaScript', async () => { ok(errs.length === 0, errs.slice(0, 3).join(' | ')); });

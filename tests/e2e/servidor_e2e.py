@@ -19,10 +19,10 @@ sys.path.insert(0, str(RAIZ))
 EMPRESA = "laboratorio"
 
 
-def crear(datos: Path, mecha_s: int = 6):
+def crear(datos: Path, mecha_s: int = 6, token: str | None = None):
     """Devuelve la app real con las rutas de control de ensayo montadas."""
     os.environ["KAIZEN_DATOS"] = str(datos)
-    os.environ.pop("KAIZEN_TOKEN", None)
+    os.environ.pop("KAIZEN_TOKEN", None)          # el token entra por parametro, no por el entorno
     from fastapi import Request
 
     from core.aprobaciones import ColaSustrato
@@ -32,7 +32,7 @@ def crear(datos: Path, mecha_s: int = 6):
     from sustrato import bus
 
     k = JsonKnowledge(datos / "knowledge.json")          # persistente: el backend se puede reiniciar sin perder la cadena
-    app = crear_app(k, mecha_s=mecha_s, ruta_ledger=datos / "ledger.jsonl")     # ledger de coste activo (si no, queda inerte)
+    app = crear_app(k, token=token, mecha_s=mecha_s, ruta_ledger=datos / "ledger.jsonl")     # ledger de coste activo (si no, queda inerte)
     st = app.state
 
     def bitacora() -> Bitacora:
@@ -146,6 +146,13 @@ def crear(datos: Path, mecha_s: int = 6):
             conn.close()
         return {"ok": True}
 
+    @app.post("/_e2e/caducar_sesiones")
+    async def e2e_caducar():
+        """La sesion del navegador caduca en el servidor (como al pasar el TTL o reiniciar)."""
+        st.sesiones.clear()
+        st.csrf.clear()
+        return {"ok": True}
+
     @app.get("/_e2e/estado")
     async def e2e_estado():
         return {"colas": sorted(st.colas), "eventos": len(k.all(EMPRESA, "evento"))}
@@ -158,11 +165,12 @@ def main() -> None:
     ap.add_argument("--puerto", type=int, default=8620)
     ap.add_argument("--datos", default="")
     ap.add_argument("--mecha", type=int, default=6)
+    ap.add_argument("--token", default="", help="modo con clave: sesion, cookie y CSRF de verdad")
     a = ap.parse_args()
     datos = Path(a.datos) if a.datos else Path(tempfile.mkdtemp(prefix="kaizen_e2e_"))
     datos.mkdir(parents=True, exist_ok=True)
     import uvicorn
-    uvicorn.run(crear(datos, a.mecha), host="127.0.0.1", port=a.puerto, log_level="warning")
+    uvicorn.run(crear(datos, a.mecha, a.token or None), host="127.0.0.1", port=a.puerto, log_level="warning")
 
 
 if __name__ == "__main__":
