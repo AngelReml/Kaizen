@@ -255,6 +255,27 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
         return {"pendientes": sum(1 for x in nodos.values() if x["estado"] == "PENDIENTE"),
                 "mechas": mechas}
 
+    def _pipeline(empresa: str) -> dict:
+        """Cuenta de leads por estado canonico del cubo Comercial (solo numeros, nunca datos de personas)
+        y de pedidos atribuidos. Sin datos todo sale a 0."""
+        estados = ("COLD", "CONTACTADO", "CONVERSACION", "COMPROMETIDO", "PEDIDO", "CUSTOMER",
+                   "DORMIDO", "DESCARTADO", "EXCLUIDO")
+        cuenta = {e: 0 for e in estados}
+        pedidos = {"atribuidos": 0, "pendientes_validacion": 0}
+        try:
+            for lead in st.k.all(empresa, "lead_canon").values():
+                e = lead.get("estado", "COLD")
+                if e in cuenta:
+                    cuenta[e] += 1
+            for p in st.k.all(empresa, "pedido_atribuido").values():
+                if p.get("estado") == "ATRIBUIDO":
+                    pedidos["atribuidos"] += 1
+                elif p.get("estado") == "PENDIENTE_VALIDACION":
+                    pedidos["pendientes_validacion"] += 1
+        except Exception:                                    # noqa: BLE001
+            pass
+        return {"leads": cuenta, "pedidos": pedidos}
+
     def _rendimiento(empresa: str, conn, cubos: list[dict]) -> dict:
         """Lee coste, pedidos y decisiones reales y aplica panel_mando/rendimiento.py. Si algo falla
         devuelve vacio (el juego lo muestra como «sin medir»), nunca un grado inventado."""
@@ -329,6 +350,9 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                                                  .get("eventos_publicados_24h", 0))},
                     "ultimo": ultimos.get(cubo),
                 })
+            for c in cubos:
+                if c["cubo"] == "comercial":
+                    c["pipeline"] = _pipeline(empresa)
             rend = _rendimiento(empresa, conn, cubos)
             for c in cubos:
                 c["rendimiento"] = rend.get(c["cubo"])

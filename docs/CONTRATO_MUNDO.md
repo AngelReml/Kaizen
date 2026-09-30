@@ -38,7 +38,7 @@ existen, todos los cubos salen `alta:false`. Campos:
   `alta`, `uid`/`role_id`/`ts_alta` (null si no hay alta), `salud`
   `{estado, detalle, eventos_24h}` (misma funcion que Colmena; si no se puede
   medir, `SIN DATOS`), `ultimo` `{texto, ts}` del chat individual o null.
-  `rendimiento` (ver «Rendimiento y grados»).
+  `rendimiento` (ver «Rendimiento y grados»). Solo el cubo `comercial` trae ademas `pipeline`: `{leads:{COLD, CONTACTADO, CONVERSACION, COMPROMETIDO, PEDIDO, CUSTOMER, DORMIDO, DESCARTADO, EXCLUIDO}, pedidos:{atribuidos, pendientes_validacion}}`. Solo numeros: ningun dato de personas.
 - `dinero`: misma funcion que `/api/dinero/{empresa}` (`frase`, `gasto_eur`,
   `tope_eur`, `sin_atribuir_eur`, `modo_ahorro`).
 - `tarjetas`: `pendientes` (numero; cola en PENDIENTE) y `mechas[]`: las
@@ -196,4 +196,16 @@ Nada está puesto porque sí; cada objeto dice algo verdadero o es un adorno dec
 | Lluvia de monedas | un cobro real o un pedido atribuido | `finanzas.cobro.registrado`, `comercial.pedido.atribuido` |
 | Orbes y halo de la sala | un orbe por evento de las últimas 24 h del cubo | `salud.eventos_24h` |
 | Maneki-neko, medallón de parqué, mostrador en media luna, barandilla baja | adorno (la barandilla deja ver la sala desde el pasillo) | — |
+
+## Comercial (sala): el camino del cliente
+
+| Objeto | Qué muestra | Origen |
+|---|---|---|
+| Seis faroles en un sendero de piedras | los leads por paso (fríos, contactados, en conversación, comprometidos, con pedido, clientes): el farol crece y brilla con la cuenta y lleva un punto por lead | `cubos[comercial].pipeline.leads` |
+| Cesta, papelera y sello rojo | dormidos, descartados y excluidos (quien pidió que no le contactemos) | `pipeline.leads` |
+| Pilas del mostrador | valor atribuido y coste de 30 días; se vacían si no hay dato | `rendimiento.valor_eur`, `rendimiento.coste_eur` |
+| Rótulo «ROI X×» o «ROI sin medir» | el ROI de 30 días o por qué no hay | `rendimiento` |
+| Caja | la tapa salta y caen monedas con cada pedido atribuido de verdad; al tocarla dice cuántos hay y cuántos esperan validación | evento `comercial.pedido.atribuido`, `pipeline.pedidos` |
+| Campanilla de la puerta | suena con cada evento real de Comercial; un punto de luz recorre el sendero con cada lead nuevo | eventos `comercial.*` |
+| Barandilla baja en el lado de Marketing | adorno: deja ver el sendero | — |
 

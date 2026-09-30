@@ -244,7 +244,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       <button class="link stop" id="b-stop" type="button" title="Mantén pulsado 2 segundos">PARAR TODO</button><span class="sep">·</span>
       <button class="link" id="b-q" type="button">Nitidez</button><span class="sep">·</span>
       <button class="link" id="b-snd" type="button">Sonido</button><span class="sep">·</span>
-      <span class="link" id="b-rin" style="cursor:default">✦ 0/25</span><span class="sep">·</span>
+      <span class="link" id="b-rin" style="cursor:default">✦ 0/33</span><span class="sep">·</span>
       <button class="link" id="b-mode" type="button">Yoru</button><span class="sep">·</span>
       <button class="link" id="b-zout" type="button" aria-label="Alejar">−</button>
       <button class="link" id="b-home" type="button" aria-label="Volver a la vista general">⌂</button>
@@ -1214,8 +1214,8 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       else { shoji(g, a, b, 20, false); dome(g, a, b, 20); poly(mg, rgba('#ffd28a', 1), [up(a, 7), up(b, 7), up(b, 20), up(a, 20)]); }
     });
     // barandilla baja de Tesorería: deja ver la fuente y el mostrador desde el pasillo (celosía con pasamanos curvo)
-    const wallLow = (Y, x) => addStatic(x + .5 + Y + .01, fp(x, Y, 1, 0, 14), g => {
-      const a = P(x, Y), b = P(x + 1, Y); poly(g, R.wood[2], [a, b, up(b, 8), up(a, 8)]);
+    const wallLow = (Y, x, alongY) => addStatic(x + .5 + Y + .01, alongY ? fp(Y, x, 0, 1, 14) : fp(x, Y, 1, 0, 14), g => {
+      const a = alongY ? P(Y, x) : P(x, Y), b = alongY ? P(Y, x + 1) : P(x + 1, Y); poly(g, R.wood[2], [a, b, up(b, 8), up(a, 8)]);
       for (let i = 1; i < 5; i++) { const q = [a[0] + (b[0] - a[0]) * i / 5, a[1] + (b[1] - a[1]) * i / 5]; line(g, R.wood[0], q[0], q[1] - 1, q[0], q[1] - 7); }
       isoLine(g, R.wood[0], up(a, 4), up(b, 4));
       const N = 8; for (let i = 0; i < N; i++) { const t0 = i / N, t1 = (i + 1) / N, p0 = [a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0 - 8 - Math.sin(t0 * Math.PI) * 2], p1 = [a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1 - 8 - Math.sin(t1 * Math.PI) * 2]; line(g, R.lacq[3], p0[0], p0[1], p1[0], p1[1], 2 * Math.max(1, S - 1)); line(g, R.gold[2], p0[0], p0[1] - 1, p1[0], p1[1] - 1, Math.max(1, S - 1)); }
@@ -1238,7 +1238,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     const BOT = ROOMS.filter(r => r.cubo && !r.annex && r.y0 === 7);
     for (let x = 0; x < 18; x++) { const r = BOT.find(q => x >= q.x0 && x < q.x1); if (r && !r.locked && x === r.door) { posts(x, 7); norenAt(x, 7, ACC[r.cubo] || '#c0407a'); } else wallX(7, x, !!(r && r.locked)); }
     for (let y = 0; y < 5; y++) { wallY(6, y); wallY(11, y); }
-    BOT.slice(1).forEach(r => { for (let y = 7; y < 13; y++) wallY(r.x0, y); });
+    BOT.slice(1).forEach((r, i) => { const low = i === 0 && room('comercial') && !room('comercial').locked; for (let y = 7; y < 13; y++) { if (low) wallLow(r.x0, y, true); else wallY(r.x0, y); } });
     AG.filter(a => a.seat && a.cubo !== 'finanzas').forEach(fuzukue);
     // Dirección: mesa lacada, cojines, ikebana en el tokonoma
     addStatic(3.5 + 2.8, fp(2.3, 1.9, 2.4, .9, 12), g => { const m = boxR(g, 2.3, 1.9, 2.4, .9, 9, R.lacq); const p = P(3.3, 2.3); rect(g, R.paper, p[0] - 7, p[1] - 11, 12, 4); line(g, R.indigo[3], p[0] - 5, p[1] - 10, p[0] + 2, p[1] - 9); rect(g, R.red[3], p[0] - 1, p[1] - 10, 2, 1); const q = P(4.3, 2.4); rect(g, R.cream, q[0], q[1] - 11, 3, 2); rect(g, R.moss[3], q[0] + 1, q[1] - 12, 1, 1); rect(g, R.cream, q[0] + 5, q[1] - 10, 3, 2); });
@@ -1454,6 +1454,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     const from = a ? { pos: a.pos.slice(), cur: a.cur } : { pos: [18.4, 6.0], cur: 'pasillo' };
     if (reduce || DROPS.length >= 40) sealed(); else DROPS.push({ pos: from.pos, path: route({ cur: from.cur }, REG_TARGET, 'registro'), trail: [] });   // en una ráfaga no se dibujan mil gotas: se sellan igual
     if (ev.cubo === 'finanzas') abacusT = 1;
+    comercialEv(ev);
     if (/^(finanzas\.cobro\.registrado|comercial\.pedido\.atribuido)/.test(ev.tipo)) { if (/^finanzas\./.test(ev.tipo)) cobrosVistos++; celebrate(); }
   }
 
@@ -1863,6 +1864,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
   }
   function furnishRoom(r) {
     roomDecor(r);
+    if (r.tpl === 'comercial') comercialDecor(r);
     const x0 = r.x0, y0 = r.y0, x1 = r.x1, w = x1 - x0, d = r.y1 - r.y0, tpl = ({ ops: 'taller', comercial: 'tienda', customer_success: 'archivo' })[r.tpl] || r.tpl;
     const bench = Math.min(3.4, w - 1.0);
     if (tpl === 'taller') {
@@ -2393,6 +2395,8 @@ void main(){
     LOTS.forEach(l => { const st = LS[l.id]; if (st.state === 'built') return; const c = P((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2 + 1.2); const nm = st.cubo && CUBES[st.cubo] ? CUBES[st.cubo].nombre : ''; text(st.state === 'obra' ? 'EN OBRA · ' + Math.round(st.p * 100) + ' %' : nm ? 'PABELLÓN · ' + nm.toUpperCase() + ' · SIN DAR DE ALTA' : 'SOLAR LIBRE', c[0], c[1], lab, '600', 'Inter, sans-serif', dk > .45 ? '#bfe3ff' : '#3f6f9c'); });
     if ('letterSpacing' in dc) dc.letterSpacing = '0px';
     const small = Math.max(10, Math.min(14, k / dpr * 4.4));
+    { const cr = room('comercial'); if (cr && !cr.locked && k / dpr >= 2.6) { comSt(cr).forEach(st => { const n = comN(st.k), p = P(st.x, st.y); if (n) text(String(n), p[0], p[1] - 36, small, '600', '"JetBrains Mono", monospace'); });
+      const rd = (CUBES.comercial || {}).rendimiento, q = P(cr.x0 + .8, cr.y0 + 3.7); text(rd && rd.roi != null ? 'ROI ' + rd.roi + '×' : 'ROI sin medir', q[0] - 4, q[1] - 26, small, '500', '"JetBrains Mono", monospace'); } }
     { const fr = room('finanzas'); if (fr && !fr.locked) {
       const c = P(10.02, .72); text('sin atribuir ' + (BK.dinero ? eur(BK.dinero.sin_atribuir_eur) : '—'), c[0], c[1] - 22, small, '500', '"JetBrains Mono", monospace');
       const f = P(10.0, 2.75); text('hoy ' + (BK.dinero ? eur(BK.dinero.gasto_eur) : '—') + ' de ' + (BK.dinero && BK.dinero.tope_eur ? eur(BK.dinero.tope_eur) : '—'), f[0], f[1] + 16, small, '500', '"JetBrains Mono", monospace'); } }
@@ -2502,7 +2506,7 @@ void main(){
     if (!paused) { if (ev.canal === 'chat') onChat(ev); else onEvento(ev); }
     if (ev.tipo && /^plataforma\.aprobacion\./.test(ev.tipo)) { pollEstado(false); if (!drawer.hidden) renderDrawer(); }
     if (tab === 'reg' && ev.canal === 'rue') renderTab();
-    if (/^plataforma\./.test(ev.tipo) || /^kaizen\.colmena\./.test(ev.tipo)) scheduleRefresh();      // alta, parada, gasto, aprobaciones: cambian la foto; el resto lo recoge el sondeo de 12 s
+    if (/^plataforma\./.test(ev.tipo) || /^kaizen\.colmena\./.test(ev.tipo) || /^comercial\./.test(ev.tipo)) scheduleRefresh();      // alta, parada, gasto, aprobaciones: cambian la foto; el resto lo recoge el sondeo de 12 s
   }
   // se vuelve a pedir la foto tras los eventos que la cambian, agrupando ráfagas
   let refreshT = null;
@@ -2660,7 +2664,7 @@ void main(){
   const chime = (i, vol, when) => { tone(noteF(i), 1.5, vol || .05, 'sine', when); tone(noteF(i) * 2.005, .7, (vol || .05) * .35, 'sine', when); };
   const arpeggio = (n, base, vol) => { for (let k = 0; k < n; k++) chime(base + k * 2, vol || .04, k * .09); };
   const thock = () => { tone(95, .2, .11, 'triangle'); tone(190, .1, .05, 'square'); };
-  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
+  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', embudo: 'una estación del embudo', cesta: 'la cesta de los dormidos', papelera: 'la papelera', sellado: 'el sello de no contactar', campanilla: 'la campanilla', caja: 'la caja de pedidos', pilas: 'las pilas de ROI', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
   const FOUND = new Set(); try { JSON.parse(localStorage.getItem('kaizen-rincones') || '[]').forEach(k => { if (RINCONES[k]) FOUND.add(k); }); } catch (e) {}
   function paintBadges() { const b = document.getElementById('b-rin'); if (b) { b.textContent = '✦ ' + FOUND.size + '/' + Object.keys(RINCONES).length; b.title = 'Rincones del jardín que has descubierto (solo adorno: no cuenta nada de tu empresa)'; } const s = document.getElementById('b-snd'); if (s) s.textContent = SND.on ? 'Sonido' : 'Sin sonido'; }
   function discover(k) { if (FOUND.has(k) || !RINCONES[k]) return; FOUND.add(k); try { localStorage.setItem('kaizen-rincones', JSON.stringify([...FOUND])); } catch (e) {} paintBadges(); inscribe('✦ Rincón descubierto: ' + RINCONES[k] + ' · ' + FOUND.size + '/' + Object.keys(RINCONES).length); arpeggio(3, 4, .05); }
@@ -2684,6 +2688,7 @@ void main(){
     FURIN.forEach(f => { if (f.ring > 0) f.ring = Math.max(0, f.ring - dt * .45); });
     AG.forEach(a => { if (a.hop > 0) a.hop = Math.max(0, a.hop - dt * 2.2); });
     if (monteGlow > 0) monteGlow = Math.max(0, monteGlow - dt * .4);
+    if (bellC > 0) bellC = Math.max(0, bellC - dt * .7); if (cajaT > 0) cajaT = Math.max(0, cajaT - dt * 1.6);
     if (abacusT > 0) abacusT = Math.max(0, abacusT - dt * 1.4); if (nekoT > 0) nekoT = Math.max(0, nekoT - dt * .5); if (gemFlash > 0) gemFlash = Math.max(0, gemFlash - dt * 1.2);
     // las luciérnagas se acercan con curiosidad al cursor cuando es de noche
     if (cursorW && FLIES.length) FLIES.forEach(f => { const d = Math.hypot(f.hx - cursorW[0], f.hy - cursorW[1]); if (d < 70 && d > 4) { f.hx += (cursorW[0] - f.hx) * dt * .35; f.hy += (cursorW[1] - 6 - f.hy) * dt * .35; } });
@@ -2783,6 +2788,64 @@ void main(){
     });
   }
   function kodamaAt(wx, wy) { for (const k of KODAMA) { if (k.gone > 0) continue; const b = P(k.x, k.y); if (Math.abs(wx - b[0]) < 7 && wy > b[1] - 13 && wy < b[1] + 2) return { x: b[0], y: b[1] - 6, r: 10, act: () => { k.gone = 50; spawn(b[0], b[1] - 6, 26, { cols: ['#ffffff', '#d8ffe8', '#fff6b0'], v: 30, g: 10, l: 1.5 }); ring(b[0], b[1], '#d8ffe8', 20); for (let i = 0; i < 5; i++) tone(700 + i * 90, .07, .04, 'square', i * .05); discover('kodama'); inscribe('Un kodama sacude la cabeza… y se esconde entre las cañas.'); } }; } return null; }
+  // ============================================================ Comercial: el camino del cliente
+  // El embudo real (cubos[comercial].pipeline): seis estaciones de farol a lo largo de un sendero de piedras; el farol crece y brilla con los leads que hay en
+  // ese estado, y cada lead es un punto. Dormidos, descartados y excluidos tienen su rincón. Las pilas del mostrador son el valor atribuido y el coste de 30 días.
+  const STG = [['COLD', 'Fríos', '#9ab8ff'], ['CONTACTADO', 'Contactados', '#7ad2c8'], ['CONVERSACION', 'En conversación', '#9af07a'], ['COMPROMETIDO', 'Comprometidos', '#f0e05a'], ['PEDIDO', 'Con pedido', '#ffb040'], ['CUSTOMER', 'Clientes', '#ff7a4a']];
+  const SIDE = [['DORMIDO', 'Dormidos', 'cesta', .7, 5.3], ['DESCARTADO', 'Descartados', 'papelera', 1.5, 5.4], ['EXCLUIDO', 'Excluidos (no contactar)', 'sello', 2.3, 5.3]];
+  let bellC = 0, cajaT = 0; const LEADMOTES = [];
+  const comPipe = () => { const c = CUBES.comercial; return (c && c.pipeline) || null; };
+  const comN = k => { const p = comPipe(); return p && p.leads ? (p.leads[k] || 0) : 0; };
+  const comPath = r => catmull([[3.0, .9], [3.9, 1.6], [3.3, 2.5], [4.1, 3.3], [3.4, 4.1], [4.1, 4.9]].map(q => [r.x0 + q[0], r.y0 + q[1]]), 6);
+  const comSt = r => { const base = [[3.0, .9], [3.9, 1.6], [3.3, 2.5], [4.1, 3.3], [3.4, 4.1], [4.1, 4.9]]; return STG.map((g, i) => ({ k: g[0], name: g[1], col: g[2], x: r.x0 + base[i][0] + .55, y: r.y0 + base[i][1] })); };
+  const moneyH = v => v > 0 ? 1 + Math.round(7 * Math.min(1, Math.log(1 + v) / Math.log(1001))) : 0;
+  function comercialDecor(r) {
+    const path = comPath(r), sts = comSt(r), b0 = P(r.x0 + 3.5, r.y0 + 3);
+    addStatic(r.x0 + r.y0 + .06, [b0[0] - 90, b0[1] - 80, b0[0] + 90, b0[1] + 80], g => {
+      for (let i = 0; i + 1 < path.length; i++) { const a = path[i], b = path[i + 1], n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / .34)); for (let k = 0; k < n; k++) { const t = k / n, p = P(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); blob(g, p[0], p[1], 5, 2.6, [R.stone[3], R.stone[4], R.stone[5], R.white]); } }
+    });
+    // estaciones
+    add(r.x0 + 4 + r.y0 + 3, (g, T) => {
+      sts.forEach((st, i) => {
+        const n = comN(st.k), f = n ? Math.min(1, .35 + Math.log(1 + n) / Math.log(21) * .65) : .25, p = P(st.x, st.y), x = Math.round(p[0]), y = Math.round(p[1]), h = Math.round(6 + f * 7), wd = Math.round(4 + f * 4);
+        blob(g, x, y - 1, 5, 2.4, [R.stone[1], R.stone[2], R.stone[3], R.stone[4]]); rect(g, R.wood[1], x - 1, y - 6, 2, 5);
+        const top = y - 6 - h; rect(g, R.ink, x - wd / 2 - 1, top - 1, wd + 2, 1); rect(g, n ? st.col : mix(st.col, '#555566', .6), x - wd / 2, top, wd, h); rect(g, n ? mix(st.col, '#ffffff', .55) : R.cream, x - wd / 2, top, 1, h); rect(g, R.ink, x - wd / 2 - 1, top + h, wd + 2, 1);
+        for (let k = 0; k < Math.min(n, 6); k++) rect(g, '#ffffff', x - 5 + k * 2, top - 4 - (k % 2), 1, 1);
+        if (n) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = (.3 + .25 * f) * (reduce ? 1 : .85 + Math.sin(T * 2.2 + i) * .15); g.drawImage(glowOf(st.col), x - 16, top - 10, 32, 28); g.restore(); }
+      });
+      // los leads que entran (evento real comercial.lead.*) recorren el sendero
+      for (let i = LEADMOTES.length - 1; i >= 0; i--) { const m = LEADMOTES[i]; m.t += .016 * (reduce ? 3 : 1) / 4; if (m.t >= 1) { LEADMOTES.splice(i, 1); continue; } const j = Math.min(path.length - 2, Math.floor(m.t * (path.length - 1))), f = m.t * (path.length - 1) - j, q = P(path[j][0] + (path[j + 1][0] - path[j][0]) * f, path[j][1] + (path[j + 1][1] - path[j][1]) * f); g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .9; g.drawImage(glowOf('#ffe28a'), Math.round(q[0] - 6), Math.round(q[1] - 12), 12, 12); g.restore(); rect(g, '#ffffff', q[0], q[1] - 7, 1, 1); }
+      // rincones de los que no avanzan
+      SIDE.forEach(sd => { const n = comN(sd[0]), p = P(r.x0 + sd[3], r.y0 + sd[4]), x = Math.round(p[0]), y = Math.round(p[1]);
+        if (sd[2] === 'cesta') { blob(g, x, y - 2, 6, 3, [mix(R.pink[0], '#000', .2), R.pink[1], R.pink[2], R.pink[3]]); rect(g, R.cream, x - 3, y - 5, 6, 1); for (let k = 0; k < Math.min(n, 4); k++) { const a = (T * .8 + k) % 2; rect(g, R.ink, x + 3 + k * 2, y - 8 - a * 4, 2, 1); } }
+        else if (sd[2] === 'papelera') { rect(g, R.wood[2], x - 3, y - 7, 7, 7); rect(g, R.wood[4], x - 3, y - 7, 7, 1); rect(g, R.wood[0], x - 3, y - 4, 7, 1); for (let k = 0; k < Math.min(n, 4); k++) rect(g, R.cream, x - 2 + k * 2, y - 9 - (k % 2), 2, 2); }
+        else { blob(g, x, y - 4, 4, 5, [R.stone[1], R.stone[2], R.stone[3], R.stone[4]]); rect(g, R.red[2], x - 2, y - 8, 4, 4); line(g, R.cream, x - 2, y - 8, x + 1, y - 5); line(g, R.cream, x + 1, y - 8, x - 2, y - 5); }
+        for (let k = 0; k < Math.min(n, 6); k++) rect(g, sd[2] === 'sello' ? R.red[3] : '#ffffff', x - 5 + k * 2, y + 1, 1, 1); });
+      // mostrador: pila de valor (oro) y de coste (plata); se vacía si no hay dato
+      const rd = (CUBES.comercial || {}).rendimiento || {}, v = rd.valor_eur || 0, c = rd.coste_eur || 0, tp = P(r.x0 + .8, r.y0 + 3.3), tc = P(r.x0 + .8, r.y0 + 4.1);
+      [[tp, v, R.gold], [tc, c, R.stone]].forEach(([q, val, ramp]) => { const hh = moneyH(val); rect(g, R.lacq[1], q[0] - 5, q[1] - 11, 10, 2); for (let k = 0; k < hh; k++) { rect(g, ramp[1], q[0] - 3, q[1] - 12 - k, 7, 1); rect(g, ramp[3] || ramp[2], q[0] - 3, q[1] - 12 - k, 7, 1 - .0); rect(g, ramp[1], q[0] + 3, q[1] - 12 - k, 1, 1); } });
+      // caja: la tapa salta con cada pedido atribuido de verdad
+      const cp = P(r.x0 + .8, r.y0 + 2.6); rect(g, R.lacq[2], cp[0] - 4, cp[1] - 14, 8, 5); rect(g, R.gold[2], cp[0] - 3, cp[1] - 13, 6, 1); rect(g, R.lacq[4], cp[0] - 4, cp[1] - 15 - Math.round(cajaT * 4), 8, 1);
+      // campanilla de la puerta: suena con cada evento real de Comercial
+      const bp = P(r.x0 + 2.5, r.y0 + .3), sw = reduce ? 0 : Math.sin(T * 14) * 3 * bellC, bx = Math.round(bp[0] + sw), by = Math.round(bp[1]) - 25; line(g, R.stone[4], bp[0], by - 3, bx, by); rect(g, R.gold[2], bx - 2, by, 5, 4); rect(g, R.gold[3], bx - 2, by, 1, 3); rect(g, R.gold[0], bx - 3, by + 4, 7, 1); rect(g, R.ink, bx, by + 5, 1, 1);
+    });
+  }
+  function comercialEv(ev) {
+    if (ev.cubo !== 'comercial') return; const cr = room('comercial'); if (!cr || cr.locked) return;
+    bellC = 1; chime(Math.floor(rnd() * 6), .035);
+    if (/lead\./.test(ev.tipo || '') && LEADMOTES.length < 8) LEADMOTES.push({ t: 0 });
+    if (/pedido\.atribuido/.test(ev.tipo || '')) { cajaT = 1; const p = P(cr.x0 + .8, cr.y0 + 2.6); spawn(p[0], p[1] - 14, 26, { cols: ['#ffd45a', '#fff2a0'], dir: -1.57, spread: 1, v: 44, g: 70, l: 1.4, sz: 2 }); }
+  }
+  function comHot(wx, wy) {
+    const cr = room('comercial'); if (!cr || cr.locked) return null;
+    const pl = comPipe();
+    for (const st of comSt(cr)) { const p = P(st.x, st.y); if (Math.abs(wx - p[0]) < 8 && wy > p[1] - 24 && wy < p[1] + 2) return { x: p[0], y: p[1] - 12, r: 11, act: () => { spawn(p[0], p[1] - 14, 12, { cols: [st.col, '#ffffff'], v: 20, g: 6, l: 1.1 }); chime(STG.findIndex(q => q[0] === st.k) * 2, .04); discover('embudo'); inscribe(pl ? st.name + ': ' + comN(st.k) + (comN(st.k) === 1 ? ' lead' : ' leads') + '. El farol crece con los que hay en este paso.' : 'Sin datos del embudo todavía.'); } }; }
+    for (const sd of SIDE) { const p = P(cr.x0 + sd[3], cr.y0 + sd[4]); if (Math.abs(wx - p[0]) < 8 && wy > p[1] - 14 && wy < p[1] + 4) return { x: p[0], y: p[1] - 6, r: 9, act: () => { ring(p[0], p[1], '#ffffff', 16); chime(1, .04); discover(sd[2] === 'cesta' ? 'cesta' : sd[2] === 'papelera' ? 'papelera' : 'sellado'); inscribe(sd[1] + ': ' + comN(sd[0]) + (sd[0] === 'EXCLUIDO' ? '. Quien pidió que no le contactemos: no se le vuelve a escribir, nunca.' : sd[0] === 'DORMIDO' ? '. Pueden despertar más adelante.' : '. Los puede recuperar el operador.')); } }; }
+    { const p = P(cr.x0 + 2.5, cr.y0 + .3); if (Math.abs(wx - p[0]) < 8 && wy > p[1] - 32 && wy < p[1] - 18) return { x: p[0], y: p[1] - 25, r: 9, act: () => { bellC = 1; for (let k = 0; k < 3; k++) chime(6 + k * 2, .04, k * .1); discover('campanilla'); inscribe('La campanilla suena cuando Comercial hace algo de verdad.'); } }; }
+    { const p = P(cr.x0 + .8, cr.y0 + 2.6); if (Math.abs(wx - p[0]) < 7 && wy > p[1] - 18 && wy < p[1] - 8) return { x: p[0], y: p[1] - 13, r: 9, act: () => { cajaT = 1; spawn(p[0], p[1] - 14, 12, { cols: ['#ffd45a', '#fff2a0'], dir: -1.57, spread: 1, v: 34, g: 60, l: 1.1 }); chime(8, .045); discover('caja'); const pd = pl && pl.pedidos; inscribe(pd ? 'Pedidos atribuidos: ' + pd.atribuidos + (pd.pendientes_validacion ? ' · por validar: ' + pd.pendientes_validacion : '') + '.' : 'Sin datos de pedidos todavía.'); } }; }
+    for (const q of [[.8, 3.3, 'valor'], [.8, 4.1, 'coste']]) { const p = P(cr.x0 + q[0], cr.y0 + q[1]); if (Math.abs(wx - p[0]) < 7 && wy > p[1] - 22 && wy < p[1] - 8) return { x: p[0], y: p[1] - 14, r: 9, act: () => { chime(4, .04); discover('pilas'); const rd = (CUBES.comercial || {}).rendimiento; inscribe(rd && rd.roi != null ? 'ROI ' + rd.roi + '×: valor atribuido ' + eur(rd.valor_eur) + ' frente a ' + eur(rd.coste_eur) + ' de coste, en 30 días.' : 'ROI sin medir' + (rd && rd.motivo ? ': ' + rd.motivo + '.' : '.')); } }; }
+    return null;
+  }
   function finHot(wx, wy) {
     const fr = room('finanzas'); if (!fr || fr.locked) return null;
     const n = P(9.25, 1.55), d = P(6.55, 1.55), f = P(10.0, 2.75), c = P(10.02, .72), din = BK.dinero;
@@ -2793,7 +2856,7 @@ void main(){
     return null;
   }
   function hotAt(wx, wy) {
-    { const fh = finHot(wx, wy); if (fh) return fh; }
+    { const fh = finHot(wx, wy) || comHot(wx, wy); if (fh) return fh; }
     { const ko = kodamaAt(wx, wy); if (ko) return ko; }
     if (CRANE.on && Math.abs(wx - CRANE.x) < 14 && Math.abs(wy - (CRANE.y + EX)) < 10) return { x: CRANE.x, y: CRANE.y + EX, r: 14, act: onCrane };
     for (const f of FURIN) if (Math.abs(wx - f.x) < 7 && wy > f.y - 3 && wy < f.y + 22) return { x: f.x, y: f.y + 8, r: 12, act: () => onFurin(f) };

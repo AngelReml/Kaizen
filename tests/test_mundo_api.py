@@ -526,3 +526,19 @@ def test_estado_trae_rendimiento_por_cubo_y_nadie_tiene_grado_sin_datos(entorno)
     assert j["cubos"] and all("rendimiento" in x for x in j["cubos"])
     assert all(x["rendimiento"]["rango"] is None for x in j["cubos"])        # tenant vacio: no se inventa ningun grado
     assert all(x["rendimiento"]["motivo"] for x in j["cubos"])
+
+
+def test_comercial_trae_el_embudo_solo_con_numeros(entorno):
+    app, c, b = _montaje()
+    j = c.get(f"/api/mundo/estado?empresa={EMPRESA}").json()
+    com = next(x for x in j["cubos"] if x["cubo"] == "comercial")
+    assert com["pipeline"]["leads"]["COLD"] == 0 and com["pipeline"]["pedidos"] == {"atribuidos": 0, "pendientes_validacion": 0}
+    assert all("pipeline" not in x for x in j["cubos"] if x["cubo"] != "comercial")
+    k = b.k if hasattr(b, "k") else None
+    if k is not None:
+        for i in range(3):
+            k.add(EMPRESA, "lead_canon", f"l{i}", {"id": f"l{i}", "estado": "COLD" if i < 2 else "CONVERSACION", "contacto": {"email": "secreto@x.es"}})
+        j = c.get(f"/api/mundo/estado?empresa={EMPRESA}").json()
+        com = next(x for x in j["cubos"] if x["cubo"] == "comercial")
+        assert com["pipeline"]["leads"]["COLD"] == 2 and com["pipeline"]["leads"]["CONVERSACION"] == 1
+        assert "secreto" not in json.dumps(j)                      # solo numeros: ningun dato de personas

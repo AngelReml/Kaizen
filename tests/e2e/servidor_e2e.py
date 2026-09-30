@@ -52,6 +52,14 @@ def crear(datos: Path, mecha_s: int = 6, token: str | None = None):
                                       origen="e2e", correlacion_id=d.get("hilo", "")))
         return {"ok": True, "tipo": s.tipo}
 
+    @app.post("/_e2e/lead")
+    async def e2e_lead(request: Request):
+        """Solo pruebas: deja leads sintéticos en un estado del embudo (sin datos de personas)."""
+        d = await request.json()
+        for i in range(int(d.get("n", 1))):
+            k.add(EMPRESA, "lead_canon", f"{d['estado'].lower()}_{i}", {"id": f"{d['estado'].lower()}_{i}", "estado": d["estado"]})
+        return {"ok": True}
+
     @app.post("/_e2e/bus")
     async def e2e_bus(request: Request):
         d = await request.json()
