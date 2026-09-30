@@ -848,10 +848,13 @@ def main() -> None:                                # pragma: no cover
     ap = argparse.ArgumentParser(prog="panel_mando")
     ap.add_argument("--abrir", action="store_true",
                     help="abre el navegador ya autenticado (un toque, R8)")
+    ap.add_argument("--pagina", default="/",
+                    help="pagina que abre el navegador (por defecto La Manana; /mundo abre el juego)")
     args = ap.parse_args()
+    pagina = args.pagina if args.pagina.startswith("/") and not args.pagina.startswith("//") else "/"
     token = os.getenv("KAIZEN_TOKEN") or None
-    url = ("http://127.0.0.1:8600/" if not token
-           else f"http://127.0.0.1:8600/login?token={token}")
+    url = (f"http://127.0.0.1:8600{pagina}" if not token
+           else f"http://127.0.0.1:8600/login?token={token}&ir={pagina}")
 
     # Mismo patron que panel_mando/colmena.py::main(): sin este chequeo, un
     # doble clic en CENTRO DE MANDO.cmd cuando el panel ya corria intentaba

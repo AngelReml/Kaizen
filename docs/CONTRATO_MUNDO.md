@@ -45,10 +45,14 @@ existen, todos los cubos salen `alta:false`. Campos:
   zona, tal cual lo da Mechas.armar), accion, cubo}` (texto y cubo del nodo de
   la cola). El detalle de las pendientes se pide a `/api/tarjetas/{empresa}`.
 - `sello`: `{integra, pasos, mensaje}` de la verificacion de la bitacora.
-- `cursores`: `{rue, bus}` para empalmar con el rio (ver abajo).
+- `rrhh`: `{mapa, propuestas[]}`. Sale de las funciones puras del cubo RRHH
+  (`mapa_desde` y `propuestas_desde` en `panel_mando/herramientas/rrhh.py`) sobre estos mismos
+  cubos: `mapa` = `{catalogo, presentes, faltantes, fuera_de_catalogo, cobertura}`. El juego no
+  reimplementa nada: cuenta lo mismo que RRHH.
+- `cursores`: `{rue, bus, chat}` para empalmar con el rio (ver abajo).
 - `recientes[]`: hasta 40 eventos unificados, ts ascendente.
 
-### `GET /api/mundo/rio?empresa=X&desde_rue=N&desde_bus=M&ciclos=K`
+### `GET /api/mundo/rio?empresa=X&desde_rue=N&desde_bus=M&desde_chat=C&ciclos=K`
 SSE (`text/event-stream`) con el mismo esqueleto que `/rio/{empresa}`: cada
 ciclo emite los eventos nuevos y una linea `: latido`; ademas el pulso quema las
 mechas vencidas. `ciclos=0` = infinito; `K>0` solo para tests/curl.
@@ -56,7 +60,7 @@ mechas vencidas. `ciclos=0` = infinito; `K>0` solo para tests/curl.
 Evento unificado (`data:` en una sola linea de JSON; `id:` es `canal:id`):
 
 ```
-{"canal":"rue"|"bus","id":<int>,"tipo":"...","cubo":"..."|null,
+{"canal":"rue"|"bus"|"chat","id":<int>,"tipo":"...","cubo":"..."|null,
  "frase":"...","ts":"...","aprobacion":"<id de tarjeta>"|null}
 ```
 
@@ -71,8 +75,15 @@ Evento unificado (`data:` en una sola linea de JSON; `id:` es `canal:id`):
   topic (`Marca: revision emitida`). Solo se emiten eventos cuyo payload no
   tenga `empresa` (globales) o coincida con la pedida; del payload no sale nada.
 
+- **Canal `chat`**: mensajes de la Colmena (`colmena_mensajes`): solo los de directores y del
+  operador; las notas de sistema no salen. `id` = id del mensaje. El `tipo` dice quien y donde:
+  `colmena.sala.director`, `colmena.individual.director`, `colmena.sala.operador`,
+  `colmena.individual.operador`. `cubo` solo se rellena para un director (el que habla); la frase
+  de un mensaje del operador empieza por `Tu: `. Sin las tablas de Colmena: canal vacio, nada
+  se crea.
+
 ## Cursores
-`desde_rue` y `desde_bus` son independientes; `-1` (defecto) = desde el
+`desde_rue`, `desde_bus` y `desde_chat` son independientes; `-1` (defecto) = desde el
 principio; se devuelven solo eventos con id **estrictamente mayor**. Tope de 200
 eventos por ciclo y canal (el siguiente ciclo continua). Empalme sin huecos ni
 repeticiones: leer `estado`, y abrir el rio con `desde_rue=cursores.rue` (la cadena RUE empieza en `n=0`; un tenant vacio devuelve `-1`) y
@@ -97,3 +108,25 @@ curl -s "http://127.0.0.1:8600/api/mundo/estado?empresa=laboratorio"
 curl -sN "http://127.0.0.1:8600/api/mundo/rio?empresa=laboratorio&ciclos=1"
 curl -si "http://127.0.0.1:8600/mundo"        # 200 + no-store (o 404 sin fichero)
 ```
+
+## Lo que el juego hace con cada cosa (y lo que NO hace)
+
+| Llega | El juego |
+|---|---|
+| `estado.cubos[].alta` pasa a true | abre la sala (o levanta el pabellon) y el director llega andando |
+| `estado.cubos[].salud` (OK, DEGRADADO, ERROR, SIN DATOS) | sala cuidada, con polvo, con polvo y goteras, o rotulada «sin datos» |
+| evento `rue` o `bus` con `cubo` | el director dice la frase y una gota de tinta viaja al Registro, que la sella |
+| evento sin cubo | solo gota y feed |
+| `plataforma.aprobacion.*` | refresca la ventanilla |
+| `chat` de un director | lo dice en su mesa; si es de la sala, camina a la Sala de Reunion |
+| `finanzas.cobro.registrado`, `comercial.pedido.atribuido` | fuegos artificiales (hanabi) |
+| `estado.dinero.modo_ahorro` | el gasto se marca y los directores dicen «en modo ahorro» |
+| `estado.parado` | el mundo se congela y dice TODO PARADO |
+| cubo nuevo en el catalogo | se le reserva el primer solar libre; al darlo de alta, se construye |
+
+Sin conexion el mundo lo dice y **no inventa actividad**: conserva lo ultimo que supo.
+
+Escritura: el juego solo usa `POST /cmd/aprobar|denegar|deshacer|parar_todo|reanudar`, con el
+mismo CSRF y los mismos gestos de mantener pulsado que el panel (SI 0,8 s; PARAR TODO 2 s), y el
+`GET /api/colmena/agentes` cuando el operador pulsa «Dar de alta a los directores» (es lo que ya
+hacia abrir el chat: da de alta a los que faltan).

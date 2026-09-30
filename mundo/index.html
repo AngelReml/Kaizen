@@ -961,8 +961,15 @@ body.muda .side, body.muda .cmd, body.muda .stats { display: none !important; }
     if (r.id === 'finanzas') return [7.8, 2.9];
     return [r.x0 + (r.x1 - r.x0) * .5 + .2, r.y0 + 2.6];
   }
+  // un cubo futuro no tiene aspecto pensado: se le da uno estable, sacado de su nombre y de la paleta de la casa
+  function ensureLook(id) {
+    if (LOOK[id]) return;
+    const h = k => hash(id.length * 17 + id.charCodeAt(0) * 3 + id.charCodeAt(id.length - 1), k), base = LOOK[CUBE_ORDER[Math.floor(h(1) * CUBE_ORDER.length)]];
+    LOOK[id] = Object.assign({}, base, { skin: Math.floor(h(2) * 3), style: ['short', 'pony', 'long', 'bun'][Math.floor(h(3) * 4)], cloth: [R.indigo, RAMP(R.moss, 1), R.pink, R.red, RAMP(R.wood, 0)][Math.floor(h(4) * 5)], obi: [R.gold, R.red, R.indigo][Math.floor(h(5) * 3)], glasses: h(6) > .7, beard: false });
+  }
   function spawnAgent(c, instant) {
     if (agentOfCubo(c.cubo)) return null;
+    ensureLook(c.cubo);
     const r = room(c.cubo); if (!r) return null;
     const seat = seatFor(r);
     const a = { id: c.cubo, cubo: c.cubo, name: c.nombre, role: 'Director', dept: c.nombre, uid: c.uid, room: r.id, seat, tasks: 0, last: '', cush: CUBE_ORDER.indexOf(c.cubo) % 2 };
@@ -1150,7 +1157,7 @@ body.muda .side, body.muda .cmd, body.muda .stats { display: none !important; }
     const a = ev.cubo ? agent(ev.cubo) : null;
     if (a && a.state !== 'rest') { say(a, short(ev.frase, 64), 6); a.emote = { e: '*', t: 1.2 }; a.last = ev.frase; a.tasks++; }
     const from = a ? { pos: a.pos.slice(), cur: a.cur } : { pos: [18.4, 6.0], cur: 'pasillo' };
-    if (reduce) sealed(); else DROPS.push({ pos: from.pos, path: route({ cur: from.cur }, REG_TARGET, 'registro'), trail: [] });
+    if (reduce || DROPS.length >= 40) sealed(); else DROPS.push({ pos: from.pos, path: route({ cur: from.cur }, REG_TARGET, 'registro'), trail: [] });   // en una ráfaga no se dibujan mil gotas: se sellan igual
     if (/^(finanzas\.cobro\.registrado|comercial\.pedido\.atribuido)/.test(ev.tipo)) celebrate();
   }
 

@@ -91,6 +91,36 @@ def crear(datos: Path, mecha_s: int = 6):
             conn.close()
         return {"ok": True}
 
+    @app.post("/_e2e/cubo_nuevo")
+    async def e2e_cubo_nuevo():
+        """Un cubo NUEVO en el catalogo (manifest instalado en disco): el edificio debe reservarle un solar."""
+        import json as _json
+        import cubos.base as cb
+        ruta = datos / "cubo_prueba" / "manifest.json"
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        ruta.write_text(_json.dumps({"cubo": "prueba", "version": "1.0.0", "descripcion": "Cubo de ensayo (e2e)",
+                                     "produce": [], "consume": [], "nivel_autonomia_defecto": "CERO",
+                                     "acciones_irreversibles": [], "requiere": []}), encoding="utf-8")
+        orig = getattr(cb, "_e2e_original", None) or cb.manifiestos_instalados
+        cb._e2e_original = orig
+        cb.manifiestos_instalados = lambda: {**orig(), "prueba": ruta}
+        return {"ok": True}
+
+    @app.post("/_e2e/alta_cubo")
+    async def e2e_alta_cubo():
+        """Alta del director del cubo nuevo, como la hace la Colmena (fila + evento sellado en el bus)."""
+        from panel_mando import colmena as CLM
+        conn = CLM._conn()
+        try:
+            with bus.transaccion(conn):
+                conn.execute("INSERT OR IGNORE INTO colmena_agentes (empresa, cubo, role_id, uid, ts_alta, evento_alta_id) VALUES (?,?,?,?,?,NULL)",
+                             (EMPRESA, "prueba", "director_prueba", "KZ-PRUEBA-E2E", "2026-09-30T10:00:00Z"))
+                bus.publicar_en_tx(conn, "kaizen.colmena.agente_registrado.v1", "colmena",
+                                   {"empresa": EMPRESA, "cubo": "prueba", "role_id": "director_prueba", "uid": "KZ-PRUEBA-E2E", "duenio": "operador"})
+        finally:
+            conn.close()
+        return {"ok": True}
+
     @app.post("/_e2e/gasto")
     async def e2e_gasto(request: Request):
         """Gasto de hoy en el ledger de coste del tenant (el que ve la Tesorería y el que activa el modo ahorro)."""

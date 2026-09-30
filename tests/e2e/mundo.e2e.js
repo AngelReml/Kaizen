@@ -196,6 +196,27 @@ const info = page => page.evaluate(() => KAIZEN.info());
     ok((await page.locator('#feedList li').count()) > 0, 'feed de recientes');
   });
 
+  await escenario('10b cubo nuevo: el edificio le reserva el solar libre y lo construye al darlo de alta', async () => {
+    await post('/_e2e/cubo_nuevo');
+    await until(page, () => KAIZEN.info().lots.some(l => l.cubo === 'prueba' && l.state === 'free'), null, 30000, 'el solar no se reserva');
+    ok(await page.evaluate(() => KAIZEN.info().lots.filter(l => !l.cubo && l.state === 'free').length === 0), 'no debería quedar ningún solar libre sin dueño');
+    await post('/_e2e/alta_cubo');
+    await until(page, () => KAIZEN.info().lots.some(l => l.cubo === 'prueba' && l.state === 'obra'), null, 20000, 'no empieza la obra');
+    await until(page, () => KAIZEN.info().agents.length === 11, null, 90000, 'la obra no termina');
+    const i = await info(page); ok(i.rooms.some(r => r.id === 'prueba' && r.annex && !r.locked), 'sala del pabellón nuevo');
+    return '11 directores, pabellón nuevo en el último solar';
+  });
+
+  await escenario('10c ráfaga de 300 eventos: el juego sigue vivo y acotado', async () => {
+    const antes = (await info(page)).events;
+    for (let k = 0; k < 300; k += 50) await Promise.all(Array.from({ length: 50 }, (_, j) => post('/_e2e/evento', { tipo: 'comercial.lead.cualificado', payload: { lead_ref: 'r' + (k + j) } })));
+    await until(page, n => KAIZEN.info().events >= n, antes + 300, 90000, 'no llegaron los 300 eventos');
+    const t0 = Date.now(); const i = await info(page); ok(Date.now() - t0 < 3000, 'la página no responde');
+    ok(i.drops <= 41, 'gotas sin acotar: ' + i.drops);
+    ok((await page.locator('#feedList li').count()) <= 60, 'el feed no está acotado');
+    return 'sellados +' + (i.events - antes) + ', gotas ' + i.drops;
+  });
+
   await escenario('11 sin errores de JavaScript', async () => { ok(errs.length === 0, errs.slice(0, 3).join(' | ')); });
 
   await b.close(); await parar();

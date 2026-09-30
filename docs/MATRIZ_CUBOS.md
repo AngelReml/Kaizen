@@ -17,7 +17,7 @@
 | marketing | Marketing: borradores de contenido; publicar de verdad exige gate | D06 | BAJA | 2 | 0 | publicacion_externa_real | construido | 5 | 3 | 9 |
 | ops | Operaciones: tareas y compromisos internos de entrega | D05 | BAJA | 1 | 1 | — | construido (`operaciones`) | 6 | 4 | 10 |
 | qa | Calidad: valida salidas de otros cubos antes de que cuenten | — (sin dossier) | CERO | 1 | 1 | — | construido (`opengravity`) | 5 | 3 | 6 |
-| rrhh | RRHH sintetico: definicion de puestos/agentes | — (sin dossier; D00 lo deja ABIERTO) | CERO | 1 | 0 | — | construido | 3 | 1 | 6 |
+| rrhh | RRHH: gestiona los agentes de Kaizen (que directores hay, cuales faltan y como rinden); solo lee y propone | — (sin dossier; D00 lo deja ABIERTO) | CERO | 1 | 0 | — | construido | 3 | 1 | 6 |
 
 \* ficheros de test que mencionan el cubo (heurística por texto; no es cobertura).
 
@@ -48,8 +48,6 @@ Eventos consumidos sin productor declarado: ninguno.
 - **Nombre doble:** el cubo `inteligencia` (manifest) es `inteligencia_mercado` en el catálogo.
 - **Nombre doble:** el cubo `ops` (manifest) es `operaciones` en el catálogo.
 - **Nombre doble:** el cubo `qa` (manifest) es `opengravity` en el catálogo.
-- **RRHH:** el manifest dice «pospuesto por decision del operador (docs/DESARROLLO_RRHH_POSPONER.md)» pero el catálogo lo marca `construido`.
-- **RRHH:** el documento citado `docs/DESARROLLO_RRHH_POSPONER.md` no existe en el repo.
 - **RRHH:** el manifest declara `consume: []`, pero el código consume CUBE_STARTED, DEPT_TASK_COMPLETED, DEPT_TASK_FAILED, OPENGRAVITY_ESCALATION_REQUESTED.
 - **Dossier ausente:** `customer_success` cita D03 (NO EXISTE); los otros dossiers lo mencionan como «siguiente de la serie».
 - **Eventos sin ningún consumidor declarado:** 11 de 15 (ver tabla 2); solo 4 están cableados por contrato entre cubos.
