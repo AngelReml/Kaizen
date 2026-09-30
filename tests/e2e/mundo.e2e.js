@@ -220,6 +220,32 @@ const info = page => page.evaluate(() => KAIZEN.info());
     return 'cadena +' + (i.cur.rue - antes) + ', gotas ' + i.drops;
   });
 
+  await escenario('10e rincones: el clic hace cosas y ninguna toca el estado de la empresa', async () => {
+    const Pw = (x, y) => [600 + (x - y) * 16, 190 + (x + y) * 8];       // la misma proyección isométrica del mundo
+    await page.addStyleTag({ content: 'aside,nav.cmd,header.top{display:none!important}' });
+    await page.evaluate(() => { document.getElementById('b-home').click(); for (let i = 0; i < 2; i++) document.getElementById('b-zout').click(); });
+    await sleep(2500);
+    const fx = () => page.evaluate(() => KAIZEN.fx());
+    const estado = async () => { const i = await info(page); return JSON.stringify({ ev: i.events, cur: i.cur, drops: i.drops, gasto: i.gasto, tarj: i.tarjetas, parado: i.parado }); };
+    const antes = await estado(), f0 = await fx(), i0 = await info(page), a = i0.agents[0];
+    const blancos = [
+      ['torii', Pw(21.5, 6).map((v, i) => i ? v - 26 : v)], ['flor', Pw(14, 21)], ['arbol', Pw(2.2, 18.6).map((v, i) => i ? v - 44 : v)],
+      ['isla', [f0.isles[1][0], f0.isles[1][1] + 14]], ...(f0.sun[2] > .3 ? [['sol', [f0.sun[0], f0.sun[1]]]] : []), ['director', Pw(a.pos[0], a.pos[1]).map((v, i) => i ? v - 14 : v)]
+    ];
+    const hechos = [];
+    for (const [k, w] of blancos) {
+      const sc = await page.evaluate(([x, y]) => KAIZEN.toScreen(x, y), w), ant = await fx();
+      await page.mouse.click(sc[0], sc[1]); await sleep(400);
+      const des = await fx();
+      ok(des.sp > ant.sp || des.bloom > ant.bloom || des.found.length > ant.found.length, 'el clic en ' + k + ' no hizo nada (' + sc.map(Math.round) + ')');
+      hechos.push(k);
+    }
+    ok((await fx()).found.length >= 5, 'rincones descubiertos: ' + (await fx()).found.join(','));
+    ok(await estado() === antes, 'un clic de adorno cambió el estado de la empresa');
+    await page.evaluate(() => { document.getElementById('pf-x') && document.getElementById('pf-x').click(); });
+    return hechos.join(' · ') + ' · estado intacto';
+  });
+
   // ── segundo servidor, con clave: sesión, cookie y CSRF de verdad ──
   await escenario('10d modo con clave: sin sesión redirige, con sesión funciona el CSRF y al caducar vuelve al acceso', async () => {
     await parar(); const P2 = PORT + 1, B2 = 'http://127.0.0.1:' + P2, CLAVE = 'clave-de-ensayo-123';

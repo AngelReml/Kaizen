@@ -131,3 +131,24 @@ Escritura: el juego solo usa `POST /cmd/aprobar|denegar|deshacer|parar_todo|rean
 mismo CSRF y los mismos gestos de mantener pulsado que el panel (SI 0,8 s; PARAR TODO 2 s), y el
 `GET /api/colmena/agentes` cuando el operador pulsa «Dar de alta a los directores» (es lo que ya
 hacia abrir el chat: da de alta a los que faltan).
+
+## Adorno y rincones (lo que reacciona al clic y NO es dato)
+
+El mundo tiene mucho que tocar: arboles (lluvia de petalos u hojas), el torii, el puente y el
+arroyo (un farolillo baja por la corriente), las islas flotantes, el sol, la montana, las nubes, el
+bambu (oleadas), los furin del alero (suenan), los faroles, el cesped (brota una flor) y, ademas, los
+directores y las salas (un destello, un salto, un pulso de luz; y se abre su ficha como siempre).
+
+**Nada de eso es estado de la empresa.** No escribe en el backend, no crea eventos, no mueve dinero
+ni aprobaciones, y no dice nada de ningun cubo. Las flores y los farolillos no se guardan. Lo unico
+que se recuerda es cuales de los rincones has descubierto (`localStorage`, clave `kaizen-rincones`,
+solo en ese navegador) y si el sonido esta activo (`kaizen-snd`). El sonido (campanillas en escala
+pentatonica) solo suena como respuesta a un clic tuyo y se apaga con el boton «Sonido».
+
+Lo que SI es real y se ve en el aspecto de un director: el **aura de chakra** (un halo con su color
+y chispas que suben) aparece solo mientras acaba de hacer algo de verdad (un evento o un mensaje
+suyo); un clic tuyo no la enciende. El color del pelo, de los ojos y de la cinta de la frente es
+solo identidad del cubo, no salud ni estado.
+
+La prueba `10e` de `tests/e2e/mundo.e2e.js` comprueba las dos cosas: que cada clic hace algo y que
+el estado de la empresa (eventos, dinero, aprobaciones, parada) queda exactamente igual.

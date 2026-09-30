@@ -16,6 +16,16 @@ En cualquier sistema: `python -m panel_mando --abrir --pagina /mundo` → http:/
 Al primer arranque de una empresa nueva las salas de cubo salen «SIN DAR DE ALTA»: en la pestaña
 **Cubos**, RRHH propone dar de alta a los directores y un clic los da de alta.
 
+## Lo que se ve y se toca
+
+Un jardin japones de anime: una casa de esquinas redondas con aleros de tejas curvados hacia arriba,
+ventanas de campana y de luna, pabellones sobre plataformas curvas, un arroyo con puente de arco,
+un torii, islas flotantes con cascada, un monte nevado y nubes; directores con el pelo, los ojos y
+la cinta de la frente de su color. Casi todo reacciona al clic (arboles, torii, puente, arroyo,
+islas, sol, nubes, bambu, furin, faroles, cesped, salas y directores) y hay un contador de
+«rincones» descubiertos. Es **adorno**: no cambia ni dice nada de la empresa (ver la ultima seccion
+de `docs/CONTRATO_MUNDO.md`). El sonido se apaga con el boton «Sonido».
+
 ## Cómo está hecho
 
 Un solo fichero, `mundo/index.html` (HTML + CSS + JS, sin dependencias ni build), servido por el
