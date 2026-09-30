@@ -418,21 +418,21 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
   LOOK.qa = Object.assign({}, LOOK.ivan, { style: 'pony', cloth: R.red, skin: 2 });
   LOOK.rrhh = Object.assign({}, LOOK.leo, { style: 'bun', cloth: R.pink, skin: 0, hair: LOOK.lucia.hair });
   ['claude', 'mateo', 'lucia', 'iker', 'nora', 'sara', 'alma', 'ivan', 'leo'].forEach(k => delete LOOK[k]);
-  // estética de anime: cada director con su color de pelo, de ojos y de cinta de frente (hitai-ate); los colores son solo de identidad, no dicen nada del estado
+  // uniforme de la casa: chaqueta carbón con solapas y emblema del color de su cubo; el grado se lee en las bocamangas (ver rankOf)
   const HAIRR = (a, b, c) => { const r = [a, b, c]; shiftRamp(r); return r; };
-  const ANIME = {
-    comercial: { hair: HAIRR('#1d3a44', '#2b5a66', '#4d8c96'), eye: ['#2f8a6a', '#7ad2a8'], band: R.moss[3], style: 'long' },
-    marketing: { hair: HAIRR('#8a2a66', '#c04a94', '#ee86c4'), eye: ['#c0407a', '#ff9ac8'], band: R.pink[1], style: 'pony' },
-    brand: { hair: HAIRR('#5a4a8a', '#8a78c0', '#bcaee8'), eye: ['#7a4ab0', '#c4a2f0'], band: R.indigo[2], style: 'bun' },
-    ops: { hair: HAIRR('#b8620f', '#ee9a22', '#ffd05a'), eye: ['#2a6ab8', '#8cc4ff'], band: R.indigo[2], style: 'spiky' },
-    finanzas: { hair: HAIRR('#7a1c22', '#b8343a', '#ee6a62'), eye: ['#b08a1a', '#f4d870'], band: R.gold[1], style: 'short' },
-    customer_success: { hair: HAIRR('#2a7a5a', '#4ab88a', '#9af0c4'), eye: ['#2a9a8a', '#8af0dc'], band: R.moss[2], style: 'pony' },
-    inteligencia: { hair: HAIRR('#1a4a9a', '#2a7ae0', '#7ab8ff'), eye: ['#2a6ab8', '#9ad2ff'], band: R.indigo[3], style: 'short' },
-    legal: { hair: HAIRR('#8a90a8', '#c4cad8', '#f4f6fc'), eye: ['#a02a2a', '#ff9a8a'], band: R.red[1], style: 'spiky' },
-    qa: { hair: HAIRR('#4a2a7a', '#7a4ac0', '#b48af0'), eye: ['#6a9a2a', '#c4f080'], band: R.red[2], style: 'spiky' },
-    rrhh: { hair: HAIRR('#b04a72', '#e0789c', '#ffb4cc'), eye: ['#d86a9a', '#ffc0dc'], band: R.pink[2], style: 'bun' }
-  };
-  Object.keys(ANIME).forEach(k => { if (LOOK[k]) Object.assign(LOOK[k], ANIME[k], { band: true, bandC: ANIME[k].band }); });
+  const ACC = { comercial: '#2f8a6a', marketing: '#c0407a', brand: '#7a4ab0', ops: '#d8761a', finanzas: '#c9a02a', customer_success: '#2a9a8a', inteligencia: '#2a6ab8', legal: '#b03030', qa: '#6a9a2a', rrhh: '#d86a9a' };
+  const UNI = ['#161a28', '#232a42', '#323c60', '#485586', '#6e7cae'], HK = ['#1c1d26', '#12131a', '#2e3039'];
+  const NAT = { comercial: ['#14151c', '#23252f', '#3a3d4c'], marketing: ['#5a2a1c', '#8a4a2c', '#b87244'], brand: ['#4a3426', '#6e4c38', '#946c50'], ops: ['#2a1c14', '#46301f', '#6a4a30'], finanzas: ['#6a6e7a', '#9a9eaa', '#c8ccd6'], customer_success: ['#1a1a22', '#2c2c38', '#46465a'], inteligencia: ['#151a2c', '#232c48', '#3a4668'], legal: ['#7a7e8a', '#aab0bc', '#dde2ea'], qa: ['#3a2a1c', '#5c4430', '#82644a'], rrhh: ['#5a2a30', '#8a4a52', '#b87480'] };
+  const STY = { comercial: 'long', marketing: 'pony', brand: 'bun', ops: 'short', finanzas: 'short', customer_success: 'pony', inteligencia: 'short', legal: 'short', qa: 'pony', rrhh: 'bun' };
+  Object.keys(ACC).forEach(k => { const L = LOOK[k]; if (!L) return; const c = ACC[k];
+    L.hair = HAIRR(NAT[k][0], NAT[k][1], NAT[k][2]); L.style = STY[k]; L.band = false; L.beard = false;
+    L.cloth = UNI.slice(); shiftRamp(L.cloth); L.hakama = HK.slice(); shiftRamp(L.hakama);
+    L.acc = [mix(c, '#000000', .35), c, mix(c, '#ffffff', .35)]; shiftRamp(L.acc); L.obi = L.acc;
+    L.eye = [mix('#2a2030', c, .22), mix('#7a6a72', c, .3)]; });
+  // grado: 0 recién llegado · 1 veterano (30 días de alta, dato real) · 2 experto · 3 mejor del mes. Los dos últimos salen del ROI, que el backend todavía no calcula
+  // por cubo: hasta que `cubos[].rendimiento.rango` exista, nadie lo tiene (no se inventa).
+  const RANKS = ['Recién llegado', 'Veterano', 'Experto', 'Mejor del mes'];
+  function rankOf(c) { if (!c || !c.alta) return 0; const r = c.rendimiento && c.rendimiento.rango; if (r === 'mejor_mes') return 3; if (r === 'experto') return 2; const t = Date.parse(c.ts_alta); return t && Date.now() - t >= 30 * 864e5 ? 1 : 0; }
 
   // ============================================================ tiempo del mundo
   const realMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
@@ -946,7 +946,8 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
   function sdfCap(x, y, a, b, ra, rb) { const pax = x - a[0], pay = y - a[1], bax = b[0] - a[0], bay = b[1] - a[1], dd = bax * bax + bay * bay || 1, h = Math.max(0, Math.min(1, (pax * bax + pay * bay) / dd)); return Math.hypot(pax - bax * h, pay - bay * h) - (ra + (rb - ra) * h); }
   function shapeSdf(s, x, y) { return s.t === 'e' ? sdfEll(x, y, s.c, s.rx, s.ry) : sdfCap(x, y, s.a, s.b, s.ra, s.rb); }
   const hue = (c, k) => mix(c, '#2a1e4a', k);
-  function charRig(id, pose, frame) {
+  function charRig(id, pose, frame, rank) {
+    rank = rank || 0;
     const L = LOOK[id], sk = SKIN[L.skin], hr = L.hair, cl = L.cloth, ob = L.obi, hk = L.hakama;
     const back = pose === 'back' || pose === 'backwalk' || pose === 'seiza', walk = pose === 'walk' || pose === 'backwalk', seated = pose === 'seiza';
     const f = frame % 4, ph = walk ? f * Math.PI / 2 : 0, sn = Math.sin(ph);
@@ -963,8 +964,10 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     if (!back) E([cx, hy - .1], 3.95, 4.05, hr, { id: 'hb' });
     if (L.style === 'long') { C([cx - 3.9, hy + .5 + 0], [cx - 4.2, 18 + top], 1.5, 1.1, hr, { id: 'hl' }); C([cx + 3.9, hy + .5], [cx + 4.2, 18 + top], 1.5, 1.1, hr, { id: 'hl' }); }
     if (L.style === 'pony' && !back) { C([cx + 3.4, hy - 1.6], [cx + 5.4, hy + 2.2], 1.0, .9, hr, { id: 'hp' }); C([cx + 5.4, hy + 2.2], [cx + 5.0, hy + 7.2], .9, .5, hr, { id: 'hp' }); }
-    // torso (kimono)
+    // torso (chaqueta del uniforme) con solapas y emblema del cubo
     C([cx, 14.8 + top], [cx, 20.4 + top + (seated ? 1.6 : 0)], 3.5, 3.95, cl, { id: 'to' });
+    if (!back) { const ac = L.acc || ob; C([cx - 1.9, 13.4 + top], [cx - .5, 18.6 + top], 1.0, .7, ac, { id: 'lp', flat: ac[1] }); C([cx + 1.9, 13.4 + top], [cx + .5, 18.6 + top], 1.0, .7, ac, { id: 'lp', flat: ac[1] }); E([cx + 2.3, 16.9 + top], 1.0, 1.0, [L.acc ? L.acc[0] : R.gold[1], L.acc ? L.acc[2] : R.gold[2], R.white], { id: 'em', flat: L.acc ? L.acc[2] : R.gold[2] }); }
+    if (rank === 3) C([cx - 3.0, 14.4 + top], [cx + 3.0, 19.6 + top], .55, .55, [R.gold[1], R.gold[2], R.gold[3]], { id: 'sash', flatLight: 1 });
     // obi
     E([cx, 18.8 + top + (seated ? .9 : 0)], 3.95, 1.35, ob, { id: 'ob' });
     if (back) { E([cx, 18.5 + top + (seated ? .9 : 0)], 1.9, 1.7, ob.map((c, i) => i ? c : c), { id: 'ob', lift: .25 }); C([cx - 1, 19.6 + top + (seated ? .9 : 0)], [cx - 1.6, 22.2 + top + (seated ? .9 : 0)], .8, .6, ob, { id: 'ob' }); C([cx + 1, 19.6 + top + (seated ? .9 : 0)], [cx + 1.5, 22.0 + top + (seated ? .9 : 0)], .8, .6, ob, { id: 'ob' }); }
@@ -996,6 +999,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     const arm = (side, wrist, hand, mo) => {
       const s = side < 0 ? -1 : 1, sh = [cx + s * 3.25, 15.1 + top];
       C(sh, wrist, 1.25, 1.7, cl, Object.assign({ id: 'sl', dark: s < 0 ? 0 : .12 }, mo));
+      if (rank > 0) for (let k = 0; k < (rank === 1 ? 1 : rank === 2 ? 2 : 3); k++) { const t = .62 + k * .15; E([sh[0] + (wrist[0] - sh[0]) * t + s * .3, sh[1] + (wrist[1] - sh[1]) * t], 1.25, .42, rank === 1 ? [R.stone[3], R.stone[4], R.white] : [R.gold[1], R.gold[2], R.gold[3]], { id: 'rk', flatLight: 1 }); }
       if (hand) E(hand, .85, .85, sk, { id: 'hn' });
     };
     if (pose === 'stretch') {
@@ -1059,9 +1063,9 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     return H;
   }
   const CHW = 18, CHH = 30, FACE = { hd: 1, bd: 1, nk: 0, bpl: 1 };
-  function charSpriteHD(id, pose, frame) {
-    const key = 'hd' + S + id + pose + frame; if (spriteCache.has(key)) return spriteCache.get(key);
-    const L = LOOK[id], rig = charRig(id, pose, frame), DW = CHW * S, DH = CHH * S;
+  function charSpriteHD(id, pose, frame, rank) {
+    const key = 'hd' + S + id + pose + frame + ':' + (rank || 0); if (spriteCache.has(key)) return spriteCache.get(key);
+    const L = LOOK[id], rig = charRig(id, pose, frame, rank), DW = CHW * S, DH = CHH * S;
     const col = new Array(DW * DH).fill(null), sid = new Int16Array(DW * DH).fill(-1);
     const inv = 1 / S, e = .28;
     for (let Y = 0; Y < DH; Y++) for (let X = 0; X < DW; X++) {
@@ -1115,7 +1119,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     spriteCache.set(key, cvs);
     return cvs;
   }
-  const charSprite = (id, pose, frame) => S >= 2 ? charSpriteHD(id, pose, frame) : charSpriteOld(id, pose, frame);
+  const charSprite = (id, pose, frame, rank) => S >= 2 ? charSpriteHD(id, pose, frame, rank) : charSpriteOld(id, pose, frame);
   function flipped(c) { const k = c._f; if (k) return k; const w = c.width / S, h = c.height / S, f = mk(w, h), g = f.getContext('2d'); g.scale(-1, 1); g.drawImage(c, -w, 0, w, h); c._f = f; return f; }
   const EMOTE = {
     '!': ['..rr..', '..rr..', '..rr..', '..rr..', '......', '..rr..'],
@@ -1207,11 +1211,16 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       poly(g, R.lacq[2], top.concat(bot.slice().reverse())); for (let i = 0; i < N; i++) line(g, R.red[3], top[i][0], top[i][1], top[i + 1][0], top[i + 1][1], Math.max(1, S - 1));
       const m = top[Math.floor(N / 2)]; rect(g, R.gold[2], m[0] - 1, m[1] - 2, 3, 3); rect(g, R.gold[3], m[0], m[1] - 2, 1, 1);
     });
+    const norenAt = (x, Y, col) => add(x + .5 + Y + .05, (g, T) => {
+      const a = P(x, Y), b = P(x + 1, Y), N = 3;
+      for (let i = 0; i < N; i++) { const q0 = [a[0] + (b[0] - a[0]) * i / N, a[1] + (b[1] - a[1]) * i / N], q1 = [a[0] + (b[0] - a[0]) * (i + 1) / N - 1, a[1] + (b[1] - a[1]) * (i + 1) / N - .5], sw = reduce ? 0 : Math.sin(T * 1.6 + i * .8 + x) * 1.3 + wind * 1.2; poly(g, i === 1 ? mix(col, '#ffffff', .25) : col, [up(q0, 21), up(q1, 21), [q1[0] + sw, q1[1] - 9], [q0[0] + sw, q0[1] - 9]]); }
+      const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; rect(g, R.cream, m[0] - 1, m[1] - 17, 3, 3); rect(g, col, m[0], m[1] - 16, 1, 1);
+    });
     const posts = (x, Y) => { archOver(x, Y); addStatic(x + Y + .02, fp(x, Y, 0, 0, 24), g => { const a = P(x, Y); rect(g, R.wood[1], a[0], a[1] - 22, 2, 22); rect(g, R.wood[3], a[0], a[1] - 22, 1, 22); }); addStatic(x + 1 + Y + .02, fp(x + 1, Y, 0, 0, 24), g => { const b = P(x + 1, Y); rect(g, R.wood[1], b[0] - 1, b[1] - 22, 2, 22); rect(g, R.wood[3], b[0] - 1, b[1] - 22, 1, 22); }); };
     const fin = room('finanzas');
-    for (let x = 0; x < 18; x++) { if (x === 8 && fin.locked) wallX(5, x, true); else if ([3, 8, 14].includes(x)) posts(x, 5); else wallX(5, x, false); }
+    for (let x = 0; x < 18; x++) { if (x === 8 && fin.locked) wallX(5, x, true); else if ([3, 8, 14].includes(x)) { posts(x, 5); norenAt(x, 5, x === 8 ? ACC.finanzas : x === 3 ? '#b8341f' : '#33437a'); } else wallX(5, x, false); }
     const BOT = ROOMS.filter(r => r.cubo && !r.annex && r.y0 === 7);
-    for (let x = 0; x < 18; x++) { const r = BOT.find(q => x >= q.x0 && x < q.x1); if (r && !r.locked && x === r.door) posts(x, 7); else wallX(7, x, !!(r && r.locked)); }
+    for (let x = 0; x < 18; x++) { const r = BOT.find(q => x >= q.x0 && x < q.x1); if (r && !r.locked && x === r.door) { posts(x, 7); norenAt(x, 7, ACC[r.cubo] || '#c0407a'); } else wallX(7, x, !!(r && r.locked)); }
     for (let y = 0; y < 5; y++) { wallY(6, y); wallY(11, y); }
     BOT.slice(1).forEach(r => { for (let y = 7; y < 13; y++) wallY(r.x0, y); });
     AG.filter(a => a.seat && a.cubo !== 'finanzas').forEach(fuzukue);
@@ -1500,11 +1509,12 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     if (a.state === 'rest') { box(g, a.pos[0] - .45, a.pos[1] - .3, .9, .5, 2, R.shoji[2], R.shoji[1], R.shoji[0]); const L = LOOK[a.id], sk = SKIN[L.skin]; rect(g, L.hair[0], x - 5, y - 9, 6, 3); rect(g, sk[0], x - 4, y - 7, 5, 3); rect(g, L.cloth[2], x + 1, y - 8, 9, 5); return; }
     g.globalAlpha = .25; g.fillStyle = R.ink; g.fillRect(x - 5, y - 1, 11, 2); g.fillRect(x - 3, y + 1, 7, 1); g.globalAlpha = 1;
     if (a.auraV > .02) drawAura(g, a, x, y);
+    if (a.rank === 3 && !reduce) { const k = (Math.sin(T * 3 + a.pos[0]) + 1) / 2; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .35 + .3 * k; g.drawImage(glowOf('#ffd45a'), x - 12, y - 42, 24, 24); g.restore(); }
     let img;
-    if (stretchT > 0 && a.state !== 'walk') img = charSprite(a.id, 'stretch', Math.floor(T * 2) % 2);
-    else if (a.state === 'sit') img = charSprite(a.id, 'seiza', reduce ? 0 : Math.floor(T * 4 + a.pos[0]) % 2);
-    else if (a.state === 'walk') img = charSprite(a.id, a.dir === 'front' ? 'walk' : 'backwalk', Math.floor(a.walkT * 7) % 4);
-    else img = charSprite(a.id, a.dir === 'front' ? (a.blinkT < .12 ? 'blink' : 'stand') : 'back', 0);
+    if (stretchT > 0 && a.state !== 'walk') img = charSprite(a.id, 'stretch', Math.floor(T * 2) % 2, a.rank);
+    else if (a.state === 'sit') img = charSprite(a.id, 'seiza', reduce ? 0 : Math.floor(T * 4 + a.pos[0]) % 2, a.rank);
+    else if (a.state === 'walk') img = charSprite(a.id, a.dir === 'front' ? 'walk' : 'backwalk', Math.floor(a.walkT * 7) % 4, a.rank);
+    else img = charSprite(a.id, a.dir === 'front' ? (a.blinkT < .12 ? 'blink' : 'stand') : 'back', 0, a.rank);
     if (a.face < 0) img = flipped(img);
     const breathe = a.state === 'stand' && !reduce && Math.sin(T * 2.2 + a.pos[0]) > .6 ? 1 : 0;
     blit(g, img, x - 9, y - 28 + (a.state === 'sit' ? 3 : 0) - (a.hop > 0 ? Math.round(Math.sin(a.hop * Math.PI) * 5) : 0));
@@ -1756,7 +1766,25 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     const dp = P(l.dx, l.side === 'n' ? y0 - .2 : y1 + .3); blob(g, dp[0], dp[1], 7, 3, [R.stone[2], R.stone[3], R.stone[4], R.stone[5]]);
   }
   // ---- mobiliario por cubo (sirve igual para un pabellón de 7×5 que para una sala de la casa de 4×6)
+  // identidad de sala: alfombra redonda y una planta con el color del cubo (adorno; el color es solo identidad)
+  function roomDecor(r) {
+    const c = ACC[r.cubo] || ACC[r.tpl] || '#c0407a', w = r.x1 - r.x0, d = r.y1 - r.y0, cx = r.x0 + w * .5, cy = r.y0 + d * .66;
+    const bbx = P(cx, cy);
+    addStatic(r.x0 + r.y0 + .02, [bbx[0] - 70, bbx[1] - 40, bbx[0] + 70, bbx[1] + 40], g => {
+      const ring = (rx, ry, col) => poly(g, col, ellipsePts(cx, cy, rx, ry, 36));
+      ring(w * .36, d * .24, mix(c, '#000000', .35)); ring(w * .33, d * .21, c); ring(w * .27, d * .17, mix(c, '#fff6e0', .7)); ring(w * .22, d * .13, mix(c, '#ffffff', .25));
+      for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283, p = P(cx + Math.cos(a) * w * .3, cy + Math.sin(a) * d * .19); rect(g, mix(c, '#ffffff', .55), p[0], p[1], 2, 1); }
+    });
+    const px = r.x1 - .8, py = r.y1 - .8, b = P(px, py);
+    add(px + py + .3, (g, T) => {
+      const sw = reduce ? 0 : Math.sin(T * 1.4 + px) * 1.2 + wind;
+      rect(g, R.lacq[2], b[0] - 4, b[1] - 6, 9, 6); rect(g, R.lacq[4], b[0] - 4, b[1] - 6, 9, 1); rect(g, c, b[0] - 4, b[1] - 4, 9, 1);
+      for (let k = 0; k < 5; k++) { const ang = -1.2 + k * .6, lx = b[0] + Math.cos(ang - 1.57) * 0, len = 7 + (k % 2) * 3; line(g, R.moss[2], b[0], b[1] - 6, b[0] + Math.round(Math.sin(ang) * len + sw), b[1] - 6 - Math.round(Math.cos(ang) * len)); blob(g, b[0] + Math.sin(ang) * len + sw, b[1] - 6 - Math.cos(ang) * len, 3, 2, [R.moss[2], R.moss[3], R.moss[4], R.moss[5]]); }
+      if (hash(Math.round(px * 7), 3) > .3) blob(g, b[0] + sw, b[1] - 15, 2, 2, [mix(c, '#000', .2), c, mix(c, '#fff', .3), mix(c, '#fff', .6)]);
+    });
+  }
   function furnishRoom(r) {
+    roomDecor(r);
     const x0 = r.x0, y0 = r.y0, x1 = r.x1, w = x1 - x0, d = r.y1 - r.y0, tpl = ({ ops: 'taller', comercial: 'tienda', customer_success: 'archivo' })[r.tpl] || r.tpl;
     const bench = Math.min(3.4, w - 1.0);
     if (tpl === 'taller') {
@@ -2039,6 +2067,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
         if (r && st.state === 'built') { const was = wearOf(r); r.name = c.nombre; r.nodata = est === 'SIN DATOS'; r.health = hp; if (was !== wearOf(r)) rebuild = true; if (c.alta && !agentOfCubo(c.cubo)) { spawnAgent(c, first); rebuild = true; } }
       }
     });
+    cubos.forEach(c => { const ag = agentOfCubo(c.cubo); if (ag) ag.rank = rankOf(c); });
     if (rehouse) { buildHouse(); buildObjects(); refreshDust(); } else if (rebuild) buildObjects();
   }
   // ---- cámara con desplazamiento suave a un punto
@@ -2133,7 +2162,7 @@ float hmove(float h, float t, float a){ float d = t - h; d -= floor(d + .5); ret
 vec3 grade(vec3 c){
   vec3 x = rgb2hsl(c); float t = abs(2. * x.z - 1.);
   x.x = fract(hmove(x.x, x.z > .5 ? 60. / 360. : 240. / 360., (7. / 360.) * t) + 1.);
-  x.y = min(1., x.y * (x.z > .5 ? 1.16 - .10 * t : 1.16 + .12 * t));
+  x.y = min(1., x.y * (x.z > .5 ? 1.30 - .10 * t : 1.30 + .12 * t));
   return hsl2rgb(x);
 }
 void main(){
@@ -2436,12 +2465,12 @@ void main(){
     selected = { kind, id }; prof.hidden = false;
     if (kind === 'agent') {
       const a = agent(id), c = CUBES[id] || {}, sl = c.salud || {};
-      prof.innerHTML = '<div class="profile"><div class="pf-top"><div class="portrait"><canvas width="18" height="30" id="pf-c"></canvas></div><div><h2 class="h">' + esc(a.name) + '</h2><div class="sub" style="margin:0">Director · uid ' + esc(a.uid || '—') + '</div><div class="state">' + esc(stateWord(a)) + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div>' +
+      prof.innerHTML = '<div class="profile"><div class="pf-top"><div class="portrait"><canvas width="18" height="30" id="pf-c"></canvas></div><div><h2 class="h">' + esc(a.name) + '</h2><div class="sub" style="margin:0">Director · ' + RANKS[a.rank || 0] + '</div><div class="state">' + esc(stateWord(a)) + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div>' +
         '<div class="box"><h3><span>Misión</span></h3><div style="font-size:13px">' + esc(c.mision || '') + '</div></div>' +
-        '<dl class="kv"><dt>Salud</dt><dd><span class="dot ' + saludDot(sl.estado) + '"></span>' + esc(sl.estado || 'SIN DATOS') + (sl.detalle ? ' · ' + esc(sl.detalle) : '') + '</dd><dt>Autonomía</dt><dd>' + esc(c.autonomia || '—') + '</dd>' + (a.cubo === 'rrhh' && BK.rrhh ? '<dt>Cobertura</dt><dd>' + Math.round(BK.rrhh.mapa.cobertura * 100) + ' % de los cubos con director' + (BK.rrhh.mapa.faltantes.length ? ' · faltan ' + esc(BK.rrhh.mapa.faltantes.join(', ')) : '') + '</dd>' : '') + '<dt>Eventos 24 h</dt><dd class="mono">' + esc(sl.eventos_24h == null ? '—' : sl.eventos_24h) + '</dd>' + ((c.irreversibles || []).length ? '<dt>Puede pedir</dt><dd>' + esc(c.irreversibles.join(', ')) + '</dd>' : '') + '</dl>' +
+        '<dl class="kv"><dt>Salud</dt><dd><span class="dot ' + saludDot(sl.estado) + '"></span>' + esc(sl.estado || 'SIN DATOS') + (sl.detalle ? ' · ' + esc(sl.detalle) : '') + '</dd><dt>Autonomía</dt><dd>' + esc(c.autonomia || '—') + '</dd><dt>Grado</dt><dd>' + RANKS[a.rank || 0] + (c.ts_alta ? ' · de alta desde ' + esc(String(c.ts_alta).slice(0, 10)) : '') + '</dd><dt>Rendimiento</dt><dd>' + (c.rendimiento && c.rendimiento.rango ? esc(c.rendimiento.rango) : 'sin medir: el backend aún no calcula el ROI por cubo') + '</dd>' + (a.cubo === 'rrhh' && BK.rrhh ? '<dt>Cobertura</dt><dd>' + Math.round(BK.rrhh.mapa.cobertura * 100) + ' % de los cubos con director' + (BK.rrhh.mapa.faltantes.length ? ' · faltan ' + esc(BK.rrhh.mapa.faltantes.join(', ')) : '') + '</dd>' : '') + '<dt>Eventos 24 h</dt><dd class="mono">' + esc(sl.eventos_24h == null ? '—' : sl.eventos_24h) + '</dd>' + ((c.irreversibles || []).length ? '<dt>Puede pedir</dt><dd>' + esc(c.irreversibles.join(', ')) + '</dd>' : '') + '</dl>' +
         '<div class="box"><h3><span>Último hecho</span></h3><div style="font-size:13px">' + esc(a.last || (c.ultimo && c.ultimo.texto) || 'Nada desde que abriste esta ventana.') + '</div></div>' +
         '<div class="acts"><button class="link" id="pf-chat" type="button">Hablar con el director</button><button class="link" id="pf-look" type="button">Seguir con la cámara</button></div></div>';
-      const pcv = document.getElementById('pf-c'); pcv.width = 18 * S; pcv.height = 30 * S; const pc = pcv.getContext('2d'); pc.imageSmoothingEnabled = false; pc.drawImage(charSprite(a.id, 'stand', 0), 0, 0, 18 * S, 30 * S);
+      const pcv = document.getElementById('pf-c'); pcv.width = 18 * S; pcv.height = 30 * S; const pc = pcv.getContext('2d'); pc.imageSmoothingEnabled = false; pc.drawImage(charSprite(a.id, 'stand', 0, a.rank), 0, 0, 18 * S, 30 * S);
       document.getElementById('pf-chat').addEventListener('click', () => { window.open('/chat?empresa=' + encodeURIComponent(BK.empresa), '_blank', 'noopener'); });
       document.getElementById('pf-look').addEventListener('click', () => { follow = follow === a.id ? null : a.id; inscribe(follow ? 'La cámara sigue a ' + a.name + '.' : 'La cámara vuelve a ser tuya.'); });
     } else if (kind === 'lot') {
@@ -2754,7 +2783,7 @@ void main(){
     toScreen: (wx, wy) => { const [ox, oy] = origin(), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1; return [r.left + (ox + wx * cam.k) / dpr, r.top + (oy + wy * cam.k) / dpr]; },
     fx: () => ({ sp: SP.length, rings: RINGS.length, bloom: BLOOMS.length, boats: BOATS.length, kicks: KICKS.length, found: [...FOUND], isles: ISLES.map(I => [I._x, I._y + EX, I.w]), sun: [sunInfo.x, sunInfo.y, sunInfo.a], furin: FURIN.map(f => [f.x, f.y]), hot: hoverHot ? hoverHot.r : null }),
     look: (wx, wy, k) => { follow = null; cam.anchor = null; cam.x = wx; cam.y = wy; if (k) cam.kt = Math.min(10, Math.max(kMin, k)); },
-    sprite: (id, pose, frame) => { try { return charSprite(id, pose || 'stand', frame || 0).toDataURL(); } catch (e) { return null; } },
+    sprite: (id, pose, frame, rank) => { try { return charSprite(id, pose || 'stand', frame || 0, rank || 0).toDataURL(); } catch (e) { return null; } },
     perf: () => ({ frame: +PERF.ms.toFixed(1), compose: +PERF.comp.toFixed(1), stalks: STALKS.length, objs: OBJ.length, buf: [world.width, world.height] })
   };
 

@@ -230,11 +230,13 @@ const info = page => page.evaluate(() => KAIZEN.info());
     const antes = await estado(), f0 = await fx(), i0 = await info(page), a = i0.agents[0];
     const blancos = [
       ['torii', Pw(21.5, 6).map((v, i) => i ? v - 26 : v)], ['flor', Pw(14, 21)], ['arbol', Pw(2.2, 18.6).map((v, i) => i ? v - 44 : v)],
-      ['isla', [f0.isles[1][0], f0.isles[1][1] + 14]], ...(f0.sun[2] > .3 ? [['sol', [f0.sun[0], f0.sun[1]]]] : []), ['director', Pw(a.pos[0], a.pos[1]).map((v, i) => i ? v - 14 : v)]
+      ['isla', [f0.isles[1][0], f0.isles[1][1] + 14]], ...(f0.sun[2] > .3 ? [['sol', [f0.sun[0], f0.sun[1]]]] : []), ['director', null]
     ];
     const hechos = [];
     for (const [k, w] of blancos) {
-      const sc = await page.evaluate(([x, y]) => KAIZEN.toScreen(x, y), w), ant = await fx();
+      let w2 = w;
+      if (k === 'director') { const ags = (await info(page)).agents, sit = ags.find(x => x.state === 'sit') || ags[0]; w2 = Pw(sit.pos[0], sit.pos[1]).map((v, i) => i ? v - 14 : v); }
+      const sc = await page.evaluate(([x, y]) => KAIZEN.toScreen(x, y), w2), ant = await fx();
       await page.mouse.click(sc[0], sc[1]); await sleep(400);
       const des = await fx();
       ok(des.sp > ant.sp || des.bloom > ant.bloom || des.found.length > ant.found.length, 'el clic en ' + k + ' no hizo nada (' + sc.map(Math.round) + ')');
