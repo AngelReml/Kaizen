@@ -88,17 +88,17 @@ const info = page => page.evaluate(() => KAIZEN.info());
 
   await escenario('4 evento del bus del sustrato', async () => {
     await post('/_e2e/bus', { topic: 'kaizen.brand.revision_emitida.v1', payload: { x: 1 } });
-    await until(page, () => Array.from(document.querySelectorAll('#feedList li')).some(li => li.textContent.includes('Marca: revision emitida')), null, 8000, 'no llegó el evento del bus');
+    await until(page, () => Array.from(document.querySelectorAll('#feedList li')).some(li => li.textContent.includes('Marca') && li.textContent.includes('revision emitida')), null, 8000, 'no llegó el evento del bus');
   });
 
   await escenario('4b chat de la Colmena: el director habla en su mesa y en la Sala de Reunión', async () => {
     await post('/_e2e/chat', { cubo: 'marketing', autor: 'operador', texto: 'como va la campana?' });
     await post('/_e2e/chat', { cubo: 'marketing', autor: 'director', texto: 'Hay dos borradores esperando revision.' });
     await until(page, () => (KAIZEN.info().agents.find(a => a.id === 'marketing') || {}).say === 'Hay dos borradores esperando revision.', null, 8000, 'el director no habla en su mesa');
-    await post('/_e2e/chat', { cubo: null, autor: 'director', texto: 'Propongo pausar la campana.' });
-    await post('/_e2e/chat', { cubo: 'ops', autor: 'director', texto: 'Yo me ocupo de la capacidad.' });
+    await post('/_e2e/chat', { cubo: null, autor: 'director', autor_cubo: 'marketing', texto: 'Propongo pausar la campana.' });
+    await post('/_e2e/chat', { cubo: null, autor: 'director', autor_cubo: 'ops', texto: 'Yo me ocupo de la capacidad.' });
     await until(page, () => KAIZEN.info().agents.some(a => a.state === 'walk'), null, 8000, 'nadie va a la Sala de Reunión');
-    ok(await page.evaluate(() => Array.from(document.querySelectorAll('#feedList li')).some(li => li.textContent.includes('Tu: como va la campana'))), 'mensaje del operador en el feed');
+    ok(await page.evaluate(() => Array.from(document.querySelectorAll('#feedList li')).some(li => li.textContent.includes('Tú: como va la campana'))), 'mensaje del operador en el feed');
   });
 
   await escenario('5 texto hostil en un evento: se muestra literal, no se ejecuta', async () => {
@@ -165,10 +165,11 @@ const info = page => page.evaluate(() => KAIZEN.info());
 
   await escenario('8 sello: íntegro y después roto', async () => {
     await page.click('[data-tab="reg"]');
-    await page.click('#t-sello'); await until(page, () => /intacto/.test(document.getElementById('reg-sello').textContent), null, 8000, 'no dice íntegro');
+    await page.click('#t-sello'); await until(page, () => /intacto/.test((document.getElementById('reg-sello') || {}).textContent || ''), null, 8000, 'no dice íntegro');
     await post('/_e2e/romper_sello');
-    await page.click('#t-sello'); await until(page, () => /se rompe/.test(document.getElementById('reg-sello').textContent), null, 8000, 'no detecta la ruptura');
+    await page.click('#t-sello'); await until(page, () => /se rompe/.test((document.getElementById('reg-sello') || {}).textContent || ''), null, 8000, 'no detecta la ruptura');
     ok(await page.evaluate(() => !!document.querySelector('#reg-sello .dot.bad')), 'punto rojo');
+    await until(page, () => document.getElementById('alive-t').textContent === 'Sello del historial roto', null, 70000, 'la barra superior no avisa del sello roto');
     await page.click('[data-tab="sala"]');
   });
 
@@ -185,7 +186,7 @@ const info = page => page.evaluate(() => KAIZEN.info());
     const items1 = await page.evaluate(() => document.querySelectorAll('#feedList li').length);
     ok(items1 === items0, 'duplicados tras reconectar: ' + items0 + ' → ' + items1);
     await post('/_e2e/evento', { tipo: 'comercial.lead.cualificado', payload: { lead_ref: 'l2' } });
-    await until(page, () => document.querySelector('#feedList li').textContent.length > 0 && !document.querySelector('#feedList li').textContent.includes('<img'), null, 10000, 'no llegan eventos tras reconectar');
+    await until(page, () => /cualific/i.test(document.querySelector('#feedList li').textContent), null, 10000, 'no llegan eventos tras reconectar');
     return 'feed ' + items0 + ' = ' + items1;
   });
 
@@ -208,13 +209,13 @@ const info = page => page.evaluate(() => KAIZEN.info());
   });
 
   await escenario('10c ráfaga de 300 eventos: el juego sigue vivo y acotado', async () => {
-    const antes = (await info(page)).events;
+    const antes = (await info(page)).cur.rue;                            // el cursor de la cadena (el contador de sellados es null con el sello roto)
     for (let k = 0; k < 300; k += 50) await Promise.all(Array.from({ length: 50 }, (_, j) => post('/_e2e/evento', { tipo: 'comercial.lead.cualificado', payload: { lead_ref: 'r' + (k + j) } })));
-    await until(page, n => KAIZEN.info().events >= n, antes + 300, 90000, 'no llegaron los 300 eventos');
+    await until(page, n => KAIZEN.info().cur.rue >= n, antes + 300, 90000, 'no llegaron los 300 eventos');
     const t0 = Date.now(); const i = await info(page); ok(Date.now() - t0 < 3000, 'la página no responde');
     ok(i.drops <= 41, 'gotas sin acotar: ' + i.drops);
     ok((await page.locator('#feedList li').count()) <= 60, 'el feed no está acotado');
-    return 'sellados +' + (i.events - antes) + ', gotas ' + i.drops;
+    return 'cadena +' + (i.cur.rue - antes) + ', gotas ' + i.drops;
   });
 
   await escenario('11 sin errores de JavaScript', async () => { ok(errs.length === 0, errs.slice(0, 3).join(' | ')); });

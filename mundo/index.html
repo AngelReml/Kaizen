@@ -2037,7 +2037,8 @@ void main(){
   }
   function feedEvent(ev, at) {
     const c = ev.cubo && CUBES[ev.cubo];
-    feedItems.unshift({ t: hhmm(at || ev.ts), who: c ? c.nombre : ev.canal === 'chat' ? 'Colmena' : 'Kaizen', text: ev.frase, tipo: ev.tipo, tag: ev.canal === 'rue' ? 'sellado' : ev.canal === 'chat' ? 'colmena' : 'sustrato', dir: ev.canal === 'chat' ? /\.director$/.test(ev.tipo) : !ev.cubo });
+    const who = c ? c.nombre : ev.canal === 'chat' ? 'Colmena' : 'Kaizen', text = ev.frase.indexOf(who + ': ') === 0 ? ev.frase.slice(who.length + 2) : ev.frase;
+    feedItems.unshift({ t: hhmm(at || ev.ts), who, text, tipo: ev.tipo, tag: ev.canal === 'rue' ? 'sellado' : ev.canal === 'chat' ? 'colmena' : 'sustrato', dir: ev.canal === 'chat' ? /\.director$/.test(ev.tipo) : !ev.cubo });
     if (feedItems.length > 60) feedItems.pop(); if (tab === 'sala') renderFeedList();
   }
 
@@ -2057,8 +2058,8 @@ void main(){
   }
   function setLive() {
     const el = document.getElementById('alive'), t = document.getElementById('alive-t');
-    const st = BK.online === false ? 'off' : BK.parado ? 'stop' : BK.online ? 'on' : 'off';
-    el.dataset.s = st; t.textContent = st === 'on' ? 'El jardín está despierto' : st === 'stop' ? 'Todo parado' : BK.online === false ? 'Sin conexión con Kaizen' : 'Conectando…';
+    const roto = !!(BK.sello && BK.sello.integra === false), st = BK.online === false ? 'off' : BK.parado || roto ? 'stop' : BK.online ? 'on' : 'off';
+    el.dataset.s = st; t.textContent = st === 'on' ? 'El jardín está despierto' : st === 'stop' ? (BK.parado ? 'Todo parado' : 'Sello del historial roto') : BK.online === false ? 'Sin conexión con Kaizen' : 'Conectando…';
     const b = document.getElementById('b-stop'); b.textContent = BK.parado ? 'REANUDAR' : 'PARAR TODO'; b.title = BK.parado ? 'Reanuda el trabajo' : 'Mantén pulsado 2 segundos';
   }
   function setOnline(on) {
@@ -2082,13 +2083,14 @@ void main(){
   }
   function applyEstado(e, first) {
     const prevAhorro = !!(BK.dinero && BK.dinero.modo_ahorro);
-    BK.empresa = e.empresa; BK.empresas = e.empresas || []; BK.dinero = e.dinero || null; BK.sello = e.sello || null; BK.tenant = (e.tenant || {}).estado || '';
+    BK.empresa = e.empresa; BK.empresas = e.empresas || []; BK.dinero = e.dinero || null; BK.sello = e.sello || null; setLive(); BK.tenant = (e.tenant || {}).estado || '';
     BK.tarjetas = e.tarjetas || { pendientes: 0, mechas: [] };
     if (BK.loaded && e.dinero && !!e.dinero.modo_ahorro !== prevAhorro) inscribe(e.dinero.modo_ahorro ? 'Modo ahorro: se llegó al tope de gasto del día.' : 'Fin del modo ahorro.');
-    BK.events = e.sello ? e.sello.pasos : null;
+    BK.events = e.sello && e.sello.integra ? e.sello.pasos : null;
     BK.rrhh = e.rrhh || null;
     if (first && e.cursores) { BK.cur.rue = e.cursores.rue; BK.cur.bus = e.cursores.bus; BK.cur.chat = e.cursores.chat == null ? -1 : e.cursores.chat; }
     setParado(!!e.parado);
+    if (BK.sello && !BK.sello.integra && !BK.sealWarned) { BK.sealWarned = true; inscribe('ATENCIÓN: el sello del historial se ha roto.'); } else if (BK.sello && BK.sello.integra) BK.sealWarned = false;
     (e.cubos || []).forEach(c => { CUBES[c.cubo] = c; });
     if (first) (e.recientes || []).forEach(ev => feedEvent(ev));
     applyCubos(e.cubos || [], first);
@@ -2114,14 +2116,14 @@ void main(){
     const k = ev.canal + ':' + ev.id; if (BK.seen.has(k)) return; BK.seen.add(k); if (BK.seen.size > 800) BK.seen.delete(BK.seen.values().next().value);
     if (ev.id > BK.cur[ev.canal]) BK.cur[ev.canal] = ev.id;
     if (ev.canal === 'bus' && /colmena\.mensaje_registrado/.test(ev.tipo)) return;     // el mensaje ya llega por el canal del chat
-    if (ev.canal === 'rue') { BK.events = (BK.events || 0) + 1; topbar(); }
+    if (ev.canal === 'rue') { if (BK.events != null) BK.events++; topbar(); }
     feedEvent(ev, ev.ts);
     if (!paused) { if (ev.canal === 'chat') onChat(ev); else onEvento(ev); }
     if (ev.tipo && /^plataforma\.aprobacion\./.test(ev.tipo)) { pollEstado(false); if (!drawer.hidden) renderDrawer(); }
     if (tab === 'reg' && ev.canal === 'rue') renderTab();
-    scheduleRefresh();
+    if (/^plataforma\./.test(ev.tipo) || /^kaizen\.colmena\./.test(ev.tipo)) scheduleRefresh();      // alta, parada, gasto, aprobaciones: cambian la foto; el resto lo recoge el sondeo de 12 s
   }
-  // tras un evento se vuelve a pedir la foto (alta, salud, gasto, tarjetas), agrupando ráfagas
+  // se vuelve a pedir la foto tras los eventos que la cambian, agrupando ráfagas
   let refreshT = null;
   function scheduleRefresh() { if (refreshT) return; refreshT = setTimeout(() => { refreshT = null; pollEstado(false); }, 1200); }
 

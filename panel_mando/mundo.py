@@ -158,7 +158,7 @@ def evento_chat(id_: int, ts: str, sala: bool, autor_tipo: str, autor_id: str,
     if autor_tipo == "director":
         c = str(autor_id).removeprefix("director_")
         cubo = c if c in CLM.NOMBRES else (cubo_sesion or None)
-    frase = texto if autor_tipo == "director" else f"Tu: {texto}"
+    frase = texto if autor_tipo == "director" else f"Tú: {texto}"
     return {"canal": "chat", "id": int(id_), "tipo": f"colmena.{'sala' if sala else 'individual'}.{autor_tipo}",
             "cubo": cubo, "frase": frase, "ts": ts, "aprobacion": ap_id or None}
 
@@ -254,6 +254,18 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
         return {"pendientes": sum(1 for x in nodos.values() if x["estado"] == "PENDIENTE"),
                 "mechas": mechas}
 
+    def _sello(empresa: str) -> dict:
+        """Verificacion real y completa de la cadena en cada foto: un sello roto se ve al momento."""
+        try:
+            v = bit(empresa).verificar()
+            if v.get("integra"):
+                return {"integra": True, "pasos": int(v.get("eventos", 0)),
+                        "mensaje": f"Historial sellado intacto: {v.get('eventos', 0)} pasos comprobados."}
+            return {"integra": False, "pasos": 0,
+                    "mensaje": f"ATENCION: el sello se rompe en el paso {int(v['punto_ruptura'])}."}
+        except Exception as exc:                             # noqa: BLE001
+            return {"integra": False, "pasos": 0, "mensaje": f"sello no verificable: {type(exc).__name__}"}
+
     @app.get("/mundo", response_class=HTMLResponse)
     def mundo_pagina(request: Request, empresa: str = ""):
         r = auth_pagina(request)
@@ -309,16 +321,7 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
         finally:
             conn.close()
 
-        try:
-            v = bit(empresa).verificar()
-            sello = ({"integra": True, "pasos": int(v.get("eventos", 0)),
-                      "mensaje": f"Historial sellado intacto: {v.get('eventos', 0)} pasos comprobados."}
-                     if v.get("integra") else
-                     {"integra": False, "pasos": 0,
-                      "mensaje": f"ATENCION: el sello se rompe en el paso {int(v['punto_ruptura'])}."})
-        except Exception as exc:                             # noqa: BLE001
-            sello = {"integra": False, "pasos": 0,
-                     "mensaje": f"sello no verificable: {type(exc).__name__}"}
+        sello = _sello(empresa)
 
         # RRHH: el mapa y las propuestas del cubo RRHH real (panel_mando/herramientas/rrhh.py),
         # calculados con sus funciones puras sobre estos mismos datos: el juego no reimplementa nada.

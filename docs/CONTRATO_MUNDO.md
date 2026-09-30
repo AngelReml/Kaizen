@@ -44,7 +44,8 @@ existen, todos los cubos salen `alta:false`. Campos:
   mechas encendidas de esa empresa, cada una `{aprobacion, dispara (ISO8601 con
   zona, tal cual lo da Mechas.armar), accion, cubo}` (texto y cubo del nodo de
   la cola). El detalle de las pendientes se pide a `/api/tarjetas/{empresa}`.
-- `sello`: `{integra, pasos, mensaje}` de la verificacion de la bitacora.
+- `sello`: `{integra, pasos, mensaje}` de la verificacion de la bitacora. La verificacion es completa
+  en cada foto: un sello roto se ve al momento.
 - `rrhh`: `{mapa, propuestas[]}`. Sale de las funciones puras del cubo RRHH
   (`mapa_desde` y `propuestas_desde` en `panel_mando/herramientas/rrhh.py`) sobre estos mismos
   cubos: `mapa` = `{catalogo, presentes, faltantes, fuera_de_catalogo, cobertura}`. El juego no
@@ -79,7 +80,7 @@ Evento unificado (`data:` en una sola linea de JSON; `id:` es `canal:id`):
   operador; las notas de sistema no salen. `id` = id del mensaje. El `tipo` dice quien y donde:
   `colmena.sala.director`, `colmena.individual.director`, `colmena.sala.operador`,
   `colmena.individual.operador`. `cubo` solo se rellena para un director (el que habla); la frase
-  de un mensaje del operador empieza por `Tu: `. Sin las tablas de Colmena: canal vacio, nada
+  de un mensaje del operador empieza por `Tú: `. Sin las tablas de Colmena: canal vacio, nada
   se crea.
 
 ## Cursores

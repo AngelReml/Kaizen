@@ -139,7 +139,8 @@ def crear(datos: Path, mecha_s: int = 6):
             tipo, cubo = ("sala", "") if not d.get("cubo") else ("individual", d["cubo"])
             ses = conn.execute("SELECT id FROM colmena_sesiones WHERE empresa=? AND tipo=? AND cubo=?", (EMPRESA, tipo, cubo)).fetchone()[0]
             autor = d.get("autor", "director")
-            aid = ("director_" + d["cubo"]) if autor == "director" and d.get("cubo") else d.get("autor_id", "operador")
+            quien = d.get("autor_cubo") or d.get("cubo")                # en la sala habla un director concreto
+            aid = ("director_" + quien) if autor == "director" and quien else d.get("autor_id", "operador")
             CLM._insertar_mensaje(conn, ses, autor, aid, d["texto"])
         finally:
             conn.close()

@@ -505,7 +505,7 @@ def test_rio_emite_el_chat_de_directores_y_operador_sin_notas_de_sistema(entorno
         ("colmena.individual.operador", None),
         ("colmena.individual.director", "comercial"),
         ("colmena.sala.director", "marketing")]
-    assert chat[0]["frase"] == "Tu: como va el pipeline?" and chat[1]["frase"] == "Hay 12 leads en frio."
+    assert chat[0]["frase"] == "Tú: como va el pipeline?" and chat[1]["frase"] == "Hay 12 leads en frio."
     assert all(set(e) == CLAVES_EVENTO for e in chat)
     # el cursor de chat no repite y el de estado empalma sin huecos
     assert not [e for e in _sse(c, desde_chat=m4)[0] if e["canal"] == "chat"]
