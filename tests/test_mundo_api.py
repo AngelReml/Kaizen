@@ -542,3 +542,15 @@ def test_comercial_trae_el_embudo_solo_con_numeros(entorno):
         com = next(x for x in j["cubos"] if x["cubo"] == "comercial")
         assert com["pipeline"]["leads"]["COLD"] == 2 and com["pipeline"]["leads"]["CONVERSACION"] == 1
         assert "secreto" not in json.dumps(j)                      # solo numeros: ningun dato de personas
+
+
+def test_marketing_trae_campanas_y_contenidos_solo_como_numeros(entorno):
+    app, c, b = _montaje()
+    k = b.k
+    k.add(EMPRESA, "campana", "c1", {"id": "c1", "nombre": "SECRETO-NOMBRE", "estado": "ACTIVA", "presupuesto_eur": 100.0, "gasto_reportado_eur": 50.0, "metricas": []})
+    k.add(EMPRESA, "contenido_mkt", "t1", {"id": "t1", "estado": "VALIDADO_POR_BRAND", "texto": "SECRETO-TEXTO"})
+    j = c.get(f"/api/mundo/estado?empresa={EMPRESA}").json()
+    mk = next(x for x in j["cubos"] if x["cubo"] == "marketing")["marketing"]
+    assert mk["campanas"]["ACTIVA"] == 1 and mk["contenidos"]["VALIDADO_POR_BRAND"] == 1
+    assert mk["gasto"] == [{"estado": "ACTIVA", "pct": 0.5}] and mk["kill_switch_pct"] == 0.9
+    assert "SECRETO" not in json.dumps(j)

@@ -60,6 +60,17 @@ def crear(datos: Path, mecha_s: int = 6, token: str | None = None):
             k.add(EMPRESA, "lead_canon", f"{d['estado'].lower()}_{i}", {"id": f"{d['estado'].lower()}_{i}", "estado": d["estado"]})
         return {"ok": True}
 
+    @app.post("/_e2e/mkt")
+    async def e2e_mkt(request: Request):
+        """Solo pruebas: campanas y contenidos sinteticos de Marketing (sin textos ni nombres reales)."""
+        d = await request.json()
+        for i, (estado, pres, gasto) in enumerate(d.get("campanas", [])):
+            k.add(EMPRESA, "campana", f"c{i}", {"id": f"c{i}", "nombre": f"campana {i}", "estado": estado, "presupuesto_eur": pres, "gasto_reportado_eur": gasto, "metricas": []})
+        for estado, n in d.get("contenidos", {}).items():
+            for i in range(int(n)):
+                k.add(EMPRESA, "contenido_mkt", f"t_{estado}_{i}", {"id": f"t_{estado}_{i}", "estado": estado, "texto": "x"})
+        return {"ok": True}
+
     @app.post("/_e2e/bus")
     async def e2e_bus(request: Request):
         d = await request.json()

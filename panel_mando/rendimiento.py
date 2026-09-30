@@ -5,9 +5,13 @@ no inventan: si no hay muestra suficiente el grado es `None` y el motivo lo dice
 
 Convencion (constantes de abajo; se cambian aqui y en docs/CONTRATO_MUNDO.md):
   * Solo opta quien lleva de alta >= DIAS_ALTA_MIN dias.
-  * Comercial es el unico cubo con dinero medible: ROI = valor atribuido 30 d / coste 30 d
-    (pedidos ATRIBUIDOS con importe; los pendientes de validacion NO cuentan). Sin valor o sin
-    coste, cae a la metrica de decisiones.
+  * Comercial y Marketing tienen dinero medible: ROI = valor atribuido 30 d / coste 30 d (pedidos
+    ATRIBUIDOS con importe; los pendientes de validacion NO cuentan). Comercial cuenta todos los
+    pedidos; Marketing solo los que vienen de un lead con fuente CAMPANA (cadena R-15), asi que
+    su valor es un SUBCONJUNTO del de Comercial (el mismo pedido suma en los dos cubos: es lo que
+    significa «lo trajo una campana» y «lo cerro Comercial»). El coste de Marketing suma lo que
+    cuesta operar el cubo y el gasto de canal reportado en las metricas de sus campanas (30 d).
+    Sin valor o sin coste, cae a la metrica de decisiones.
   * Los demas cubos: tasa de acierto = decisiones firmes / (firmes + rechazadas) en 30 d, con
     un minimo de DECISIONES_MIN. Firmes = APROBADA, EJECUTANDO, EJECUTADA; rechazadas =
     DENEGADA, REVOCADA. PENDIENTE, ANULADA y CADUCADA no cuentan.
@@ -27,7 +31,7 @@ ACIERTO_EXPERTO = 0.90
 DECISIONES_MIN = 5
 FIRMES = ("APROBADA", "EJECUTANDO", "EJECUTADA")
 RECHAZADAS = ("DENEGADA", "REVOCADA")
-CUBO_CON_DINERO = "comercial"
+CUBOS_CON_DINERO = ("comercial", "marketing")
 
 
 def _ts(v) -> datetime | None:
@@ -43,8 +47,17 @@ def _en_ventana(v, desde: datetime) -> bool:
     return d is not None and d >= desde
 
 
+def valor_de_campanas(leads: list[dict], pedidos: list[dict], ahora: datetime | None = None) -> float:
+    """Valor (importe bruto) de los pedidos ATRIBUIDOS de los ultimos 30 d cuyo lead tiene una fuente de tipo CAMPANA."""
+    desde = (ahora or datetime.now(timezone.utc)) - timedelta(days=VENTANA_DIAS)
+    de_campana = {l.get("id") for l in leads if any(f.get("tipo") == "CAMPANA" for f in (l.get("fuentes") or []))}
+    return sum(float(p.get("importe_bruto") or 0) for p in pedidos
+               if p.get("estado") == "ATRIBUIDO" and p.get("lead_ref") in de_campana and _en_ventana(p.get("ts"), desde))
+
+
 def rendimiento_desde(cubos: list[dict], costes: list[dict], pedidos: list[dict],
-                      aprobaciones: list[dict], ahora: datetime | None = None) -> dict[str, dict]:
+                      aprobaciones: list[dict], ahora: datetime | None = None, *,
+                      valor_cubo: dict | None = None, coste_extra: dict | None = None) -> dict[str, dict]:
     """`cubos`: [{cubo, alta, ts_alta}]; `costes`: [{cubo, ts, coste_eur}];
     `pedidos`: nodos pedido_atribuido; `aprobaciones`: nodos de la cola. Devuelve {cubo: rendimiento}."""
     ahora = ahora or datetime.now(timezone.utc)
@@ -55,6 +68,10 @@ def rendimiento_desde(cubos: list[dict], costes: list[dict], pedidos: list[dict]
             coste[c.get("cubo", "")] = coste.get(c.get("cubo", ""), 0.0) + float(c.get("coste_eur") or 0)
     valor = sum(float(p.get("importe_bruto") or 0) for p in pedidos
                 if p.get("estado") == "ATRIBUIDO" and _en_ventana(p.get("ts"), desde))
+    vcubo = {"comercial": valor}
+    vcubo.update(valor_cubo or {})
+    for k_, v_ in (coste_extra or {}).items():
+        coste[k_] = coste.get(k_, 0.0) + float(v_ or 0)
     firmes: dict[str, int] = {}
     rech: dict[str, int] = {}
     for n in aprobaciones:
@@ -81,15 +98,15 @@ def rendimiento_desde(cubos: list[dict], costes: list[dict], pedidos: list[dict]
         if ahora - alta < timedelta(days=DIAS_ALTA_MIN):
             base["motivo"] = f"lleva de alta menos de {DIAS_ALTA_MIN} dias"
             continue
-        if k == CUBO_CON_DINERO and coste.get(k, 0) > 0 and valor > 0:
-            base.update(metrica="roi", valor_eur=round(valor, 2), roi=round(valor / coste[k], 3))
+        if k in CUBOS_CON_DINERO and coste.get(k, 0) > 0 and vcubo.get(k, 0) > 0:
+            base.update(metrica="roi", valor_eur=round(vcubo[k], 2), roi=round(vcubo[k] / coste[k], 3))
             base["puntuacion"] = round(base["roi"] / ROI_EXPERTO, 3)
         elif f + r >= DECISIONES_MIN:
             base["metrica"] = "acierto"
             base["puntuacion"] = round(base["tasa_acierto"] / ACIERTO_EXPERTO, 3)
         else:
             base["motivo"] = (f"muestra insuficiente: {f + r} decisiones en {VENTANA_DIAS} dias "
-                              f"(minimo {DECISIONES_MIN})" + ("" if k != CUBO_CON_DINERO else " y sin ROI medible"))
+                              f"(minimo {DECISIONES_MIN})" + ("" if k not in CUBOS_CON_DINERO else " y sin ROI medible"))
             continue
         if base["puntuacion"] >= 1:
             base["rango"] = "experto"

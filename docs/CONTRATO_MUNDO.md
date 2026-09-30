@@ -38,7 +38,7 @@ existen, todos los cubos salen `alta:false`. Campos:
   `alta`, `uid`/`role_id`/`ts_alta` (null si no hay alta), `salud`
   `{estado, detalle, eventos_24h}` (misma funcion que Colmena; si no se puede
   medir, `SIN DATOS`), `ultimo` `{texto, ts}` del chat individual o null.
-  `rendimiento` (ver «Rendimiento y grados»). Solo el cubo `comercial` trae ademas `pipeline`: `{leads:{COLD, CONTACTADO, CONVERSACION, COMPROMETIDO, PEDIDO, CUSTOMER, DORMIDO, DESCARTADO, EXCLUIDO}, pedidos:{atribuidos, pendientes_validacion}}`. Solo numeros: ningun dato de personas.
+  `rendimiento` (ver «Rendimiento y grados»). Solo el cubo `comercial` trae ademas `pipeline`: `{leads:{COLD, CONTACTADO, CONVERSACION, COMPROMETIDO, PEDIDO, CUSTOMER, DORMIDO, DESCARTADO, EXCLUIDO}, pedidos:{atribuidos, pendientes_validacion}}`. Solo numeros: ningun dato de personas. Solo el cubo `marketing` trae `marketing`: `{campanas:{BORRADOR..CANCELADA}, contenidos:{GENERADO, VALIDADO_POR_BRAND, RECHAZADO, APROBADO, LANZADO, ARCHIVADO}, gasto:[{estado, pct}] (activas y pausadas, hasta 8; pct = gasto reportado / presupuesto), kill_switch_pct}`: sin nombres de campana ni textos.
 - `dinero`: misma funcion que `/api/dinero/{empresa}` (`frase`, `gasto_eur`,
   `tope_eur`, `sin_atribuir_eur`, `modo_ahorro`).
 - `tarjetas`: `pendientes` (numero; cola en PENDIENTE) y `mechas[]`: las
@@ -163,7 +163,7 @@ Calculado por `panel_mando/rendimiento.py` (funciones puras, con tests) sobre da
 | Regla | Valor (constantes del modulo) |
 |---|---|
 | Opta a grado | alta de 30 dias o mas |
-| Comercial (unico cubo con dinero medible) | ROI = valor de pedidos ATRIBUIDOS con importe / coste; experto con ROI >= 2 |
+| Comercial y Marketing (los dos con dinero medible) | ROI = valor de pedidos ATRIBUIDOS con importe / coste; experto con ROI >= 2. Comercial cuenta todos los pedidos; Marketing solo los de leads con fuente CAMPANA (cadena R-15) y su coste suma el del cubo y el gasto de canal de las metricas de sus campanas |
 | Resto de cubos | acierto = firmes / (firmes + rechazadas); experto con >= 90 % y >= 5 decisiones |
 | Mejor del mes | el experto de mayor puntuacion; un empate no premia a nadie |
 | Sin muestra | `rango: null` y el `motivo` lo dice; nunca un grado inventado |
@@ -173,8 +173,9 @@ caducadas no cuentan. Los pedidos pendientes de validacion externa no cuentan co
 
 **Limites honestos:** (1) ROI y acierto no son la misma unidad: la puntuacion es metrica / umbral, una
 convencion para comparar, no una medida universal. (2) La tabla `costes` no tiene columna de empresa:
-con varias empresas en la misma base el coste por cubo se mezcla. (3) Marketing y el resto no tienen
-ingresos atribuibles en los datos de hoy, por eso se miden por decisiones. Los umbrales los decide el
+con varias empresas en la misma base el coste por cubo se mezcla. (3) El valor de Marketing es un SUBCONJUNTO
+del de Comercial: el mismo pedido suma en los dos cubos («lo trajo una campana» y «lo cerro Comercial»). (4) Los cubos sin ingresos
+atribuibles se miden por decisiones. Los umbrales los decide el
 operador; cambiarlos es editar las constantes y este cuadro.
 
 El juego lo dibuja en las bocamangas (veterano = 30 dias de alta; experto y mejor del mes solo si este
@@ -208,4 +209,14 @@ Nada está puesto porque sí; cada objeto dice algo verdadero o es un adorno dec
 | Caja | la tapa salta y caen monedas con cada pedido atribuido de verdad; al tocarla dice cuántos hay y cuántos esperan validación | evento `comercial.pedido.atribuido`, `pipeline.pedidos` |
 | Campanilla de la puerta | suena con cada evento real de Comercial; un punto de luz recorre el sendero con cada lead nuevo | eventos `comercial.*` |
 | Barandilla baja en el lado de Marketing | adorno: deja ver el sendero | — |
+
+## Marketing (sala): cometas y taller de tinta
+
+| Objeto | Qué muestra | Origen |
+|---|---|---|
+| Una cometa atada a un carrete por campaña activa o pausada (hasta 6) | la cuerda se tensa con el gasto del presupuesto; al 90 % (kill-switch) cuerda y cometa se ponen rojas; la pausada descansa plegada en el suelo; con zoom, el porcentaje | `marketing.gasto` |
+| Mesa de tinta con cuatro bandejas | borradores, validados por Marca, rechazados y lanzados (pila de hasta 6 hojas) | `marketing.contenidos` |
+| Sello de Marca | se hunde y deja un destello verde con cada contenido aprobado de verdad | evento `marketing.contenido.aprobado` |
+| Gong | vibra con cada evento real de Marketing; una chispa sube con cada campaña lanzada | eventos `marketing.*` |
+| Barandilla baja hacia Marca | adorno: deja ver la sala | — |
 

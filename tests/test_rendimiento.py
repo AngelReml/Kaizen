@@ -50,3 +50,16 @@ def test_pendientes_y_anuladas_no_cuentan_y_lo_viejo_tampoco():
         + [{"cubo": "legal", "estado": "EJECUTADA", "decidida_en": iso(80)}] * 9
     r = R.rendimiento_desde([cubo("legal")], [], [], ap, AHORA)
     assert r["legal"]["decisiones"] == {"firmes": 0, "rechazadas": 0} and r["legal"]["rango"] is None
+
+
+def test_marketing_mide_roi_solo_con_pedidos_de_leads_de_campana():
+    leads = [{"id": "a", "fuentes": [{"tipo": "CAMPANA", "ref": "c1"}]}, {"id": "b", "fuentes": [{"tipo": "WEB"}]}]
+    pedidos = [{"estado": "ATRIBUIDO", "lead_ref": "a", "importe_bruto": 600, "ts": iso(2)},
+               {"estado": "ATRIBUIDO", "lead_ref": "b", "importe_bruto": 9999, "ts": iso(2)},      # no vino de una campana
+               {"estado": "PENDIENTE_VALIDACION", "lead_ref": "a", "importe_bruto": 5000, "ts": iso(2)}]
+    v = R.valor_de_campanas(leads, pedidos, AHORA)
+    assert v == 600
+    r = R.rendimiento_desde([cubo("marketing"), cubo("comercial")], [{"cubo": "marketing", "ts": iso(1), "coste_eur": 50}], pedidos, [], AHORA,
+                            valor_cubo={"marketing": v}, coste_extra={"marketing": 50})
+    assert r["marketing"]["roi"] == 6.0 and r["marketing"]["coste_eur"] == 100.0      # 50 del cubo + 50 de canal
+    assert r["comercial"]["roi"] is None                                              # sin coste propio no hay ROI inventado

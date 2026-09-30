@@ -276,6 +276,29 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             pass
         return {"leads": cuenta, "pedidos": pedidos}
 
+    def _marketing(empresa: str) -> dict:
+        """Campanas y contenidos del cubo Marketing, solo numeros (sin nombres ni textos): cuenta por estado,
+        y por campana el porcentaje de presupuesto gastado (tope 90 % = kill-switch). Como mucho 8 campanas."""
+        est_c = ("BORRADOR", "APROBADA", "ACTIVA", "PAUSADA", "COMPLETADA", "CANCELADA")
+        est_t = ("GENERADO", "VALIDADO_POR_BRAND", "RECHAZADO", "APROBADO", "LANZADO", "ARCHIVADO")
+        campanas = {e: 0 for e in est_c}
+        contenidos = {e: 0 for e in est_t}
+        gasto = []
+        try:
+            for c in st.k.all(empresa, "campana").values():
+                e = c.get("estado")
+                if e in campanas:
+                    campanas[e] += 1
+                pres = float(c.get("presupuesto_eur") or 0)
+                if e in ("ACTIVA", "PAUSADA") and len(gasto) < 8:
+                    gasto.append({"estado": e, "pct": round(min(2.0, float(c.get("gasto_reportado_eur") or 0) / pres), 3) if pres > 0 else 0.0})
+            for t in st.k.all(empresa, "contenido_mkt").values():
+                if t.get("estado") in contenidos:
+                    contenidos[t["estado"]] += 1
+        except Exception:                                    # noqa: BLE001
+            pass
+        return {"campanas": campanas, "contenidos": contenidos, "gasto": gasto, "kill_switch_pct": 0.9}
+
     def _rendimiento(empresa: str, conn, cubos: list[dict]) -> dict:
         """Lee coste, pedidos y decisiones reales y aplica panel_mando/rendimiento.py. Si algo falla
         devuelve vacio (el juego lo muestra como «sin medir»), nunca un grado inventado."""
@@ -285,7 +308,13 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                 costes = [{"cubo": r[0], "ts": r[1], "coste_eur": r[2]} for r in conn.execute(
                     "SELECT cubo, ts, coste_eur FROM costes WHERE estado = 'liquidado'")]
             pedidos = list(st.k.all(empresa, "pedido_atribuido").values())
-            return REND.rendimiento_desde(cubos, costes, pedidos, cola(empresa).listar())
+            leads = list(st.k.all(empresa, "lead_canon").values())
+            desde = datetime.now(timezone.utc) - REND.timedelta(days=REND.VENTANA_DIAS)
+            gasto_canal = sum(float(m.get("coste_eur") or 0) for c in st.k.all(empresa, "campana").values()
+                              for m in (c.get("metricas") or []) if REND._en_ventana(m.get("fecha"), desde))
+            return REND.rendimiento_desde(cubos, costes, pedidos, cola(empresa).listar(),
+                                          valor_cubo={"marketing": REND.valor_de_campanas(leads, pedidos)},
+                                          coste_extra={"marketing": gasto_canal})
         except Exception:                                    # noqa: BLE001
             return {}
 
@@ -353,6 +382,8 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             for c in cubos:
                 if c["cubo"] == "comercial":
                     c["pipeline"] = _pipeline(empresa)
+                elif c["cubo"] == "marketing":
+                    c["marketing"] = _marketing(empresa)
             rend = _rendimiento(empresa, conn, cubos)
             for c in cubos:
                 c["rendimiento"] = rend.get(c["cubo"])
