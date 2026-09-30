@@ -1199,12 +1199,14 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     OBJ = []; LIGHTS.length = 0; FURIN.length = 0;
     [[0, 9.5, 1, 0], [0, 4.6, 1, 0], [8.5, 0, 0, 1], [14.5, 0, 0, 1]].forEach((q, i) => furinAt(q[0], q[1], q[2], q[3], i));
     // tabiques shoji y fusuma
-    const wallX = (Y, x, fus) => addStatic(x + .5 + Y + .01, fp(x, Y, 1, 0, 24), g => {
+    // cimera curva sobre cada tramo de tabique (ranma): rompe la línea recta del tabique
+  const dome = (g, a, b, h) => { const N = 10, top = [], bot = []; for (let i = 0; i <= N; i++) { const t = i / N, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, l = Math.sin(t * Math.PI) * 5; top.push([x, y - h - l]); bot.push([x, y - h + 1]); } poly(g, '#efe2c4', top.concat(bot.reverse())); for (let i = 0; i < N; i++) line(g, R.lacq[2], top[i][0], top[i][1], top[i + 1][0], top[i + 1][1], Math.max(1, S - 1)); const m = top[5]; rect(g, R.gold[2], m[0] - 1, m[1] + 1, 3, 1); };
+  const wallX = (Y, x, fus) => addStatic(x + .5 + Y + .01, fp(x, Y, 1, 0, 24), g => {
       const a = P(x, Y), b = P(x + 1, Y);
       if (fus) { poly(g, mix(R.shoji[0], R.stone[2], .35), [a, b, up(b, 20), up(a, 20)]); const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; line(g, R.stone[2], a[0] + 2, a[1] - 7, m[0], m[1] - 14); line(g, R.stone[2], m[0], m[1] - 14, b[0] - 2, b[1] - 8); line(g, R.indigo[2], a[0] + 3, a[1] - 4, b[0] - 3, b[1] - 4); rect(g, R.gold[1], m[0] - 1, m[1] - 10, 2, 2); isoLine(g, R.lacq[1], up(a, 20), up(b, 20)); isoLine(g, R.lacq[1], a, b); line(g, R.lacq[1], a[0], a[1], a[0], a[1] - 20); line(g, R.lacq[1], b[0], b[1], b[0], b[1] - 20); }
-      else { shoji(g, a, b, 20, false); poly(mg, rgba('#ffd28a', 1), [up(a, 7), up(b, 7), up(b, 20), up(a, 20)]); }
+      else { shoji(g, a, b, 20, false); dome(g, a, b, 20); poly(mg, rgba('#ffd28a', 1), [up(a, 7), up(b, 7), up(b, 20), up(a, 20)]); }
     });
-    const wallY = (X, y) => addStatic(X + y + .5 + .01, fp(X, y, 0, 1, 24), g => { const a = P(X, y), b = P(X, y + 1); shoji(g, a, b, 20, false); g.globalAlpha = .1; poly(g, R.ink, [a, b, up(b, 20), up(a, 20)]); g.globalAlpha = 1; });
+    const wallY = (X, y) => addStatic(X + y + .5 + .01, fp(X, y, 0, 1, 24), g => { const a = P(X, y), b = P(X, y + 1); shoji(g, a, b, 20, false); dome(g, a, b, 20); g.globalAlpha = .1; poly(g, R.ink, [a, b, up(b, 20), up(a, 20)]); g.globalAlpha = 1; });
     const archOver = (x, Y) => addStatic(x + .5 + Y + .03, fp(x, Y, 1, 0, 40), g => {
       const a = P(x, Y), b = P(x + 1, Y), N = 14, top = [], bot = [];
       for (let i = 0; i <= N; i++) { const t = i / N, sag = Math.sin(t * Math.PI), tip = Math.pow(Math.abs(t - .5) * 2, 3) * 4; const p = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; top.push([p[0], p[1] - 24 - sag * 4 - tip]); bot.push([p[0], p[1] - 21 - sag * 1 - tip * .4]); }
@@ -1775,6 +1777,13 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       ring(w * .36, d * .24, mix(c, '#000000', .35)); ring(w * .33, d * .21, c); ring(w * .27, d * .17, mix(c, '#fff6e0', .7)); ring(w * .22, d * .13, mix(c, '#ffffff', .25));
       for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283, p = P(cx + Math.cos(a) * w * .3, cy + Math.sin(a) * d * .19); rect(g, mix(c, '#ffffff', .55), p[0], p[1], 2, 1); }
     });
+    // actividad real: un orbe luminoso por cada evento de las últimas 24 h del cubo (hasta 8) y un farol que brilla más cuanto más pasa
+    const cb = r.cubo || r.tpl, mid = P(r.x0 + w * .5, r.y0 + d * .5);
+    add(r.x0 + w * .5 + r.y0 + d * .5 + .4, (g, T) => {
+      const ev = ((CUBES[cb] && CUBES[cb].salud && CUBES[cb].salud.eventos_24h) || 0), n = Math.min(8, ev), k = ev ? Math.min(1, Math.log(1 + ev) / Math.log(21)) : 0;
+      for (let i = 0; i < n; i++) { const a = T * (.5 + i * .03) + i * 6.283 / n, x = mid[0] + Math.cos(a) * (14 + (i % 3) * 4), y = mid[1] - 26 + Math.sin(a) * 5 + Math.sin(T * 2 + i) * 1.5; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .95; g.drawImage(glowOf(mix(c, '#ffffff', .55)), Math.round(x - 8), Math.round(y - 8), 16, 16); g.restore(); rect(g, '#ffffff', x - .5, y - .5, 2, 2); }
+      if (k > 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .18 + .3 * k; g.drawImage(glowOf(c), Math.round(mid[0] - 34), Math.round(mid[1] - 40), 68, 50); g.restore(); }
+    });
     const px = r.x1 - .8, py = r.y1 - .8, b = P(px, py);
     add(px + py + .3, (g, T) => {
       const sw = reduce ? 0 : Math.sin(T * 1.4 + px) * 1.2 + wind;
@@ -2049,6 +2058,11 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
   const CUBES = {};      // último estado conocido de cada cubo, tal cual lo da el backend
   function siteOf(cubo) { const r = ROOMS.find(q => q.cubo === cubo && !q.annex); if (r) return { room: r }; const l = lotForCubo(cubo); return l ? { lot: l } : null; }
   // Aplica la foto del backend al edificio. `first`: carga inicial (todo aparece ya hecho); si no, un alta nueva se ve llegar.
+  function rendimientoTxt(r) {
+    if (!r) return 'sin medir (el backend no lo ha dado)';
+    const m = r.metrica === 'roi' ? 'ROI ' + r.roi + '× (valor ' + r.valor_eur + ' € / coste ' + r.coste_eur + ' €)' : r.metrica === 'acierto' ? 'acierto ' + Math.round(r.tasa_acierto * 100) + ' % (' + r.decisiones.firmes + ' firmes, ' + r.decisiones.rechazadas + ' rechazadas)' : '';
+    return esc((m ? m + ' · ' : '') + (r.rango ? r.rango.replace('_', ' ') + ' · ' : '') + (r.motivo || 'sin medir')) + ' <span class="note">· ventana de 30 días</span>';
+  }
   function applyCubos(cubos, first) {
     let rebuild = false, rehouse = false;
     cubos.forEach(c => {
@@ -2467,7 +2481,7 @@ void main(){
       const a = agent(id), c = CUBES[id] || {}, sl = c.salud || {};
       prof.innerHTML = '<div class="profile"><div class="pf-top"><div class="portrait"><canvas width="18" height="30" id="pf-c"></canvas></div><div><h2 class="h">' + esc(a.name) + '</h2><div class="sub" style="margin:0">Director · ' + RANKS[a.rank || 0] + '</div><div class="state">' + esc(stateWord(a)) + '</div></div><button class="x" id="pf-x" type="button" aria-label="Cerrar">×</button></div>' +
         '<div class="box"><h3><span>Misión</span></h3><div style="font-size:13px">' + esc(c.mision || '') + '</div></div>' +
-        '<dl class="kv"><dt>Salud</dt><dd><span class="dot ' + saludDot(sl.estado) + '"></span>' + esc(sl.estado || 'SIN DATOS') + (sl.detalle ? ' · ' + esc(sl.detalle) : '') + '</dd><dt>Autonomía</dt><dd>' + esc(c.autonomia || '—') + '</dd><dt>Grado</dt><dd>' + RANKS[a.rank || 0] + (c.ts_alta ? ' · de alta desde ' + esc(String(c.ts_alta).slice(0, 10)) : '') + '</dd><dt>Rendimiento</dt><dd>' + (c.rendimiento && c.rendimiento.rango ? esc(c.rendimiento.rango) : 'sin medir: el backend aún no calcula el ROI por cubo') + '</dd>' + (a.cubo === 'rrhh' && BK.rrhh ? '<dt>Cobertura</dt><dd>' + Math.round(BK.rrhh.mapa.cobertura * 100) + ' % de los cubos con director' + (BK.rrhh.mapa.faltantes.length ? ' · faltan ' + esc(BK.rrhh.mapa.faltantes.join(', ')) : '') + '</dd>' : '') + '<dt>Eventos 24 h</dt><dd class="mono">' + esc(sl.eventos_24h == null ? '—' : sl.eventos_24h) + '</dd>' + ((c.irreversibles || []).length ? '<dt>Puede pedir</dt><dd>' + esc(c.irreversibles.join(', ')) + '</dd>' : '') + '</dl>' +
+        '<dl class="kv"><dt>Salud</dt><dd><span class="dot ' + saludDot(sl.estado) + '"></span>' + esc(sl.estado || 'SIN DATOS') + (sl.detalle ? ' · ' + esc(sl.detalle) : '') + '</dd><dt>Autonomía</dt><dd>' + esc(c.autonomia || '—') + '</dd><dt>Grado</dt><dd>' + RANKS[a.rank || 0] + (c.ts_alta ? ' · de alta desde ' + esc(String(c.ts_alta).slice(0, 10)) : '') + '</dd><dt>Rendimiento</dt><dd>' + rendimientoTxt(c.rendimiento) + '</dd>' + (a.cubo === 'rrhh' && BK.rrhh ? '<dt>Cobertura</dt><dd>' + Math.round(BK.rrhh.mapa.cobertura * 100) + ' % de los cubos con director' + (BK.rrhh.mapa.faltantes.length ? ' · faltan ' + esc(BK.rrhh.mapa.faltantes.join(', ')) : '') + '</dd>' : '') + '<dt>Eventos 24 h</dt><dd class="mono">' + esc(sl.eventos_24h == null ? '—' : sl.eventos_24h) + '</dd>' + ((c.irreversibles || []).length ? '<dt>Puede pedir</dt><dd>' + esc(c.irreversibles.join(', ')) + '</dd>' : '') + '</dl>' +
         '<div class="box"><h3><span>Último hecho</span></h3><div style="font-size:13px">' + esc(a.last || (c.ultimo && c.ultimo.texto) || 'Nada desde que abriste esta ventana.') + '</div></div>' +
         '<div class="acts"><button class="link" id="pf-chat" type="button">Hablar con el director</button><button class="link" id="pf-look" type="button">Seguir con la cámara</button></div></div>';
       const pcv = document.getElementById('pf-c'); pcv.width = 18 * S; pcv.height = 30 * S; const pc = pcv.getContext('2d'); pc.imageSmoothingEnabled = false; pc.drawImage(charSprite(a.id, 'stand', 0, a.rank), 0, 0, 18 * S, 30 * S);

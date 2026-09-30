@@ -38,6 +38,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from panel_mando import colmena as CLM
 from panel_mando import nucleo as N
+from panel_mando import rendimiento as REND
 from panel_mando.herramientas import rrhh as RRHH
 from sustrato import bus, coste
 from sustrato.consola import ts_iso8601z
@@ -254,6 +255,19 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
         return {"pendientes": sum(1 for x in nodos.values() if x["estado"] == "PENDIENTE"),
                 "mechas": mechas}
 
+    def _rendimiento(empresa: str, conn, cubos: list[dict]) -> dict:
+        """Lee coste, pedidos y decisiones reales y aplica panel_mando/rendimiento.py. Si algo falla
+        devuelve vacio (el juego lo muestra como «sin medir»), nunca un grado inventado."""
+        try:
+            costes = []
+            if _tabla_existe(conn, "costes"):
+                costes = [{"cubo": r[0], "ts": r[1], "coste_eur": r[2]} for r in conn.execute(
+                    "SELECT cubo, ts, coste_eur FROM costes WHERE estado = 'liquidado'")]
+            pedidos = list(st.k.all(empresa, "pedido_atribuido").values())
+            return REND.rendimiento_desde(cubos, costes, pedidos, cola(empresa).listar())
+        except Exception:                                    # noqa: BLE001
+            return {}
+
     def _sello(empresa: str) -> dict:
         """Verificacion real y completa de la cadena en cada foto: un sello roto se ve al momento."""
         try:
@@ -315,6 +329,9 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                                                  .get("eventos_publicados_24h", 0))},
                     "ultimo": ultimos.get(cubo),
                 })
+            rend = _rendimiento(empresa, conn, cubos)
+            for c in cubos:
+                c["rendimiento"] = rend.get(c["cubo"])
             cursor_bus = _ultimo_id_bus(conn)
             cursor_chat = _ultimo_id_chat(conn)
             recientes = _recientes(empresa, conn)

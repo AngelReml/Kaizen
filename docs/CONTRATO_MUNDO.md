@@ -38,6 +38,7 @@ existen, todos los cubos salen `alta:false`. Campos:
   `alta`, `uid`/`role_id`/`ts_alta` (null si no hay alta), `salud`
   `{estado, detalle, eventos_24h}` (misma funcion que Colmena; si no se puede
   medir, `SIN DATOS`), `ultimo` `{texto, ts}` del chat individual o null.
+  `rendimiento` (ver «Rendimiento y grados»).
 - `dinero`: misma funcion que `/api/dinero/{empresa}` (`frase`, `gasto_eur`,
   `tope_eur`, `sin_atribuir_eur`, `modo_ahorro`).
 - `tarjetas`: `pendientes` (numero; cola en PENDIENTE) y `mechas[]`: las
@@ -152,3 +153,31 @@ solo identidad del cubo, no salud ni estado.
 
 La prueba `10e` de `tests/e2e/mundo.e2e.js` comprueba las dos cosas: que cada clic hace algo y que
 el estado de la empresa (eventos, dinero, aprobaciones, parada) queda exactamente igual.
+
+## Rendimiento y grados (`cubos[].rendimiento`)
+
+Calculado por `panel_mando/rendimiento.py` (funciones puras, con tests) sobre datos reales: la tabla
+`costes` (por cubo), los pedidos atribuidos y la cola de aprobaciones. Ventana de 30 dias. Forma:
+`{rango, metrica, puntuacion, coste_eur, valor_eur, roi, decisiones:{firmes,rechazadas}, tasa_acierto, motivo}`.
+
+| Regla | Valor (constantes del modulo) |
+|---|---|
+| Opta a grado | alta de 30 dias o mas |
+| Comercial (unico cubo con dinero medible) | ROI = valor de pedidos ATRIBUIDOS con importe / coste; experto con ROI >= 2 |
+| Resto de cubos | acierto = firmes / (firmes + rechazadas); experto con >= 90 % y >= 5 decisiones |
+| Mejor del mes | el experto de mayor puntuacion; un empate no premia a nadie |
+| Sin muestra | `rango: null` y el `motivo` lo dice; nunca un grado inventado |
+
+Firmes = APROBADA, EJECUTANDO, EJECUTADA. Rechazadas = DENEGADA, REVOCADA. Pendientes, anuladas y
+caducadas no cuentan. Los pedidos pendientes de validacion externa no cuentan como valor.
+
+**Limites honestos:** (1) ROI y acierto no son la misma unidad: la puntuacion es metrica / umbral, una
+convencion para comparar, no una medida universal. (2) La tabla `costes` no tiene columna de empresa:
+con varias empresas en la misma base el coste por cubo se mezcla. (3) Marketing y el resto no tienen
+ingresos atribuibles en los datos de hoy, por eso se miden por decisiones. Los umbrales los decide el
+operador; cambiarlos es editar las constantes y este cuadro.
+
+El juego lo dibuja en las bocamangas (veterano = 30 dias de alta; experto y mejor del mes solo si este
+campo lo dice) y en la ficha del director. Ademas, en cada sala hay un orbe luminoso por evento de las
+ultimas 24 h del cubo (hasta 8) y un halo que crece con esa cuenta: es `salud.eventos_24h`, dato real.
+

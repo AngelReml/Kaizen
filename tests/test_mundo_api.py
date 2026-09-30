@@ -518,3 +518,11 @@ def test_chat_sin_tablas_de_colmena_no_emite_ni_crea_nada(entorno):
     evs, _ = _sse(c)
     assert not [e for e in evs if e["canal"] == "chat"]
     assert _estado(c)["cursores"]["chat"] == 0 and _filas_agentes() is None
+
+
+def test_estado_trae_rendimiento_por_cubo_y_nadie_tiene_grado_sin_datos(entorno):
+    app, c, b = _montaje()
+    j = c.get(f"/api/mundo/estado?empresa={EMPRESA}").json()
+    assert j["cubos"] and all("rendimiento" in x for x in j["cubos"])
+    assert all(x["rendimiento"]["rango"] is None for x in j["cubos"])        # tenant vacio: no se inventa ningun grado
+    assert all(x["rendimiento"]["motivo"] for x in j["cubos"])
