@@ -503,9 +503,8 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
                 "mensaje": f"ATENCION: el sello se rompe en el paso {int(v['punto_ruptura'])}. Nada anterior ha cambiado; investiga ese punto.",
                 "detalle_tecnico": v}
 
-    @app.get("/api/dinero/{empresa}")
-    def api_dinero(empresa: str, request: Request):
-        auth(request)
+    def dinero_de(empresa: str) -> dict:
+        """Una sola logica para /api/dinero y /api/mundo/estado (cero copias)."""
         lb = libro()
         gasto = lb.gasto_dia(empresa)
         try:
@@ -519,6 +518,11 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         return {"frase": frase,
                 "gasto_eur": gasto, "tope_eur": tope, "sin_atribuir_eur": sa,
                 "modo_ahorro": bool(tope and gasto >= tope)}
+
+    @app.get("/api/dinero/{empresa}")
+    def api_dinero(empresa: str, request: Request):
+        auth(request)
+        return dinero_de(empresa)
 
     @app.get("/api/dinero/{empresa}/export.csv")
     def api_dinero_csv(empresa: str, request: Request, mes: str = ""):
@@ -821,6 +825,11 @@ paridad de tipos de evento cubiertos: <span id="par" data-src="/api/paridad"></s
     CLM.registrar(app, auth=auth, auth_pagina=auth_pagina, identidad=identidad,
                   cola=cola, bit=bit, libro=libro, pagina=_pagina,
                   empresas=lambda: _empresas(st.k))
+    # Mundo (vista isometrica): /mundo + lectura /api/mundo/*; solo proyeccion.
+    from panel_mando import mundo as MND
+    MND.registrar(app, auth=auth, auth_pagina=auth_pagina, cola=cola, bit=bit,
+                  empresas=lambda: _empresas(st.k), empresa_valida=_empresa_valida,
+                  dinero=dinero_de, quemar_vencidas=quemar_vencidas)
     return app
 
 

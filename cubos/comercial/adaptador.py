@@ -91,6 +91,13 @@ class CuboComercial:
                 "SELECT COUNT(*) FROM bus_eventos WHERE topic LIKE 'kaizen.comercial.%' AND ts >= ?",
                 (corte,)).fetchone()[0]
         except sqlite3.Error as exc:
+            if isinstance(exc, sqlite3.OperationalError) and "no such table" in str(exc):
+                # instalacion nueva: las tablas del registro aun no existen. No es una averia, es
+                # falta de datos, y asi lo dice el cubo (antes salia ERROR y el panel lo pintaba en rojo).
+                return {"cubo": "comercial", "estado": "SIN DATOS",
+                        "detalle": "registro aun sin inicializar", "ts": ts_iso8601z(),
+                        "contadores": {"leads": 0, "compromisos_pendientes": 0,
+                                       "eventos_publicados_24h": 0}}
             return {"cubo": "comercial", "estado": "ERROR",
                     "detalle": f"registro inaccesible: {type(exc).__name__}",
                     "ts": ts_iso8601z(),
