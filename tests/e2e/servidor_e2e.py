@@ -71,6 +71,17 @@ def crear(datos: Path, mecha_s: int = 6, token: str | None = None):
                 k.add(EMPRESA, "contenido_mkt", f"t_{estado}_{i}", {"id": f"t_{estado}_{i}", "estado": estado, "texto": "x"})
         return {"ok": True}
 
+    @app.post("/_e2e/marca")
+    async def e2e_marca(request: Request):
+        """Solo pruebas: veredictos y directrices sinteticos de Marca (sin reglas ni textos)."""
+        d = await request.json()
+        for v, n in d.get("veredictos", {}).items():
+            for _ in range(int(n)):
+                bitacora().publicar(Sobre(tenant_id=EMPRESA, tipo="plataforma.verificacion.emitida", payload={"veredicto": v, "hash": "h"}, origen="e2e"))
+        for i in range(int(d.get("directrices", 0))):
+            k.add(EMPRESA, "directriz", f"d{i}", {"id": f"d{i}", "estado": "ACTIVA"})
+        return {"ok": True}
+
     @app.post("/_e2e/bus")
     async def e2e_bus(request: Request):
         d = await request.json()

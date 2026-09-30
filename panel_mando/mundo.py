@@ -76,9 +76,12 @@ def evento_rue(n: int, e: dict) -> dict:
     if tipo.startswith("plataforma.aprobacion."):
         ref = payload.get("aprobacion_ref")        # clave real: core/aprobaciones.py
         aprobacion = str(ref) if ref else None
-    return {"canal": "rue", "id": int(n), "tipo": tipo,
-            "cubo": _cubo_de_rue(tipo, payload), "frase": N.render(e),
-            "ts": e.get("ts", ""), "aprobacion": aprobacion}
+    out = {"canal": "rue", "id": int(n), "tipo": tipo,
+           "cubo": _cubo_de_rue(tipo, payload), "frase": N.render(e),
+           "ts": e.get("ts", ""), "aprobacion": aprobacion}
+    if tipo == "plataforma.verificacion.emitida" and payload.get("veredicto") in ("APTO", "NO_APTO", "AMBIGUO"):
+        out["veredicto"] = payload["veredicto"]          # solo la etiqueta: el juego enciende la linterna de ese veredicto
+    return out
 
 
 def _frase_bus(topic: str) -> tuple[str | None, str]:
@@ -276,6 +279,25 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             pass
         return {"leads": cuenta, "pedidos": pedidos}
 
+    def _marca(empresa: str) -> dict:
+        """Veredictos de Marca de los ultimos 30 dias (eventos plataforma.verificacion.emitida, que solo se emiten
+        al evaluar de verdad) y directrices del libro de estilo por estado. Solo numeros: ni reglas ni textos."""
+        desde = datetime.now(timezone.utc) - REND.timedelta(days=REND.VENTANA_DIAS)
+        ver = {"APTO": 0, "NO_APTO": 0, "AMBIGUO": 0}
+        directrices: dict[str, int] = {}
+        try:
+            for e in st.k.all(empresa, "evento").values():
+                if e.get("tipo") == "plataforma.verificacion.emitida" and REND._en_ventana(e.get("ts"), desde):
+                    v = (e.get("payload") or {}).get("veredicto")
+                    if v in ver:
+                        ver[v] += 1
+            for d in st.k.all(empresa, "directriz").values():
+                est = str(d.get("estado", "BORRADOR"))
+                directrices[est] = directrices.get(est, 0) + 1
+        except Exception:                                    # noqa: BLE001
+            pass
+        return {"veredictos": ver, "directrices": directrices, "ventana_dias": REND.VENTANA_DIAS}
+
     def _marketing(empresa: str) -> dict:
         """Campanas y contenidos del cubo Marketing, solo numeros (sin nombres ni textos): cuenta por estado,
         y por campana el porcentaje de presupuesto gastado (tope 90 % = kill-switch). Como mucho 8 campanas."""
@@ -384,6 +406,8 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                     c["pipeline"] = _pipeline(empresa)
                 elif c["cubo"] == "marketing":
                     c["marketing"] = _marketing(empresa)
+                elif c["cubo"] == "brand":
+                    c["marca"] = _marca(empresa)
             rend = _rendimiento(empresa, conn, cubos)
             for c in cubos:
                 c["rendimiento"] = rend.get(c["cubo"])

@@ -554,3 +554,16 @@ def test_marketing_trae_campanas_y_contenidos_solo_como_numeros(entorno):
     assert mk["campanas"]["ACTIVA"] == 1 and mk["contenidos"]["VALIDADO_POR_BRAND"] == 1
     assert mk["gasto"] == [{"estado": "ACTIVA", "pct": 0.5}] and mk["kill_switch_pct"] == 0.9
     assert "SECRETO" not in json.dumps(j)
+
+
+def test_marca_trae_veredictos_y_directrices_solo_como_numeros(entorno):
+    app, c, b = _montaje()
+    for v in ("APTO", "APTO", "NO_APTO"):
+        _rue(b, "plataforma.verificacion.emitida", {"veredicto": v, "hash": "h", "contenido_ref": "SECRETO-REF"})
+    b.k.add(EMPRESA, "directriz", "d1", {"id": "d1", "regla": "SECRETO-REGLA", "estado": "ACTIVA"})
+    j = c.get(f"/api/mundo/estado?empresa={EMPRESA}").json()
+    m = next(x for x in j["cubos"] if x["cubo"] == "brand")["marca"]
+    assert m["veredictos"] == {"APTO": 2, "NO_APTO": 1, "AMBIGUO": 0} and m["directrices"] == {"ACTIVA": 1}
+    assert "SECRETO" not in json.dumps(j)
+    ev = [e for e in j["recientes"] if e["tipo"] == "plataforma.verificacion.emitida"]
+    assert ev and ev[-1]["veredicto"] == "NO_APTO" and "SECRETO" not in json.dumps(ev)
