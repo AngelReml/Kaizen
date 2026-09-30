@@ -642,9 +642,9 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
   function clipTo(g, pts, fn) { g.save(); pathOf(g, pts); g.clip(); fn(); g.restore(); }
   // recorrido del muro trasero: del extremo oeste (0,13) por la esquina norte hasta el extremo este (18,0), en tramos de ~1 baldosa; n = normal hacia fuera
   function wallRun(bx) {
-    bx = bx || HBOX; const out = [], r = bx.rc[0], push = (ax, ay, bx_, by_, nx, ny, kind) => out.push({ a: [ax, ay], b: [bx_, by_], n: [nx, ny], kind });
+    bx = bx || HBOX; const out = [], r = bx.rc[0], push = (ax, ay, bx_, by_, nx, ny, kind, n0, n1) => out.push({ a: [ax, ay], b: [bx_, by_], n: [nx, ny], n0: n0 || [nx, ny], n1: n1 || [nx, ny], kind });
     for (let y = bx.y1; y > bx.y0 + r; y--) push(bx.x0, y, bx.x0, Math.max(y - 1, bx.y0 + r), -1, 0);
-    const N = 8; for (let i = 0; i < N; i++) { const a0 = Math.PI + Math.PI / 2 * i / N, a1 = Math.PI + Math.PI / 2 * (i + 1) / N; push(bx.x0 + r + Math.cos(a0) * r, bx.y0 + r + Math.sin(a0) * r, bx.x0 + r + Math.cos(a1) * r, bx.y0 + r + Math.sin(a1) * r, Math.cos((a0 + a1) / 2), Math.sin((a0 + a1) / 2), 'arc'); }
+    const N = 8; for (let i = 0; i < N; i++) { const a0 = Math.PI + Math.PI / 2 * i / N, a1 = Math.PI + Math.PI / 2 * (i + 1) / N; push(bx.x0 + r + Math.cos(a0) * r, bx.y0 + r + Math.sin(a0) * r, bx.x0 + r + Math.cos(a1) * r, bx.y0 + r + Math.sin(a1) * r, Math.cos((a0 + a1) / 2), Math.sin((a0 + a1) / 2), 'arc', [Math.cos(a0), Math.sin(a0)], [Math.cos(a1), Math.sin(a1)]); }
     for (let x = bx.x0 + r; x < bx.x1; x++) push(x, bx.y0, Math.min(x + 1, bx.x1), bx.y0, 0, -1);
     return out;
   }
@@ -697,6 +697,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     paintEave(g, WRUN, H);
   }
   // alero: banda de tejas de pizarra que sale del muro y se curva hacia arriba en las puntas
+  const nrm = (w, f) => { const x = w.n0[0] + (w.n1[0] - w.n0[0]) * f, y = w.n0[1] + (w.n1[1] - w.n0[1]) * f, l = Math.hypot(x, y) || 1; return [x / l, y / l]; };
   function paintEave(g, run, H, D0) {
     const D = D0 || 2.0, Hi = H + 7, nRun = run.length;
     const lift = (u) => { const e = 1 - Math.min(1, Math.min(u, 1 - u) / .2); return 16 * ease(Math.max(0, e)) * ease(Math.max(0, e)); };
@@ -708,18 +709,18 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       const { w } = sg;
       for (let k = 0; k < strips; k++) {
         const t0 = k / strips, t1 = (k + 1) / strips; // 0 = muro, 1 = borde exterior
-        const q = (u, t) => { const d = D * t, x = w.a[0] + (w.b[0] - w.a[0]) * ((u - sg.u0) / (sg.u1 - sg.u0)) + w.n[0] * d, y = w.a[1] + (w.b[1] - w.a[1]) * ((u - sg.u0) / (sg.u1 - sg.u0)) + w.n[1] * d; const hh = Hi - 2 * t + lift(u) * ease(t) * 1.0 + 1.5 * Math.sin(t * Math.PI) * -1; const p = P(x, y); return [p[0], p[1] - hh]; };
+        const q = (u, t) => { const d = D * t, f_ = (u - sg.u0) / (sg.u1 - sg.u0), nn = nrm(w, f_), x = w.a[0] + (w.b[0] - w.a[0]) * f_ + nn[0] * d, y = w.a[1] + (w.b[1] - w.a[1]) * f_ + nn[1] * d; const hh = Hi - 2 * t + lift(u) * ease(t) * 1.0 + 1.5 * Math.sin(t * Math.PI) * -1; const p = P(x, y); return [p[0], p[1] - hh]; };
         const base = ['#2c3f6e', '#36508a', '#4463a3', '#5478b8'], col = mix(base[Math.min(3, Math.floor(t0 * 4))], '#9ab4e8', t0 * .22 + (k % 2 ? .05 : 0));
         poly(g, (k === strips - 1) ? '#7f9ee0' : k === 0 ? '#1d2a4c' : col, [q(sg.u0, t0), q(sg.u1, t0), q(sg.u1, t1), q(sg.u0, t1)]);
       }
       // hiladas de tejas (líneas hacia el borde) y remate de tejas redondas
       const n = 3;
-      for (let m = 0; m <= n; m++) { const u = sg.u0 + (sg.u1 - sg.u0) * m / n; const a = [], b = []; const qq = (t) => { const d = D * t, f = (u - sg.u0) / (sg.u1 - sg.u0), x = w.a[0] + (w.b[0] - w.a[0]) * f + w.n[0] * d, y = w.a[1] + (w.b[1] - w.a[1]) * f + w.n[1] * d, hh = Hi - 2 * t + lift(u) * ease(t) - 1.5 * Math.sin(t * Math.PI), p = P(x, y); return [p[0], p[1] - hh]; }; const p0 = qq(0), p1 = qq(1); line(g, '#1d2a4c', p0[0], p0[1], p1[0], p1[1], Math.max(1, S - 1)); }
-      const f = .5, ex = w.a[0] + (w.b[0] - w.a[0]) * f + w.n[0] * D, ey = w.a[1] + (w.b[1] - w.a[1]) * f + w.n[1] * D, uu = (sg.u0 + sg.u1) / 2, ep = P(ex, ey), eh = Hi - 2 + lift(uu);
+      for (let m = 0; m <= n; m++) { const u = sg.u0 + (sg.u1 - sg.u0) * m / n; const a = [], b = []; const qq = (t) => { const d = D * t, f = (u - sg.u0) / (sg.u1 - sg.u0), nn = nrm(w, f), x = w.a[0] + (w.b[0] - w.a[0]) * f + nn[0] * d, y = w.a[1] + (w.b[1] - w.a[1]) * f + nn[1] * d, hh = Hi - 2 * t + lift(u) * ease(t) - 1.5 * Math.sin(t * Math.PI), p = P(x, y); return [p[0], p[1] - hh]; }; const p0 = qq(0), p1 = qq(1); line(g, '#1d2a4c', p0[0], p0[1], p1[0], p1[1], Math.max(1, S - 1)); }
+      const f = .5, nm = nrm(w, f), ex = w.a[0] + (w.b[0] - w.a[0]) * f + nm[0] * D, ey = w.a[1] + (w.b[1] - w.a[1]) * f + nm[1] * D, uu = (sg.u0 + sg.u1) / 2, ep = P(ex, ey), eh = Hi - 2 + lift(uu);
       rect(g, '#c9603a', ep[0] - 1.5, ep[1] - eh - 1, 3, 3); rect(g, '#e38a5a', ep[0] - 1, ep[1] - eh - 1, 2, 1); rect(g, R.ink, ep[0] - 1, ep[1] - eh + 2, 2, 1);
     });
     // cresta exterior con remate dorado en las puntas
-    const tip = (w, f, u) => { const x = w.a[0] + (w.b[0] - w.a[0]) * f + w.n[0] * D, y = w.a[1] + (w.b[1] - w.a[1]) * f + w.n[1] * D, p = P(x, y); return [p[0], p[1] - (Hi - 2 + lift(u))]; };
+    const tip = (w, f, u) => { const nm = nrm(w, f), x = w.a[0] + (w.b[0] - w.a[0]) * f + nm[0] * D, y = w.a[1] + (w.b[1] - w.a[1]) * f + nm[1] * D, p = P(x, y); return [p[0], p[1] - (Hi - 2 + lift(u))]; };
     let prev = null; seg.forEach(sg => { [0, 1].forEach(f => { const pp = tip(sg.w, f, sg.u0 + (sg.u1 - sg.u0) * f); if (prev) line(g, R.indigo[4], prev[0], prev[1] - 1, pp[0], pp[1] - 1, Math.max(1, S - 1)); prev = pp; }); });
     [seg[0], seg[seg.length - 1]].forEach((sg, k) => { const pp = tip(sg.w, k ? 1 : 0, k ? 1 : 0); rect(g, R.gold[2], pp[0] - 1, pp[1] - 4, 3, 4); rect(g, R.gold[3], pp[0], pp[1] - 5, 1, 2); });
     // faldón de sombra bajo la viga del alero
@@ -1266,7 +1267,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     {
       const bx = 9.3, by = streamAtX(bx), y0 = by - 1.3, y1 = by + 1.3, hw = .42, Hb = 7, N = 14;
       const arch = t => Hb * Math.pow(Math.sin(Math.PI * t), .75);
-      addStatic(bx + y0 + .3, [P(bx - hw, y0)[0] - 8, P(bx + hw, y0)[1] - Hb - 26, P(bx + hw, y1)[0] + 8, P(bx - hw, y1)[1] + 10], g => {
+      addStatic(bx + y0 + .3, [P(bx - hw, y1)[0] - 10, P(bx - hw, y0)[1] - Hb - 28, P(bx + hw, y0)[0] + 10, P(bx + hw, y1)[1] + 12], g => {
         for (let i = 0; i < N; i++) {
           const t0 = i / N, t1 = (i + 1) / N, ya = y0 + (y1 - y0) * t0, yb = y0 + (y1 - y0) * t1, ha = arch(t0), hb = arch(t1);
           const A = up(P(bx - hw, ya), ha), B = up(P(bx + hw, ya), ha), C = up(P(bx + hw, yb), hb), D = up(P(bx - hw, yb), hb);
@@ -1276,7 +1277,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
         // barandilla lejana (la cercana va en otro objeto) y cuerpo bajo el tablero
         for (let i = 0; i <= N; i++) { const t = i / N, ya = y0 + (y1 - y0) * t, p = up(P(bx - hw, ya), arch(t)); if (i > 0) { const q = up(P(bx - hw, y0 + (y1 - y0) * (i - 1) / N), arch((i - 1) / N)); line(g, R.red[2], q[0], q[1] - 9, p[0], p[1] - 9, Math.max(1, S - 1)); line(g, R.red[3], q[0], q[1] - 10, p[0], p[1] - 10, Math.max(1, S - 1)); } if (i % 2 === 0) { rect(g, R.red[1], p[0], p[1] - 10, 2, 10); } }
       });
-      addStatic(bx + hw + y1 + .3, [P(bx - hw, y0)[0] - 8, P(bx + hw, y0)[1] - Hb - 26, P(bx + hw, y1)[0] + 8, P(bx - hw, y1)[1] + 10], g => {
+      addStatic(bx + hw + y1 + .3, [P(bx - hw, y1)[0] - 10, P(bx - hw, y0)[1] - Hb - 28, P(bx + hw, y0)[0] + 10, P(bx + hw, y1)[1] + 12], g => {
         for (let i = 0; i <= N; i++) { const t = i / N, ya = y0 + (y1 - y0) * t, p = up(P(bx + hw, ya), arch(t)); if (i > 0) { const q = up(P(bx + hw, y0 + (y1 - y0) * (i - 1) / N), arch((i - 1) / N)); line(g, R.red[2], q[0], q[1] - 9, p[0], p[1] - 9, Math.max(1, S - 1)); line(g, R.red[3], q[0], q[1] - 10, p[0], p[1] - 10, Math.max(1, S - 1)); } if (i % 2 === 0) { rect(g, R.red[1], p[0] - 1, p[1] - 10, 2, 10); rect(g, R.gold[2], p[0] - 1, p[1] - 12, 3, 2); } }
       });
     }
@@ -2659,7 +2660,7 @@ void main(){
     if (dk > .3) { g.globalAlpha = dk * .35; g.drawImage(glowOf('#bcd4ff'), x - 14, y - 10, 28, 20); g.globalAlpha = 1; }
   }
   function onCrane() { CRANE.fast = 5; spawn(CRANE.x, CRANE.y + EX, 26, { cols: ['#ffffff', '#e6eeff', '#ffc8d8'], v: 26, g: 14, l: 2.2, add: false, sz: 2, sway: 1 }); arpeggio(4, 5, .04); discover('grulla'); inscribe('La grulla bate las alas y acelera.'); }
-  const KODAMA = [{ x: 28.4, y: -2.6, ph: 0 }, { x: 4.6, y: -3.1, ph: 1.3 }, { x: -3.9, y: 9.5, ph: 2.6 }, { x: 40.5, y: -3.4, ph: 3.9 }, { x: -4.2, y: 1.2, ph: 5.1 }].map(k => Object.assign(k, { gone: 0 }));
+  const KODAMA = [{ x: 13, y: -10.2, ph: 0 }, { x: 2.5, y: -9.6, ph: 1.3 }, { x: -7, y: 5, ph: 2.6 }, { x: 38, y: -5.4, ph: 3.9 }, { x: -6.6, y: 14.2, ph: 5.1 }].map(k => Object.assign(k, { gone: 0 }));
   function drawKodamas(g) {
     KODAMA.forEach(k => {
       if (k.gone > 0) return; const b = P(k.x, k.y), sh = reduce ? 0 : Math.max(0, Math.sin(T * .7 + k.ph * 3)) > .8 ? Math.sin(T * 30) * 1.4 : 0, tilt = reduce ? 0 : Math.sin(T * .9 + k.ph) * 1.2, x = Math.round(b[0] + sh), y = Math.round(b[1]);
@@ -2752,6 +2753,7 @@ void main(){
       lots: LOTS.map(l => ({ id: l.id, state: LS[l.id].state, cubo: LS[l.id].cubo })), drops: DROPS.length, obras: OBRA.length }),
     toScreen: (wx, wy) => { const [ox, oy] = origin(), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1; return [r.left + (ox + wx * cam.k) / dpr, r.top + (oy + wy * cam.k) / dpr]; },
     fx: () => ({ sp: SP.length, rings: RINGS.length, bloom: BLOOMS.length, boats: BOATS.length, kicks: KICKS.length, found: [...FOUND], isles: ISLES.map(I => [I._x, I._y + EX, I.w]), sun: [sunInfo.x, sunInfo.y, sunInfo.a], furin: FURIN.map(f => [f.x, f.y]), hot: hoverHot ? hoverHot.r : null }),
+    look: (wx, wy, k) => { follow = null; cam.anchor = null; cam.x = wx; cam.y = wy; if (k) cam.kt = Math.min(10, Math.max(kMin, k)); },
     sprite: (id, pose, frame) => { try { return charSprite(id, pose || 'stand', frame || 0).toDataURL(); } catch (e) { return null; } },
     perf: () => ({ frame: +PERF.ms.toFixed(1), compose: +PERF.comp.toFixed(1), stalks: STALKS.length, objs: OBJ.length, buf: [world.width, world.height] })
   };
