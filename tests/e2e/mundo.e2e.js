@@ -227,6 +227,7 @@ const info = page => page.evaluate(() => KAIZEN.info());
     await sleep(2500);
     const fx = () => page.evaluate(() => KAIZEN.fx());
     const estado = async () => { const i = await info(page); return JSON.stringify({ ev: i.events, cur: i.cur, drops: i.drops, gasto: i.gasto, tarj: i.tarjetas, parado: i.parado }); };
+    await until(page, () => KAIZEN.info().drops === 0, null, 30000, 'las gotas de tinta no terminaron de llegar al Registro');   // lo que ya venía en camino no es de este clic
     const antes = await estado(), f0 = await fx(), i0 = await info(page), a = i0.agents[0];
     const blancos = [
       ['torii', Pw(21.5, 6).map((v, i) => i ? v - 26 : v)], ['flor', Pw(14, 21)], ['arbol', Pw(2.2, 18.6).map((v, i) => i ? v - 44 : v)],
