@@ -47,6 +47,10 @@ existen, todos los cubos salen `alta:false`. Campos:
   mechas encendidas de esa empresa, cada una `{aprobacion, dispara (ISO8601 con
   zona, tal cual lo da Mechas.armar), accion, cubo}` (texto y cubo del nodo de
   la cola). El detalle de las pendientes se pide a `/api/tarjetas/{empresa}`.
+- `apuestas`: `{conteo: {BORRADOR, DOSIER, ELEGIDA, EN_PRUEBA, MEDIDA, CRECE, PODADA, DESCARTADA: n}, pide_medicion: n}`
+  (`pide_medicion` = apuestas EN_PRUEBA con el plazo vencido: solo un aviso, no cambia el estado). **Solo numeros**: ni
+  titulos ni textos de dosier. El detalle se lee en `GET /api/apuestas/{empresa}` (autenticado) y las decisiones del
+  operador entran por `POST /cmd/apuestas/transicion`. Los eventos `inteligencia.apuesta.*` salen en el feed con su frase.
 - `sello`: `{integra, pasos, mensaje}` de la verificacion de la bitacora. La verificacion es completa
   en cada foto: un sello roto se ve al momento.
 - `rrhh`: `{mapa, propuestas[]}`. Sale de las funciones puras del cubo RRHH

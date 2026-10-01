@@ -36,6 +36,7 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
+from core import apuestas as AP
 from core import autonomia as AUT
 from panel_mando import colmena as CLM
 from panel_mando import nucleo as N
@@ -261,6 +262,15 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
         return {"pendientes": sum(1 for x in nodos.values() if x["estado"] == "PENDIENTE"),
                 "en_manos": sum(1 for x in nodos.values() if x["estado"] == "EN_MANOS"),
                 "mechas": mechas}
+
+    def _apuestas(empresa: str) -> dict:
+        """Solo NUMEROS: cuantas apuestas hay en cada estado y cuantas piden medicion (plazo vencido).
+        Ni titulos ni textos: el dosier se lee en /api/apuestas/{empresa}."""
+        try:
+            ap = AP.Apuestas(st.k, empresa)
+            return {"conteo": ap.conteo_por_estado(), "pide_medicion": len(ap.pide_medicion())}
+        except Exception:                                    # noqa: BLE001 — sin datos: ceros, nunca inventado
+            return {"conteo": {e: 0 for e in AP.ESTADOS}, "pide_medicion": 0}
 
     def _pipeline(empresa: str) -> dict:
         """Cuenta de leads por estado canonico del cubo Comercial (solo numeros, nunca datos de personas)
@@ -538,6 +548,7 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             "cubos": cubos,
             "dinero": dinero(empresa),
             "tarjetas": _tarjetas(empresa),
+            "apuestas": _apuestas(empresa),
             "sello": sello,
             "rrhh": {"mapa": mapa, "propuestas": RRHH.propuestas_desde(mapa)},
             "cursores": {"rue": _cursor_rue(empresa), "bus": cursor_bus, "chat": cursor_chat},

@@ -568,6 +568,8 @@ class Apuestas:
     def iniciar_prueba(self, ap_id: str, *, por: str, criterio=None) -> dict:
         """ELEGIDA -> EN_PRUEBA (o CRECE -> EN_PRUEBA: nueva ronda). Fija el criterio de muerte."""
         def mutar(r):
+            if criterio is not None and not isinstance(criterio, dict):
+                raise ApuestaInvalida("criterio: debe ser un objeto (o vacio para heredar el del dosier)")
             c = limpiar_criterio(criterio, r.get("dosier"))
             errores = validar_criterio(c)
             if errores:

@@ -25,6 +25,7 @@ from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                RedirectResponse, StreamingResponse)
 
 import claude_client
+from core import apuestas as AP
 from core import autonomia as AUT
 from core import tenants as T
 from core.aprobaciones import ColaSustrato, TransicionAprobacionInvalida
@@ -709,6 +710,45 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         aut = AUT.AutonomiaCubos(st.k, empresa, bitacora=bit(empresa))
         resultado = aut.fijar(cubo, defecto, nivel, por=quien, motivo=motivo)
         return {"resultado": resultado, "ficha": st.ficha_cubo(empresa, cubo)}
+
+    # ═══ Apuestas (docs/APUESTAS_Y_DOSIER_v0.md): leer y decidir. Decide SIEMPRE el operador. ═══
+    @app.get("/api/apuestas/{empresa}")
+    def api_apuestas(empresa: str, request: Request):
+        auth(request)
+        if empresa not in _empresas(st.k):
+            raise HTTPException(404, "empresa desconocida")
+        ap = AP.Apuestas(st.k, empresa)
+        return {"empresa": empresa, "conteo": ap.conteo_por_estado(), "pide_medicion": ap.pide_medicion(),
+                "apuestas": ap.listar()}
+
+    ACCIONES_APUESTA = ("elegir", "iniciar_prueba", "registrar_medicion", "cerrar", "descartar")
+
+    @app.post("/cmd/apuestas/transicion")
+    async def cmd_apuesta(request: Request):
+        auth(request)
+        d = await request.json()
+        if not isinstance(d, dict):
+            raise ValueError("cuerpo invalido: se esperaba un objeto JSON")
+        quien = identidad(d, request)
+        empresa, ap_id, accion = d.get("empresa"), d.get("id"), d.get("accion")
+        if not isinstance(empresa, str) or empresa not in _empresas(st.k):
+            raise ValueError("empresa desconocida")
+        if not isinstance(ap_id, str) or not ap_id:
+            raise ValueError("falta el id de la apuesta")
+        if accion not in ACCIONES_APUESTA:
+            raise ValueError(f"accion desconocida: usa una de {list(ACCIONES_APUESTA)}")
+        ap = AP.Apuestas(st.k, empresa, bitacora=bit(empresa))
+        if accion == "elegir":
+            r = ap.elegir(ap_id, por=quien)
+        elif accion == "iniciar_prueba":
+            r = ap.iniciar_prueba(ap_id, por=quien, criterio=d.get("criterio"))
+        elif accion == "registrar_medicion":
+            r = ap.registrar_medicion(ap_id, por=quien, valor=d.get("valor"), referencia=d.get("referencia"))
+        elif accion == "cerrar":
+            r = ap.cerrar(ap_id, d.get("decision"), por=quien, aprendizaje=d.get("aprendizaje"))
+        else:
+            r = ap.descartar(ap_id, por=quien, razon=d.get("razon"), aprendizaje=d.get("aprendizaje"))
+        return {"apuesta": r}
 
     # ═══ P2/P3/P5 · paginas ═══
     def _pagina(titulo: str, cuerpo: str, tema: str) -> str:

@@ -585,3 +585,14 @@ def test_el_mundo_atribuye_los_eventos_de_apuestas_a_inteligencia():
     from panel_mando import mundo as M
     ev = M.evento_rue(1, {"tipo": "inteligencia.apuesta.creada", "payload": {"modelo_ingreso": "otro", "cliente": "pyme"}, "ts": "x"})
     assert ev["cubo"] == "inteligencia" and "apuesta" in ev["frase"]
+
+
+@pytest.mark.parametrize("malo", ["texto", 5, [1], True])
+def test_un_criterio_que_no_es_objeto_se_rechaza_en_vez_de_ignorarse(ap, malo):
+    a, _, _ = ap
+    r = _a_dosier(a)
+    a.elegir(r["id"], por="op")
+    with pytest.raises(A.ApuestaInvalida, match="criterio"):
+        a.iniciar_prueba(r["id"], por="op", criterio=malo)
+    assert a.obtener(r["id"])["estado"] == "ELEGIDA"
+    assert a.iniciar_prueba(r["id"], por="op", criterio=None)["estado"] == "EN_PRUEBA"        # vacio = hereda
