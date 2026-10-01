@@ -174,3 +174,9 @@ Para dejarlo encendido toda la noche: `python -X utf8 herramientas\apuestas.py t
 - Si el proceso del panel se reinicia durante una búsqueda, la tanda se pierde; el candado de «en marcha» caduca solo (horas + 1).
 - La búsqueda del botón son 3 vueltas fijas; el director puede pedir otro número (1–20).
 - «Hablar con el director» sigue abriendo el chat de la Colmena en otra pestaña: dentro del Mundo aún no hay chat integrado.
+
+### Modelo local (LM Studio u otro servidor con API tipo OpenAI)
+- Alternativa estable a WebLLM mientras este se afina: sin navegador, sin tope diario. En `.env`: `KAIZEN_EXPLORACION_MODELO=local`; opcionales `KAIZEN_LOCAL_URL` (defecto `http://127.0.0.1:1234/v1`), `KAIZEN_LOCAL_MODELO` (si no, el primero cargado) y `KAIZEN_LOCAL_CLAVE`. Solo en esta maquina salvo `KAIZEN_LOCAL_PERMITIR_REMOTO=1`.
+- Probado con un servidor simulado (+14 tests). **Con LM Studio real no probado**; la calidad del JSON del dosier depende del modelo cargado (si no sale, se cuenta como rechazo). La busqueda web sigue siendo `ddgs`.
+- Solo cubre la exploracion de nichos. Que los **directores del chat** usen cerebro local es un cambio aparte (usan `claude_client`).
+- Prueba de proxy: no demuestra que la peticion GET de descubrir modelo ignore el proxy del entorno (en loopback el proxy se salta solo).

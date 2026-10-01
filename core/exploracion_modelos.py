@@ -22,6 +22,7 @@ Reglas de seguridad:
 from __future__ import annotations
 
 import os
+import re
 import threading
 import time
 from collections import deque
@@ -69,6 +70,11 @@ class _HttpDirecto:
         import httpx
         with httpx.Client(trust_env=False, timeout=timeout) as c:
             return c.post(url, headers=headers, json=json)
+
+    def get(self, url, *, headers, timeout):
+        import httpx
+        with httpx.Client(trust_env=False, timeout=timeout) as c:
+            return c.get(url, headers=headers)
 
 
 class ClienteWebllm:
@@ -218,6 +224,112 @@ class ClienteWebllm:
         return t[:MAX_RESPUESTA]
 
 
+URL_LOCAL_DEFECTO = "http://127.0.0.1:1234/v1"      # LM Studio
+
+
+class ClienteLocal:
+    """Un servidor LOCAL con la API estandar tipo OpenAI (LM Studio, enrutadores locales...): sin navegador,
+    sin tope diario, sin token obligatorio. Solo en esta maquina (loopback) salvo permiso explicito.
+    La calidad depende del modelo cargado: si no devuelve el JSON pedido, la tanda lo cuenta como rechazo."""
+    nombre = "local"
+
+    def __init__(self, *, url: str | None = None, modelo: str | None = None, clave: str | None = None,
+                 timeout: float = 300.0, http=None) -> None:
+        url = (url or os.environ.get("KAIZEN_LOCAL_URL") or URL_LOCAL_DEFECTO).rstrip("/")
+        parts = urlsplit(url)
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            raise ErrorModelo(f"KAIZEN_LOCAL_URL no es una URL http(s) valida: {url!r}")
+        if not _es_local(url) and os.environ.get("KAIZEN_LOCAL_PERMITIR_REMOTO") != "1":
+            raise ErrorModelo("El modelo local debe estar en esta maquina (127.0.0.1): KAIZEN_LOCAL_URL apunta fuera.")
+        clave = clave if clave is not None else os.environ.get("KAIZEN_LOCAL_CLAVE", "")
+        clave = (clave or "").strip()
+        if clave and any(c.isspace() or ord(c) < 33 or ord(c) > 126 for c in clave):
+            raise ErrorModelo("KAIZEN_LOCAL_CLAVE tiene caracteres no validos")
+        self._url, self._clave = url, clave
+        self._modelo = (modelo or os.environ.get("KAIZEN_LOCAL_MODELO") or "").strip() or None
+        self._timeout = timeout
+        self._http = http
+        self._lock = threading.Lock()
+        self.preguntas = 0
+        self.errores = 0
+        self.por_modelo: dict[str, int] = {}
+        self.ultimo_modelo: str | None = None
+
+    def __repr__(self) -> str:                                  # la clave nunca se imprime
+        return f"ClienteLocal(url={self._url!r}, modelo={self._modelo!r}, preguntas={self.preguntas})"
+
+    __str__ = __repr__
+
+    def _cab(self) -> dict:
+        h = {"Content-Type": "application/json"}
+        if self._clave:
+            h["Authorization"] = f"Bearer {self._clave}"
+        return h
+
+    def _http_(self):
+        return self._http if self._http is not None else _HttpDirecto()
+
+    def _elegir_modelo(self) -> str:
+        """Sin KAIZEN_LOCAL_MODELO: el primero que el servidor diga tener cargado."""
+        if self._modelo:
+            return self._modelo
+        try:
+            r = self._http_().get(f"{self._url}/models", headers=self._cab(), timeout=15.0)
+            ids = [m["id"] for m in r.json()["data"] if isinstance(m, dict) and isinstance(m.get("id"), str)]
+        except Exception as e:                                  # noqa: BLE001
+            raise ErrorModelo(f"no pude hablar con el servidor local en {self._url} ({type(e).__name__}). "
+                              "Comprueba que LM Studio (u otro) esta abierto con su servidor local encendido.") from None
+        if not ids:
+            raise ErrorModelo("el servidor local no tiene ningun modelo cargado: carga uno o fija KAIZEN_LOCAL_MODELO.")
+        with self._lock:
+            self._modelo = ids[0]
+        return ids[0]
+
+    def preguntar(self, sistema: str, usuario: str, *, modelo: str | None = None,
+                  max_tokens: int | None = None) -> str:
+        if not (usuario or "").strip():
+            raise ErrorModelo("pregunta vacia")
+        m = modelo or self._elegir_modelo()
+        cuerpo = {"model": m, "stream": False,
+                  "messages": ([{"role": "system", "content": sistema}] if sistema else [])
+                  + [{"role": "user", "content": usuario}]}
+        if max_tokens:
+            cuerpo["max_tokens"] = int(max_tokens)
+        with self._lock:
+            self.preguntas += 1
+            self.por_modelo[m] = self.por_modelo.get(m, 0) + 1
+        try:
+            r = self._http_().post(f"{self._url}/chat/completions", headers=self._cab(), json=cuerpo,
+                                   timeout=self._timeout)
+        except Exception as e:                                  # noqa: BLE001
+            self.errores += 1
+            raise ErrorModelo(f"sin conexion con el servidor local ({type(e).__name__}): "
+                              "esta encendido el servidor de LM Studio?") from None
+        st = r.status_code
+        if st != 200:
+            self.errores += 1
+            if st in (401, 403):
+                raise ApagadaOSinToken(f"el servidor local rechazo la clave ({st}): revisa KAIZEN_LOCAL_CLAVE.")
+            if st == 429:
+                raise CapAgotado("el servidor local dijo 429 (demasiadas peticiones).")
+            cola = ""
+            try:
+                cola = (r.text or "")[:200].replace("\n", " ")
+            except Exception:                                   # noqa: BLE001
+                pass
+            raise ErrorModelo(f"el servidor local respondio {st}: {cola}")
+        try:
+            t = r.json()["choices"][0]["message"]["content"]
+        except Exception as e:                                  # noqa: BLE001
+            raise RespuestaInvalida(f"respuesta del servidor local ilegible ({type(e).__name__})") from None
+        if isinstance(t, str):                                  # modelos que razonan en voz alta: se descarta el razonamiento
+            t = re.sub(r"<think>.*?</think>", "", t, flags=re.S).strip()
+        if not isinstance(t, str) or not t.strip():
+            raise RespuestaInvalida("el servidor local devolvio una respuesta vacia")
+        self.ultimo_modelo = m
+        return t[:MAX_RESPUESTA]
+
+
 class ClienteClaude:
     """Adaptador de `claude_client.chat` (de pago): mismo contrato, con su freno de coste."""
     nombre = "claude"
@@ -254,10 +366,12 @@ class ClienteClaude:
 
 
 def cliente_desde_entorno(empresa: str):
-    """KAIZEN_EXPLORACION_MODELO = webllm (defecto, gratuito) | claude (de pago)."""
+    """KAIZEN_EXPLORACION_MODELO = webllm (defecto, gratuito) | local (LM Studio u otro servidor local) | claude (de pago)."""
     modo = (os.environ.get("KAIZEN_EXPLORACION_MODELO") or "webllm").strip().lower()
     if modo == "claude":
         return ClienteClaude(empresa)
+    if modo == "local":
+        return ClienteLocal()
     if modo != "webllm":
-        raise ErrorModelo(f"KAIZEN_EXPLORACION_MODELO desconocido: {modo!r} (webllm | claude)")
+        raise ErrorModelo(f"KAIZEN_EXPLORACION_MODELO desconocido: {modo!r} (webllm | local | claude)")
     return ClienteWebllm()
