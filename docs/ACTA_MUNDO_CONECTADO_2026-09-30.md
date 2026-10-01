@@ -73,3 +73,18 @@ eventos en el repositorio, asi que su pulso sale a cero hasta que existan; el co
 Marca cuentan todas las verificaciones de la plataforma; (corregido despues: la fuente de Finanzas se movio fuera del alcance de la pared este y los rotulos ya no se pisan);
 webllm (handoff del 2026-10-01) no se ha integrado: falta definir que han de hacer los agentes con el ordenador.
 
+
+## 7. Adenda — rendimiento medido (2026-10-01)
+
+Navegador de pruebas SIN GPU (Chromium con SwiftShader, 1280x720, 10 directores, datos sinteticos), mediana de 5 muestras:
+
+| Nitidez | Vista general | Con zoom | Arranque | Memoria JS |
+|---|---|---|---|---|
+| x1 | 23 ms/fotograma | 9,5 ms | 5 s | 16 MB |
+| x2 (por defecto) | 57 ms | 18,6 ms | 6 s | 16 MB |
+| x3 | 112 ms | 29 ms | 9 s | 15 MB |
+
+Perfil de CPU a x1 (8 s): 92,5 % en trabajo nativo del navegador (rasterizado y composicion por software), 5,3 % en `drawImage`; el codigo
+JavaScript del juego suma menos del 1 %. Conclusion: no hay un cuello de botella en nuestro JS que optimizar; el coste esta en el
+dibujado, que en un PC con GPU es mucho menor. El juego ya sugiere «Nitidez x1» si el fotograma supera 42 ms.
+Limite: no hay cifras en hardware real; las de arriba solo sirven para comparar niveles entre si.
