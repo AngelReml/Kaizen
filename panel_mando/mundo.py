@@ -36,6 +36,7 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
+from core import autonomia as AUT
 from panel_mando import colmena as CLM
 from panel_mando import nucleo as N
 from panel_mando import rendimiento as REND
@@ -465,7 +466,7 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             manifiestos = CLM._manifiestos()
             cubos = []
             for cubo in _cubos_instalados():
-                man = manifiestos.get(cubo, {})
+                man = AUT.manifest_efectivo(st.k, empresa, cubo, manifiestos.get(cubo, {}))
                 a = agentes.get(cubo)
                 salud = CLM._salud_cubo(conn, cubo, empresa=empresa, knowledge=st.k)
                 cubos.append({

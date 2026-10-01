@@ -51,6 +51,7 @@ from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                StreamingResponse)
 
 import claude_client
+from core import autonomia as AUT
 from core.aprobaciones import CLASES_ACCION
 from panel_mando import herramientas as H
 from sustrato import bus
@@ -593,7 +594,7 @@ def registrar(app, *, auth, auth_pagina, identidad, cola, bit, libro,
         conn = _conn()
         try:
             agente = _agente(conn, empresa, cubo)
-            man = manifests().get(cubo, {})
+            man = AUT.manifest_efectivo(st.k, empresa, cubo, manifests().get(cubo, {}))
             en_sala = ses["tipo"] == "sala"
             salud = _salud_cubo(conn, cubo, empresa=empresa, knowledge=st.k)
             pendientes = len(cola(empresa).listar("PENDIENTE"))
@@ -821,7 +822,7 @@ def registrar(app, *, auth, auth_pagina, identidad, cola, bit, libro,
             agentes = []
             for cubo in CUBOS_ORDEN:
                 a = _agente(conn, empresa, cubo)
-                man = manifests().get(cubo, {})
+                man = AUT.manifest_efectivo(st.k, empresa, cubo, manifests().get(cubo, {}))
                 sid, _ = sesiones[("individual", cubo)]
                 ult = ultimos.get(sid)
                 agentes.append({

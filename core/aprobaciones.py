@@ -179,7 +179,8 @@ class ColaSustrato:
 
 # ── Candado de umbrales / autonomia (D00 §4.2) ──────────────────────────────
 
-def cambiar_nivel(actual: str, pedido: str, *, actor: str, bitacora=None, tenant: str = "") -> str:
+def cambiar_nivel(actual: str, pedido: str, *, actor: str, bitacora=None, tenant: str = "",
+                 cubo: str = "", causa: str = "") -> str:
     """Sub-agentes SOLO endurecen (bajar nivel). Relajar exige operador; el intento
     de relajacion por sub-agente se RECHAZA y se REGISTRA."""
     ia, ip = NIVELES.index(actual), NIVELES.index(pedido)
@@ -195,7 +196,9 @@ def cambiar_nivel(actual: str, pedido: str, *, actor: str, bitacora=None, tenant
                                 tipo="plataforma.autonomia.cambiada",
                                 payload={"de": actual, "a": pedido, "actor": actor,
                                          "veredicto": veredicto,
-                                         **({"motivo": motivo} if motivo else {})},
+                                         **({"motivo": motivo} if motivo else {}),
+                                         **({"cubo": cubo} if cubo else {}),
+                                         **({"causa": causa} if causa else {})},
                                 origen="plataforma.autonomia"))
     if veredicto == "rechazado":
         return actual

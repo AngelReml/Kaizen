@@ -601,3 +601,20 @@ def test_pulso_ops_e_inteligencia_solo_numeros(entorno):
     assert por["ops"]["pulso"]["total"] == 1
     assert por["rrhh"]["pulso"] == {"dias": [0] * 14, "total": 0}
     assert "SECRETO" not in json.dumps(j) and "123456" not in json.dumps(j["cubos"])
+
+
+def test_autonomia_efectiva_se_refleja_en_el_mundo(entorno):
+    """El nivel que muestra el mundo es el VIGENTE de la empresa (core/autonomia), no solo el
+    defecto del manifest: tras endurecer, baja; otra empresa sigue con el defecto."""
+    from core.autonomia import AutonomiaCubos
+    app, c, b = _montaje()
+
+    def nivel(cubo):
+        return {x["cubo"]: x["autonomia"] for x in _estado(c)["cubos"]}[cubo]
+
+    assert nivel("comercial") == "BAJA"
+    AutonomiaCubos(b.k, EMPRESA, bitacora=b).endurecer(
+        "comercial", "BAJA", causa="prueba", incidente="i1")
+    assert nivel("comercial") == "CERO"
+    assert nivel("legal") == "BAJA"                      # solo ese cubo
+    assert b.verificar()["integra"] is True
