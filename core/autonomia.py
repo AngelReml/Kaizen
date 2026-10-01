@@ -18,6 +18,7 @@ No toca `sustrato/gates` (camino legado de Comercial, solo operador, con su prop
 from __future__ import annotations
 
 import contextlib
+import time
 from datetime import datetime, timezone
 
 from core.aprobaciones import NIVELES, NIVELES_BLOQUEADOS, cambiar_nivel
@@ -116,3 +117,81 @@ def manifest_efectivo(knowledge, tenant: str, cubo: str, manifest: dict) -> dict
     if vigente == defecto:
         return manifest
     return {**manifest, "nivel_autonomia_defecto": vigente, "nivel_autonomia_manifest": defecto}
+
+
+# ── gatillos de endurecimiento (G1) ─────────────────────────────────────────
+
+RACHA_DENEGADAS = 3
+# Verificar la cadena entera cuesta ~32 microsegundos por evento (medido: 3000 eventos ≈ 96 ms)
+# y el pulso corre por cada cliente conectado: sin freno, N pestañas verificarian N veces por ciclo.
+VIGILAR_CADA_S = 30.0
+# Decisiones POSITIVAS del operador sobre una tarjeta. CADUCADA (nadie decidio) y REVOCADA (decision
+# ambigua sobre algo ya aprobado) no cuentan: ni cortan ni alargan una racha de denegaciones.
+_POSITIVAS = frozenset({"APROBADA", "EJECUTANDO", "EJECUTADA", "ENSAYO_SECO", "ANULADA"})
+
+
+def _dt(iso: str) -> datetime:
+    d = datetime.fromisoformat(iso)
+    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+def incidente_de_racha(tarjetas: list[dict], cubo: str, desde: str | None) -> str | None:
+    """Identificador del incidente "N denegadas seguidas" del cubo, o None.
+
+    Cuenta solo decisiones POSTERIORES al ultimo cambio de nivel del cubo (`desde`): lo anterior
+    ya se pago con aquella bajada. El id es el de la 3.ª denegacion de la racha final, estable aunque
+    la racha siga creciendo.
+    """
+    limite = _dt(desde) if desde else None
+    decididas = []
+    for n in tarjetas:
+        if n.get("cubo") != cubo or not n.get("decidida_en"):
+            continue
+        if n["estado"] != "DENEGADA" and n["estado"] not in _POSITIVAS:
+            continue
+        if limite is not None and _dt(n["decidida_en"]) <= limite:
+            continue
+        decididas.append(n)
+    decididas.sort(key=lambda n: (_dt(n["decidida_en"]), n["id"]))
+    racha = []
+    for n in reversed(decididas):
+        if n["estado"] != "DENEGADA":
+            break
+        racha.append(n)
+    racha.reverse()
+    return f"racha:{racha[RACHA_DENEGADAS - 1]['id']}" if len(racha) >= RACHA_DENEGADAS else None
+
+
+def vigilar(knowledge, tenant: str, *, cola, bitacora, defectos,
+            ultima: dict | None = None, cada_s: float = VIGILAR_CADA_S) -> list[dict]:
+    """Aplica los gatillos de G1 y devuelve SOLO los cambios realmente aplicados.
+
+    1. `RACHA_DENEGADAS` tarjetas seguidas denegadas de un mismo cubo -> baja ese cubo un nivel.
+    2. Sello de la bitacora roto -> bajan todos los cubos de la empresa un nivel.
+    El tope de gasto NO es gatillo aqui: ya lo gestiona core/techos.py.
+    `defectos` = {cubo: nivel por defecto del manifest} o una funcion que lo devuelve (se llama
+    solo si pasa el freno). `ultima` (dict del llamante) lleva el freno por empresa.
+    """
+    if ultima is not None and cada_s > 0:
+        ahora = time.monotonic()
+        if ahora - ultima.get(tenant, float("-inf")) < cada_s:
+            return []
+        ultima[tenant] = ahora
+    defectos = defectos() if callable(defectos) else defectos
+    aut = AutonomiaCubos(knowledge, tenant, bitacora=bitacora)
+    aplicados = []
+    tarjetas = cola.listar()
+    for cubo, defecto in sorted(defectos.items()):
+        incidente = incidente_de_racha(tarjetas, cubo, aut.ultimo_cambio(cubo))
+        if incidente:
+            r = aut.endurecer(cubo, defecto, causa="racha_de_denegadas", incidente=incidente)
+            if r["aplicado"]:
+                aplicados.append(r)
+    v = bitacora.verificar()
+    if not v.get("integra"):
+        punto = f"sello:{v.get('punto_ruptura')}"
+        for cubo, defecto in sorted(defectos.items()):
+            r = aut.endurecer(cubo, defecto, causa="sello_roto", incidente=punto)
+            if r["aplicado"]:
+                aplicados.append(r)
+    return aplicados

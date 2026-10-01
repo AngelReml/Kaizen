@@ -25,6 +25,7 @@ from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                RedirectResponse, StreamingResponse)
 
 import claude_client
+from core import autonomia as AUT
 from core import tenants as T
 from core.aprobaciones import ColaSustrato, TransicionAprobacionInvalida
 from core.ledger import LedgerCoste
@@ -32,6 +33,7 @@ from core.panico import Panico, PanicoActivo, PalancaCerrada
 from core.rue import Bitacora, Sobre
 from core.techos import LibroCoste, TechoAlcanzado
 from panel_mando import nucleo as N
+from sustrato.consola import log
 
 RAIZ = Path(__file__).resolve().parent.parent
 CSS = (Path(__file__).parent / "assets" / "panel.css")
@@ -90,6 +92,7 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
     # R-07: ledger persistente unico; sin rutas (tests) queda inerte y todo sigue igual.
     st.ledger = LedgerCoste(ruta_ledger, legacy_json=ruta_legacy_coste)
     st.mechas = N.Mechas(mecha_s if mecha_s is not None else N.MECHA_SEGUNDOS)
+    st.vigilancia = {}          # freno por empresa de core.autonomia.vigilar (G1)
     st.ruta_registro = ruta_registro
     st.tema = N.TEMA_DEFECTO
     # R-01: sesiones de navegador (cookie kz_sesion). sid -> epoch de caducidad.
@@ -288,6 +291,16 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         for e in _empresas(st.k):
             for c in cola(e).barrer_caducadas():
                 hechas.append({"aprobacion": c["id"], "caducada": c["estado"]})
+        # G1 (docs/AUTONOMIA_v0.md): endurecer el nivel de un cubo ante incidentes. NO se anade a
+        # `hechas` (es la respuesta de /cmd/*): el registro es el evento sellado en la bitacora.
+        for e in _empresas(st.k):
+            try:
+                AUT.vigilar(st.k, e, cola=cola(e), bitacora=bit(e), ultima=st.vigilancia,
+                            defectos=lambda: {c: m.get("nivel_autonomia_defecto", "CERO")
+                                              for c, m in CLM._manifiestos().items()})
+            except Exception as exc:                      # noqa: BLE001 — no debe romper el pulso
+                log("WARN", "autonomia", "vigilancia fallida", empresa=e,
+                    error=type(exc).__name__)
         return hechas
 
     # ── manejador escudo (§6) ──
