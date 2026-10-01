@@ -482,6 +482,20 @@ class Apuestas:
         xs = [x for x in xs if estado is None or x["estado"] == estado]
         return sorted(xs, key=lambda x: (x["creada_en"], x["id"]))
 
+    def resolver_id(self, texto) -> str:
+        """Id completo, o el UNICO id que empiece o acabe por `texto` (minimo 6 caracteres)."""
+        texto = texto.strip() if isinstance(texto, str) else ""
+        ids = [x["id"] for x in self.listar()]
+        if texto in ids:
+            return texto
+        if len(texto) >= 6:
+            c = [i for i in ids if i.startswith(texto) or i.endswith(texto)]
+            if len(c) == 1:
+                return c[0]
+            if len(c) > 1:
+                raise ApuestaInvalida(f"el id {texto!r} es ambiguo ({len(c)} coincidencias): escribe mas caracteres")
+        raise ApuestaInvalida(f"no hay ninguna apuesta con el id {texto!r}")
+
     def conteo_por_estado(self) -> dict[str, int]:
         c = {e: 0 for e in ESTADOS}
         for x in self.k.all(self.tenant, COLECCION).values():

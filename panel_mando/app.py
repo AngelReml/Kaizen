@@ -453,7 +453,10 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         # una herramienta real (Fase 4) puede tardar; sin esto, el panel
         # entero se congela para todo el mundo mientras dura la aprobacion.
         n2 = await asyncio.to_thread(cola(d["empresa"]).ejecutar, d["id"], ejecutor)
-        return {"estado": n2["estado"], "quemadas": quemadas}
+        resp = {"estado": n2["estado"], "quemadas": quemadas}
+        if n2["estado"] == "ANULADA" and n2.get("motivo"):      # el SI no pudo cumplirse: se te dice por que y que hacer
+            resp["mensaje"] = f"No se pudo hacer: {n2['motivo']}"
+        return resp
 
     @app.post("/cmd/deshacer")
     async def cmd_deshacer(request: Request):

@@ -136,9 +136,12 @@ class ColaSustrato:
         estado_final = "EJECUTADA"
         if isinstance(resultado, dict) and resultado.get("estado"):
             estado_final = resultado["estado"]
+        # Si el ejecutor explica POR QUE no se hizo (p. ej. ANULADA: falta una configuracion), el motivo se
+        # conserva: antes se perdia y la tarjeta solo decia "ANULADA" sin decir que hacer.
+        extra = {"motivo": str(resultado["motivo"])[:400]} if isinstance(resultado, dict) and resultado.get("motivo") else {}
         with self._lock:
             n = self._get(ap_id)
-            n.update(estado=estado_final, ejecutada_en=_ts(), ejecutada_por=por)
+            n.update(estado=estado_final, ejecutada_en=_ts(), ejecutada_por=por, **extra)
             self._put(n)
         self._emitir("plataforma.aprobacion.concedida",
                      {"aprobacion_ref": ap_id, "hito": "ejecutada", "por": por})

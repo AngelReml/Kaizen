@@ -212,13 +212,13 @@ def test_todas_las_specs_declaran_su_propio_nombre_y_clase_valida():
         assert spec.clase in B.CLASES_HERRAMIENTA
 
 
-def test_solo_definir_umbral_alerta_es_irreversible():
-    """Este cubo tiene una unica IRREVERSIBLE-INTERNA: definir_umbral_alerta (fuerza
-    por='operador' en servidor). El resto sigue siendo LECTURA/REVERSIBLE."""
+def test_solo_dos_herramientas_son_irreversibles():
+    """Este cubo tiene dos IRREVERSIBLE-INTERNA, ambas con SI del operador: definir_umbral_alerta (fuerza
+    por='operador' en servidor) y buscar_nichos (gasta cuota de modelo). El resto es LECTURA/REVERSIBLE."""
     clases = {spec.clase for spec in I.HERRAMIENTAS.values()}
     assert clases <= {"LECTURA", "REVERSIBLE", "IRREVERSIBLE-INTERNA"}
     irreversibles = {n for n, s in I.HERRAMIENTAS.items() if s.clase == "IRREVERSIBLE-INTERNA"}
-    assert irreversibles == {"definir_umbral_alerta"}
+    assert irreversibles == {"definir_umbral_alerta", "buscar_nichos"}
 
 
 # ── definir_umbral_alerta (IRREVERSIBLE-INTERNA) ─────────────────────────

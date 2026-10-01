@@ -542,7 +542,8 @@ def registrar(app, *, auth, auth_pagina, identidad, cola, bit, libro,
         out = {}
         for x in cola(empresa).listar():
             out[x["id"]] = {"estado": x["estado"], "accion": x["accion"],
-                            "clase": x["clase"], "cubo": x["cubo"]}
+                            "clase": x["clase"], "cubo": x["cubo"],
+                            **({"motivo": str(x["motivo"])[:400]} if x.get("motivo") else {})}
         mechas = {m["aprobacion"]: m["dispara"] for m in st.mechas.encendidas()}
         for ap_id, d in out.items():
             if ap_id in mechas and d["estado"] == "APROBADA":

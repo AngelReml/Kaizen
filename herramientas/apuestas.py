@@ -28,8 +28,8 @@ sys.path.insert(0, str(RAIZ))
 
 from core import apuestas as A                                   # noqa: E402
 from core import exploracion as E                                # noqa: E402
-from core.exploracion_busqueda import buscar_ddgs                # noqa: E402
-from core.exploracion_modelos import ErrorModelo, cliente_desde_entorno   # noqa: E402
+from core import exploracion_fondo as F                          # noqa: E402
+from core.exploracion_modelos import ErrorModelo                    # noqa: E402
 
 COD_OK, COD_ERROR = 0, 2
 
@@ -51,13 +51,12 @@ class Salida:
 
 
 def _dependencias(empresa: str | None) -> dict:
-    """Lo REAL: mismo almacen, misma bitacora (mismo genesis) y mismo estado de PARAR TODO que el panel."""
+    """Lo REAL y minimo: mismo almacen y misma bitacora (mismo genesis) que el panel. El modelo, la busqueda y
+    PARAR TODO se crean solo al lanzar una tanda (`core.exploracion_fondo.fabrica_real`)."""
     from dotenv import load_dotenv
     load_dotenv(RAIZ / ".env")
-    from core import rutas as R
     from core import tenants as T
     from core.knowledge import get_knowledge
-    from core.panico import Panico
     from core.rue import Bitacora
     k = get_knowledge()
     empresa = empresa or os.environ.get("KAIZEN_EMPRESA") or (sorted(set(k.companies()) - {"plataforma"}) or ["laboratorio"])[0]
@@ -65,37 +64,15 @@ def _dependencias(empresa: str | None) -> dict:
         fecha_alta = T.get_tenant(empresa)["fecha_alta"]
     except Exception:                                            # noqa: BLE001 — igual que el panel
         fecha_alta = ""
-    ruta_panico = R.dir_state() / "panico" / "estado.json"
-    from core.autonomia import AutonomiaCubos
-    from cubos.base import manifiestos_instalados
-
-    def nivel_inteligencia() -> str:
-        """Nivel VIGENTE de Inteligencia (override de la empresa o, si no hay, el defecto de su manifest)."""
-        import json as _json
-        try:
-            defecto = _json.loads(manifiestos_instalados()["inteligencia"].read_text(encoding="utf-8")).get("nivel_autonomia_defecto", "CERO")
-        except Exception:                                        # noqa: BLE001 — sin manifest legible: lo prudente
-            defecto = "CERO"
-        return AutonomiaCubos(k, empresa).nivel("inteligencia", defecto)
-    return {"k": k, "empresa": empresa, "bitacora": Bitacora(k, empresa, fecha_alta=fecha_alta),
-            "nivel_autonomia": nivel_inteligencia,
-            "parar": lambda: Panico(ruta_estado=ruta_panico).activo,    # se relee en cada comprobacion
-            "informes": R.dir_empresa(empresa) / "exploracion", "cliente": None, "buscar": buscar_ddgs}
+    return {"k": k, "empresa": empresa, "bitacora": Bitacora(k, empresa, fecha_alta=fecha_alta)}
 
 
 def resolver_id(ap: A.Apuestas, texto: str) -> str:
     """Id completo, o el unico id que empiece o acabe por `texto` (minimo 6 caracteres)."""
-    texto = (texto or "").strip()
-    ids = [x["id"] for x in ap.listar()]
-    if texto in ids:
-        return texto
-    if len(texto) >= 6:
-        c = [i for i in ids if i.startswith(texto) or i.endswith(texto)]
-        if len(c) == 1:
-            return c[0]
-        if len(c) > 1:
-            raise A.ApuestaInvalida(f"el id {texto!r} es ambiguo ({len(c)} coincidencias): escribe mas caracteres")
-    raise A.ApuestaInvalida(f"no hay ninguna apuesta con el id {texto!r} (usa `listar`)")
+    try:
+        return ap.resolver_id(texto)
+    except A.ApuestaInvalida as e:
+        raise A.ApuestaInvalida(f"{e} (usa `listar`)" if "ninguna" in str(e) else str(e)) from None
 
 
 def _aprendizaje(args, out: Salida) -> dict:
@@ -110,26 +87,17 @@ def _tanda(args, d: dict, out: Salida) -> int:
         raise A.ApuestaInvalida("--horas debe ser un numero entre 0 y 48")
     if not (1 <= args.ciclos <= 20):
         raise A.ApuestaInvalida("--ciclos debe estar entre 1 y 20")
-    cliente = d.get("cliente") or cliente_desde_entorno(d["empresa"])
-    ap = A.Apuestas(d["k"], d["empresa"], bitacora=d["bitacora"])
-    ctx = E.Contexto(k=d["k"], empresa=d["empresa"], apuestas=ap, cliente=cliente, buscar=d["buscar"],
-                     bitacora=d["bitacora"], reloj=d.get("reloj"))
+    deps = d if d.get("cliente") is not None else {**d, **F.fabrica_real(d["empresa"], d["k"], d["bitacora"])}
     out.imprimir(f"Tanda de exploracion en «{d['empresa']}»: hasta {args.ciclos} ciclos, {args.horas} h como maximo. "
-                 f"Modelo: {getattr(cliente, 'nombre', '?')}.")
+                 f"Modelo: {getattr(deps['cliente'], 'nombre', '?')}.")
     out.imprimir("Puedes parar con PARAR TODO en el panel; se comprueba antes de cada pregunta al modelo.")
 
     def progreso(r: dict) -> None:
         out.imprimir(f"  ciclo {r['ciclo']}: {len(r['dosieres'])} dosieres, {len(r['rechazos'])} rechazados "
                      f"({r['rechazados_por_repeticion']} por repeticion), {r['preguntas_modelo']} preguntas al modelo"
                      + (f"  [PARADA: {r['parar_por']}]" if r["parar_por"] else ""))
-    t = E.ejecutar_tanda(ctx, ciclos=args.ciclos, horas_max=args.horas, parar=d["parar"],
-                         sello_integro=lambda: d["bitacora"].verificar().get("integra", False),
-                         nivel_autonomia=d.get("nivel_autonomia"), al_terminar_ciclo=progreso)
-    carpeta = Path(args.informe_dir) if args.informe_dir else Path(d["informes"])
-    carpeta.mkdir(parents=True, exist_ok=True)
-    marca = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    ruta = carpeta / f"informe_{marca}_{t['tanda_id']}.md"
-    ruta.write_text(E.generar_informe(ctx, t), encoding="utf-8")
+    t, ruta = F.correr(d["k"], d["empresa"], d["bitacora"], deps, ciclos=args.ciclos, horas=args.horas,
+                       progreso=progreso, informe_dir=args.informe_dir, reloj=d.get("reloj"))
     out.imprimir(f"\nTerminada: {t['motivo']}. {t['dosieres']} dosieres completos en {t['ciclos_hechos']} ciclos.")
     if t["error"]:
         out.imprimir(f"Aviso: {t['error']}")
@@ -230,7 +198,7 @@ def main(argv=None, *, deps: dict | None = None, out: Salida | None = None) -> i
         d = deps or _dependencias(args.empresa)
         d.setdefault("empresa", args.empresa or "laboratorio")
         return args.f(args, d, out)
-    except (A.ApuestaInvalida, ErrorModelo) as e:
+    except (A.ApuestaInvalida, ErrorModelo, F.YaEnMarcha) as e:
         out.imprimir(f"No se pudo: {e}")
         return COD_ERROR
     except KeyboardInterrupt:

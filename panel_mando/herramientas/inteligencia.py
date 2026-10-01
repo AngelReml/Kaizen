@@ -37,7 +37,7 @@ from departments.inteligencia import herramientas as h
 from departments.inteligencia.agente import InteligenciaDepartment
 from departments.inteligencia.cubo_serie_d import CuboInteligencia
 
-from panel_mando.herramientas.base import Argumento, ToolSpec
+from panel_mando.herramientas.base import ArgumentosInvalidos, Argumento, ToolSpec
 
 
 def _cubo(k, tenant, bitacora) -> CuboInteligencia:
@@ -124,6 +124,50 @@ def _fn_definir_umbral_alerta(*, k, tenant, bitacora=None, **kwargs) -> dict:
     i = _cubo(k, tenant, bitacora)
     return i.definir_umbral(kwargs["metrica"], kwargs["minimo"], kwargs["maximo"],
                             por="operador")
+
+
+# ── nichos / apuestas (docs/APUESTAS_Y_DOSIER_v0.md): lo que Inteligencia SABE y puede PEDIR ──────────────────
+
+def _fn_ver_nichos(*, k, tenant, bitacora=None, **kwargs) -> dict:
+    """Estado REAL de las apuestas: conteo por estado, las mas recientes y la busqueda (en curso / ultima)."""
+    from core import apuestas as A
+    from core import exploracion_fondo as F
+    ap = A.Apuestas(k, tenant)
+    todas = ap.listar()
+    st = F.estado(k, tenant)
+    return {"total": len(todas), "conteo": ap.conteo_por_estado(), "pide_medicion": len(ap.pide_medicion()),
+            "apuestas": [{"id": x["id"][-8:], "estado": x["estado"], "titulo": x["borrador"]["titulo"][:100],
+                          "modelo_ingreso": x["coordenadas"]["modelo_ingreso"], "cliente": x["coordenadas"]["cliente"],
+                          "canal": x["coordenadas"]["canal"], "con_dosier": bool(x.get("dosier"))}
+                         for x in todas[-30:]],
+            "solo_las_30_mas_recientes": len(todas) > 30,
+            "busqueda_en_curso": st["en_curso"], "ultima_busqueda": st["ultima"]}
+
+
+def _fn_leer_nicho(*, k, tenant, bitacora=None, **kwargs) -> dict:
+    """El dosier completo de UNA apuesta, en texto legible."""
+    from core import apuestas as A
+    from core import exploracion as E
+    ap = A.Apuestas(k, tenant)
+    try:
+        x = ap.obtener(ap.resolver_id(kwargs["id"]))
+    except A.ApuestaInvalida as e:
+        raise ArgumentosInvalidos(str(e)) from None
+    return {"id": x["id"][-8:], "estado": x["estado"], "ficha": "\n".join(E.ficha_markdown(x))[:6000]}
+
+
+def _fn_buscar_nichos(*, k, tenant, bitacora=None, **kwargs) -> dict:
+    """Lanza una tanda de busqueda de nichos EN SEGUNDO PLANO (vuelve enseguida). Solo tras el SI del operador."""
+    from core import apuestas as A
+    from core import exploracion_fondo as F
+    from core.exploracion_modelos import ErrorModelo
+    ciclos = 3 if kwargs.get("ciclos") is None else kwargs["ciclos"]       # 0 NO es "no dicho": se rechaza
+    try:
+        r = F.lanzar(k, tenant, bitacora, ciclos=ciclos)
+    except (ErrorModelo, F.YaEnMarcha, A.ApuestaInvalida) as e:
+        raise ArgumentosInvalidos(str(e)) from None                     # el motivo (con instrucciones) llega a la tarjeta
+    return {"lanzada": True, "ciclos": r["ciclos"],
+            "donde_verlo": "Tarda un rato. Los dosieres aparecen en la pestaña Nichos del Mundo; el informe queda guardado."}
 
 
 HERRAMIENTAS: dict[str, ToolSpec] = {
@@ -215,6 +259,24 @@ HERRAMIENTAS: dict[str, ToolSpec] = {
             Argumento("detalle", "str", "detalle adicional de la señal", obligatorio=False),
         ),
         fn=_fn_observar),
+    "ver_nichos": ToolSpec(
+        nombre="ver_nichos", clase="LECTURA",
+        descripcion="Como van los NICHOS (apuestas): cuantas hay en cada estado, las mas recientes con su titulo y "
+                    "modelo de ingreso, y si hay una busqueda en marcha o cual fue la ultima. Datos reales; sin "
+                    "ninguna apuesta devuelve ceros.",
+        argumentos=(), fn=_fn_ver_nichos),
+    "leer_nicho": ToolSpec(
+        nombre="leer_nicho", clase="LECTURA",
+        descripcion="Lee el dosier completo de UN nicho (evidencia con su etiqueta, coste, senal, primer paso gratuito...). "
+                    "El id es el que da ver_nichos (8 caracteres).",
+        argumentos=(Argumento("id", "str", "id del nicho (el corto de ver_nichos)"),), fn=_fn_leer_nicho),
+    "buscar_nichos": ToolSpec(
+        nombre="buscar_nichos", clase="IRREVERSIBLE-INTERNA",
+        descripcion="Pone a buscar nichos nuevos: una tanda de ciclos en segundo plano con modelos gratuitos y busqueda "
+                    "web. Consume la cuota diaria del proveedor, asi que SOLO se dispara tras el SI del operador "
+                    "(tarjeta). Los resultados son hipotesis, no hechos.",
+        argumentos=(Argumento("ciclos", "int", "ciclos de 5 apuestas cada uno (1 a 20; por defecto 3)", obligatorio=False),),
+        fn=_fn_buscar_nichos),
     "definir_umbral_alerta": ToolSpec(
         nombre="definir_umbral_alerta", clase="IRREVERSIBLE-INTERNA",
         descripcion="Define/versiona el umbral [minimo, maximo] de una metrica que "
