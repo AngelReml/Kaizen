@@ -272,8 +272,13 @@ def _llm(messages: list, *, system: str, model: str, max_tokens: int, empresa: s
 _NIVEL_EXPLICA = {
     "CERO": "solo lees, cuentas y analizas; NO propones tarjetas de accion",
     "BAJA": "puedes escribir borradores internos reversibles y PROPONER tarjetas",
-    "MEDIA": "puedes proponer tarjetas; nada sale sin aprobacion",
-    "ALTA": "puedes proponer tarjetas; nada sale sin aprobacion",
+    # MEDIA y ALTA estan RESERVADOS (docs/AUTONOMIA_v0.md): hoy no anaden ninguna
+    # capacidad en la Colmena. Se dice tal cual para no prometer al agente nada que el
+    # codigo no hace; ALTA ademas esta bloqueado esta temporada (core.aprobaciones).
+    "MEDIA": "nivel reservado: hoy actuas como en BAJA (borradores internos y PROPONER "
+             "tarjetas); nada sale sin aprobacion",
+    "ALTA": "nivel reservado y bloqueado esta temporada: hoy actuas como en BAJA; "
+            "nada sale sin aprobacion",
 }
 
 

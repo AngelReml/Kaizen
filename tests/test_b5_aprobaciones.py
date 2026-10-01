@@ -103,3 +103,32 @@ def test_candado_subagente_no_relaja_y_queda_registrado(cola):
                if e["tipo"] == "plataforma.autonomia.cambiada"]
     assert any(e["payload"]["veredicto"] == "rechazado" for e in cambios)
     assert b.verificar()["integra"] is True
+
+
+def test_alta_bloqueada_esta_temporada_tampoco_para_el_operador(cola):
+    _, k, b = cola
+    assert cambiar_nivel("MEDIA", "ALTA", actor="operador", bitacora=b) == "MEDIA"
+    assert cambiar_nivel("BAJA", "ALTA", actor="subagente", bitacora=b) == "BAJA"
+    cambios = [e["payload"] for e in k.all("t1", "evento").values()
+               if e["tipo"] == "plataforma.autonomia.cambiada"]
+    assert [c["motivo"] for c in cambios] == ["nivel_bloqueado", "nivel_bloqueado"]
+    assert all(c["veredicto"] == "rechazado" for c in cambios)
+    # quedarse en el mismo nivel o endurecer sigue permitido
+    assert cambiar_nivel("MEDIA", "BAJA", actor="subagente", bitacora=b) == "BAJA"
+    assert b.verificar()["integra"] is True
+
+
+def test_motivo_de_rechazo_por_relajar_sin_ser_operador(cola):
+    _, k, b = cola
+    assert cambiar_nivel("CERO", "BAJA", actor="subagente", bitacora=b) == "CERO"
+    ev = [e["payload"] for e in k.all("t1", "evento").values()
+          if e["tipo"] == "plataforma.autonomia.cambiada"]
+    assert ev[-1]["motivo"] == "solo_operador_relaja"
+
+
+def test_texto_de_niveles_reservados_no_promete_capacidades():
+    from panel_mando.colmena import _NIVEL_EXPLICA
+    for n in ("MEDIA", "ALTA"):
+        assert "reservado" in _NIVEL_EXPLICA[n]
+        assert "BAJA" in _NIVEL_EXPLICA[n]
+        assert "ciclos propios" not in _NIVEL_EXPLICA[n]

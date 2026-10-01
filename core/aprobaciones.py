@@ -21,6 +21,9 @@ from core.rue import Sobre, nuevo_id
 
 CLASES_ACCION = ("REVERSIBLE", "IRREVERSIBLE-INTERNA", "IRREVERSIBLE-EXTERNA")
 NIVELES = ("CERO", "BAJA", "MEDIA", "ALTA")
+# Niveles que NO se pueden fijar esta temporada (docs/AUTONOMIA_v0.md §2): ALTA queda
+# reservado hasta que una apuesta demuestre con evidencia que se lo merece.
+NIVELES_BLOQUEADOS = frozenset({"ALTA"})
 CADUCIDAD_HORAS = 72
 
 
@@ -182,13 +185,17 @@ def cambiar_nivel(actual: str, pedido: str, *, actor: str, bitacora=None, tenant
     ia, ip = NIVELES.index(actual), NIVELES.index(pedido)
     relaja = ip > ia
     veredicto = "aplicado"
-    if relaja and actor != "operador":
-        veredicto = "rechazado"
+    motivo = ""
+    if pedido in NIVELES_BLOQUEADOS and pedido != actual:
+        veredicto, motivo = "rechazado", "nivel_bloqueado"       # ni el operador, esta temporada
+    elif relaja and actor != "operador":
+        veredicto, motivo = "rechazado", "solo_operador_relaja"
     if bitacora is not None:
         bitacora.publicar(Sobre(tenant_id=tenant or bitacora.tenant,
                                 tipo="plataforma.autonomia.cambiada",
                                 payload={"de": actual, "a": pedido, "actor": actor,
-                                         "veredicto": veredicto},
+                                         "veredicto": veredicto,
+                                         **({"motivo": motivo} if motivo else {})},
                                 origen="plataforma.autonomia"))
     if veredicto == "rechazado":
         return actual
