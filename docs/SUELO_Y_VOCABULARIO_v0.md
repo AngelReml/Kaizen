@@ -27,6 +27,9 @@ Principio rector: **exploración libre, acción por puertas.** Kaizen puede
 investigar cualquier vía; actuar hacia fuera (publicar, contactar, gastar,
 cobrar) pasa por reglas.
 
+**Punto de partida (decidido por Ángel):** Kaizen no tiene hoy ningún negocio. Empieza limpio.
+No hay ingresos previos ni cartera que operar; los cubos son mecanismos a la espera de apuestas.
+
 ## 2. Vocabulario (jardín → concepto)
 
 | Jardín | Término | Definición operativa |
@@ -45,7 +48,7 @@ es servicio lo que responde "¿qué capacidad das a los demás?" (SLA, sin decid
 
 ## 3. A1 — Monedero de semillas
 
-- Ángel fija un **tope por temporada**. Sugerencia inicial: **50 € en 3 meses** (la cifra la decide Ángel).
+- **Tope por temporada: 50 € máximo** (decidido por Ángel, 2026-10-01). La duración de la temporada (propuesta: 3 meses) queda por confirmar.
 - Kaizen pide gastos dentro del tope mediante una **petición de financiación**.
 - Hasta **15 €** por petición: aprobación de un clic. Por encima: revisión completa. (Sugerencia; la decide Ángel.)
 - **Ángel paga**. Ningún agente mueve dinero. Cada gasto queda registrado (importe, concepto, activo comprado).
@@ -102,13 +105,12 @@ la revisión corresponde a un gestor. Hasta esa puerta Kaizen investiga y prueba
 
 ## 8. Lo que queda abierto (no decidido)
 
-- Cifras finales de A1 (tope de temporada, umbral de un clic).
+- Umbral de un clic (propuesta 15 €) y duración de la temporada (propuesta 3 meses).
 - Criterio cubo/servicio: ratificar o ajustar.
 - Autonomía (clases y niveles actuales vs. ajustes) — siguiente capa.
 - Estados de una apuesta (incluido el estado "aprendido") — siguiente capa.
 - Rol del Consejo (propuesta: ensambla un informe único, no decide) — siguiente capa.
 - Qué tendrían que hacer los agentes con el ordenador (webllm) — se define al llegar a C2.
-- Si existe hoy algún negocio real con ingresos que Kaizen deba operar (lo dirá Ángel).
 
 ## 9. Firma
 
