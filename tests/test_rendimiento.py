@@ -63,3 +63,10 @@ def test_marketing_mide_roi_solo_con_pedidos_de_leads_de_campana():
                             valor_cubo={"marketing": v}, coste_extra={"marketing": 50})
     assert r["marketing"]["roi"] == 6.0 and r["marketing"]["coste_eur"] == 100.0      # 50 del cubo + 50 de canal
     assert r["comercial"]["roi"] is None                                              # sin coste propio no hay ROI inventado
+
+
+def test_tarjetas_en_manos_y_hechas_cuentan_como_firmes():
+    """Una tarjeta aprobada que pasa a las manos del operador (C1) sigue siendo un SI: no puede
+    desaparecer del acierto del cubo."""
+    from panel_mando import rendimiento as R
+    assert {"EN_MANOS", "HECHA"} <= set(R.FIRMES)

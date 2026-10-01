@@ -159,7 +159,7 @@ def test_estado_tenant_vacio(entorno):
     assert j["tenant"]["estado"] in ("activo", "pausado", "baja", "desconocido")
     assert j["cubos"] and all(x["alta"] is False and x["uid"] is None for x in j["cubos"])
     assert j["sello"]["integra"] is True and j["sello"]["pasos"] == 0
-    assert j["tarjetas"] == {"pendientes": 0, "mechas": []}
+    assert j["tarjetas"] == {"pendientes": 0, "en_manos": 0, "mechas": []}
     assert j["cursores"] == {"rue": -1, "bus": 0, "chat": 0} and j["recientes"] == []
 
 
@@ -253,7 +253,7 @@ def test_tarjetas_pendientes_y_en_mecha(entorno):
     cola = app.state.colas[EMPRESA]
     n = cola.solicitar(cubo="comercial", accion="enviar email inicial a candidato",
                        clase="IRREVERSIBLE-EXTERNA", contenido_ref="borrador_x")
-    assert _estado(c)["tarjetas"] == {"pendientes": 1, "mechas": []}
+    assert _estado(c)["tarjetas"] == {"pendientes": 1, "en_manos": 0, "mechas": []}
     r = c.post("/cmd/aprobar", json={"empresa": EMPRESA, "id": n["id"], "quien": "operador"})
     assert r.json()["estado"] == "EN_MECHA"
     t = _estado(c)["tarjetas"]
@@ -261,7 +261,7 @@ def test_tarjetas_pendientes_y_en_mecha(entorno):
     assert t["mechas"][0] == {"aprobacion": n["id"], "dispara": r.json()["dispara"],
                               "accion": "enviar email inicial a candidato", "cubo": "comercial"}
     c.post("/cmd/deshacer", json={"empresa": EMPRESA, "id": n["id"], "quien": "operador"})
-    assert _estado(c)["tarjetas"] == {"pendientes": 0, "mechas": []}
+    assert _estado(c)["tarjetas"] == {"pendientes": 0, "en_manos": 0, "mechas": []}
 
 
 def test_parado_tras_parar_todo_y_reanudar(entorno):
@@ -618,3 +618,18 @@ def test_autonomia_efectiva_se_refleja_en_el_mundo(entorno):
     assert nivel("comercial") == "CERO"
     assert nivel("legal") == "BAJA"                      # solo ese cubo
     assert b.verificar()["integra"] is True
+
+
+def test_tarjetas_en_manos_se_cuentan_como_numero(entorno):
+    """C1: una IRREVERSIBLE-EXTERNA aprobada y entregada al operador sale en la foto como
+    numero, y la EVIDENCIA con que se confirma no viaja nunca al mundo (solo su huella, sellada)."""
+    _, c, b = _montaje()
+    cola = ColaSustrato(b.k, EMPRESA, bitacora=b)
+    n = cola.solicitar(cubo="marketing", accion="publicar landing", clase="IRREVERSIBLE-EXTERNA")
+    cola.aprobar(n["id"], por="angel")
+    cola.entregar_a_humano(n["id"], por="angel")
+    t = _estado(c)["tarjetas"]
+    assert t["en_manos"] == 1 and t["pendientes"] == 0
+    cola.confirmar_hecha(n["id"], por="angel", evidencia="evidencia privada")
+    assert _estado(c)["tarjetas"]["en_manos"] == 0
+    assert "privada" not in json.dumps(_estado(c))

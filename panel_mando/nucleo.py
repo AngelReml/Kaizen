@@ -53,6 +53,10 @@ FRASES = {
     "plataforma.aprobacion.denegada": lambda e: "recibi tu NO; no se hizo nada",
     "plataforma.aprobacion.revocada": lambda e: "deshecho a tiempo: no salio nada",
     "plataforma.aprobacion.caducada": lambda e: "caduco sin respuesta; se aborto",
+    "plataforma.aprobacion.en_manos": lambda e: "tu SI esta en tus manos: te toca hacerlo a ti",
+    "plataforma.aprobacion.hecha": lambda e: "confirmado como hecho, con evidencia",
+    "plataforma.aprobacion.no_hecha": lambda e: "decidiste no hacerlo; queda anulada y registrada",
+    "plataforma.autonomia.cambiada": lambda e: _f_autonomia(e),
     "plataforma.coste.techo_alcanzado": lambda e: "modo ahorro: se alcanzo el tope del dia",
     "plataforma.panico.activado": lambda e: "TODO PARADO por orden del operador",
     "plataforma.panico.desactivado": lambda e: "reanudado por el operador",
@@ -94,6 +98,22 @@ def _frase_lead_descubierto(evento: dict, knowledge, empresa: str) -> str | None
         frase += f" en {municipio}"
     frase += f" via {fuente}" if fuente else " (migracion de datos existentes)"
     return frase
+
+
+_CAUSA_AUTONOMIA = {
+    "racha_de_denegadas": "por tres noes seguidos",
+    "sello_roto": "porque el sello del historial se rompio",
+    "decision_del_operador": "por decision del operador",
+}
+
+
+def _f_autonomia(e: dict) -> str:
+    p = e.get("payload") or {}
+    cubo = p.get("cubo") or "un cubo"
+    if p.get("veredicto") == "rechazado":
+        return f"intento de cambiar el nivel de {cubo} rechazado (y registrado)"
+    causa = _CAUSA_AUTONOMIA.get(p.get("causa", ""), p.get("causa") or "")
+    return f"el nivel de {cubo} paso de {p.get('de', '?')} a {p.get('a', '?')}" + (f" {causa}" if causa else "")
 
 
 def render(evento: dict, knowledge=None, empresa: str | None = None) -> str:

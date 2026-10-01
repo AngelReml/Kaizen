@@ -5,6 +5,9 @@ Maquina de estados estricta:
          ↘ DENEGADA          ↘ (fallo) → REINTENTO/ANULADA
          ↘ CADUCADA (72 h sin decision)
     APROBADA → REVOCADA (antes de ejecutar)
+    APROBADA → EN_MANOS → HECHA | ANULADA   (IRREVERSIBLE-EXTERNA que ejecuta el HUMANO, decision
+                                             C1 de docs/AUTONOMIA_v0.md: el agente prepara, el
+                                             operador ejecuta y confirma con evidencia)
 
 Reglas duras: claim atomico (exactamente-una-vez); la revocacion gana si llega antes
 del claim; caducidad R-13 de D09 (REVERSIBLE reencola UNA vez, IRR-EXT aborta siempre);
@@ -14,6 +17,7 @@ toda transicion emite `plataforma.aprobacion.*` con identidad; candado de umbral
 """
 from __future__ import annotations
 
+import hashlib
 import threading
 from datetime import datetime, timedelta, timezone
 
@@ -25,6 +29,7 @@ NIVELES = ("CERO", "BAJA", "MEDIA", "ALTA")
 # reservado hasta que una apuesta demuestre con evidencia que se lo merece.
 NIVELES_BLOQUEADOS = frozenset({"ALTA"})
 CADUCIDAD_HORAS = 72
+EVIDENCIA_MAX = 500
 
 
 class TransicionAprobacionInvalida(ValueError):
@@ -137,6 +142,62 @@ class ColaSustrato:
             self._put(n)
         self._emitir("plataforma.aprobacion.concedida",
                      {"aprobacion_ref": ap_id, "hito": "ejecutada", "por": por})
+        return n
+
+    # ── ejecuta el humano (C1/I1) ──
+    def entregar_a_humano(self, ap_id: str, *, por: str) -> dict:
+        """APROBADA → EN_MANOS. Solo IRREVERSIBLE-EXTERNA. Reclama la tarjeta igual que
+        `ejecutar`: si el ejecutor automatico la reclamo antes, esto falla (y viceversa), asi
+        que una accion sale o por codigo o por manos humanas, nunca por las dos."""
+        with self._lock:
+            n = self._get(ap_id)
+            if n["estado"] != "APROBADA":
+                raise TransicionAprobacionInvalida(
+                    f"entregar a humano exige APROBADA; esta en {n['estado']}")
+            if n["clase"] != "IRREVERSIBLE-EXTERNA":
+                raise TransicionAprobacionInvalida(
+                    f"solo IRREVERSIBLE-EXTERNA la ejecuta un humano; esta es {n['clase']}")
+            n.update(estado="EN_MANOS", entregada_por=por, entregada_en=_ts())
+            self._put(n)
+        self._emitir("plataforma.aprobacion.en_manos", {"aprobacion_ref": ap_id, "por": por})
+        return n
+
+    def confirmar_hecha(self, ap_id: str, *, por: str, evidencia: str) -> dict:
+        """EN_MANOS → HECHA, con evidencia obligatoria. La evidencia queda en la tarjeta; en la
+        bitacora solo su huella sha256 (sellada y comprobable, sin volcar el texto al feed)."""
+        evidencia = (evidencia or "").strip()
+        if not evidencia:
+            raise ValueError("confirmar como hecha exige evidencia (referencia, recibo, enlace...)")
+        if len(evidencia) > EVIDENCIA_MAX:
+            raise ValueError(f"la evidencia no puede pasar de {EVIDENCIA_MAX} caracteres")
+        huella = hashlib.sha256(evidencia.encode("utf-8")).hexdigest()
+        with self._lock:
+            n = self._get(ap_id)
+            if n["estado"] != "EN_MANOS":
+                raise TransicionAprobacionInvalida(
+                    f"confirmar como hecha exige EN_MANOS; esta en {n['estado']}")
+            n.update(estado="HECHA", hecha_por=por, hecha_en=_ts(), evidencia=evidencia,
+                     evidencia_sha256=huella)
+            self._put(n)
+        self._emitir("plataforma.aprobacion.hecha",
+                     {"aprobacion_ref": ap_id, "por": por, "evidencia_sha256": huella})
+        return n
+
+    def anular_en_manos(self, ap_id: str, *, por: str, motivo: str) -> dict:
+        """EN_MANOS → ANULADA: el humano decide no hacerla. Sin esta salida la tarjeta quedaria
+        EN_MANOS para siempre (nada caduca ahi: ya la aprobo una persona)."""
+        motivo = (motivo or "").strip()
+        if not motivo:
+            raise ValueError("anular exige un motivo")
+        with self._lock:
+            n = self._get(ap_id)
+            if n["estado"] != "EN_MANOS":
+                raise TransicionAprobacionInvalida(
+                    f"anular desde EN_MANOS; esta en {n['estado']}")
+            n.update(estado="ANULADA", motivo=f"no hecha por el humano: {motivo}",
+                     anulada_por=por, anulada_en=_ts())
+            self._put(n)
+        self._emitir("plataforma.aprobacion.no_hecha", {"aprobacion_ref": ap_id, "por": por})
         return n
 
     def barrer_caducadas(self, *, ahora: datetime | None = None) -> list[dict]:

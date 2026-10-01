@@ -29,7 +29,7 @@ DIAS_ALTA_MIN = 30
 ROI_EXPERTO = 2.0          # cada euro gastado devuelve al menos 2 de valor atribuido
 ACIERTO_EXPERTO = 0.90
 DECISIONES_MIN = 5
-FIRMES = ("APROBADA", "EJECUTANDO", "EJECUTADA")
+FIRMES = ("APROBADA", "EJECUTANDO", "EJECUTADA", "EN_MANOS", "HECHA")
 RECHAZADAS = ("DENEGADA", "REVOCADA")
 CUBOS_CON_DINERO = ("comercial", "marketing")
 

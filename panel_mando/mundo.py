@@ -246,7 +246,8 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
         return sorted(rue + del_bus, key=_clave_ts)[-LIMITE_RECIENTES:]
 
     def _tarjetas(empresa: str) -> dict:
-        """`pendientes` (numero) y `mechas` (cuenta atras viva de esa empresa,
+        """`pendientes` y `en_manos` (numeros: tarjetas aprobadas que ejecuta el humano, C1) y
+        `mechas` (cuenta atras viva de esa empresa,
         con el texto y el cubo del nodo de la cola). El detalle de las tarjetas
         pendientes lo da /api/tarjetas/{empresa}."""
         nodos = {x["id"]: x for x in cola(empresa).listar()}
@@ -258,6 +259,7 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             mechas.append({"aprobacion": m["aprobacion"], "dispara": m["dispara"],
                            "accion": n.get("accion", ""), "cubo": n.get("cubo", "")})
         return {"pendientes": sum(1 for x in nodos.values() if x["estado"] == "PENDIENTE"),
+                "en_manos": sum(1 for x in nodos.values() if x["estado"] == "EN_MANOS"),
                 "mechas": mechas}
 
     def _pipeline(empresa: str) -> dict:

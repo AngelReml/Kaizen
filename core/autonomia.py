@@ -127,7 +127,8 @@ RACHA_DENEGADAS = 3
 VIGILAR_CADA_S = 30.0
 # Decisiones POSITIVAS del operador sobre una tarjeta. CADUCADA (nadie decidio) y REVOCADA (decision
 # ambigua sobre algo ya aprobado) no cuentan: ni cortan ni alargan una racha de denegaciones.
-_POSITIVAS = frozenset({"APROBADA", "EJECUTANDO", "EJECUTADA", "ENSAYO_SECO", "ANULADA"})
+_POSITIVAS = frozenset({"APROBADA", "EJECUTANDO", "EJECUTADA", "ENSAYO_SECO", "ANULADA",
+                          "EN_MANOS", "HECHA"})
 
 
 def _dt(iso: str) -> datetime:

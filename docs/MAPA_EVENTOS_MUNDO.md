@@ -1,4 +1,4 @@
-# MAPA DE EVENTOS DEL MUNDO — generado 2026-09-30
+# MAPA DE EVENTOS DEL MUNDO — generado 2026-10-01
 
 **Tipo:** estado (capa 4, se regenera; no editar a mano) · **Fuente:** `eventos.json` y `panel_mando/mundo.py` · **Generador:** `python herramientas/mapa_eventos_mundo.py`
 
@@ -8,7 +8,7 @@ Regla del juego: **lo que se ve es real**. El Mundo no dibuja nada que no venga 
 
 | Familia (prefijo) | Cubo | Tipos | Gesto |
 |---|---|---|---|
-| `plataforma` | — (plataforma: sin director) | 21 | gota al Registro |
+| `plataforma` | — (plataforma: sin director) | 24 | gota al Registro |
 | `comercial` | comercial | 12 | el director de ese cubo habla + gota al Registro |
 | `brand` | brand | 4 | el director de ese cubo habla + gota al Registro |
 | `finanzas` | finanzas | 12 | el director de ese cubo habla + gota al Registro |
@@ -17,7 +17,7 @@ Regla del juego: **lo que se ve es real**. El Mundo no dibuja nada que no venga 
 | `inteligencia` | inteligencia | 8 | el director de ese cubo habla + gota al Registro |
 | `cumplimiento` | legal | 12 | el director de ese cubo habla + gota al Registro |
 
-Total: 92 tipos en 8 familias.
+Total: 95 tipos en 8 familias.
 
 ## 2. Gestos propios (además del genérico)
 
@@ -28,6 +28,9 @@ Total: 92 tipos en 8 familias.
 | `plataforma.aprobacion.denegada` | la ventanilla se refresca (la tarjeta desaparece) |
 | `plataforma.aprobacion.revocada` | la ventanilla se refresca (deshecho a tiempo) |
 | `plataforma.aprobacion.caducada` | la ventanilla se refresca (caducada) |
+| `plataforma.aprobacion.en_manos` | la ventanilla se refresca (la tarjeta pasa a tus manos) |
+| `plataforma.aprobacion.hecha` | la ventanilla se refresca (confirmada como hecha) |
+| `plataforma.aprobacion.no_hecha` | la ventanilla se refresca (anulada por ti) |
 | `plataforma.panico.activado` | el mundo se congela y dice TODO PARADO |
 | `plataforma.panico.desactivado` | el mundo se reanuda |
 | `plataforma.coste.techo_alcanzado` | modo ahorro: el gasto se marca y los directores lo dicen |
