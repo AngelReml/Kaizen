@@ -72,6 +72,7 @@ Decisiones de Ángel: K1, L1, M1 (decide él), N1; P1 y Q1 asumidas por su orden
   entorno desviaba la petición y con ella el token; los frenos solo se miraban entre ciclos; el aprendizaje de una ronda se pisaba al abrir la siguiente;
   VERIFICADA sobreafirmaba y el doc decía que Inteligencia no podía buscar; novedad ciega a otros alfabetos y a sectores cortos; vetos esquivables con caracteres
   invisibles; informe que interpretaba html y enlaces del modelo.
+- **E2E con una carrera del arnés:** de 5 ejecuciones del e2e con G1 activo, 1 dio 13/20 (escenario 9 y cascada) y la repetición del MISMO código dio 20/20: la espera de "calma" podía cumplirse justo antes de que llegaran al cliente los eventos de endurecimiento. Ahora espera a verlos en el feed y a 4 s seguidos sin gotas; validado con una ejecución 20/20 más.
 - Cada garantía tiene **prueba de mutación** (se rompe a propósito y el test falla).
 
 ### Límites que siguen abiertos

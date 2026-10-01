@@ -183,7 +183,12 @@ const info = page => page.evaluate(() => KAIZEN.info());
     const drops0 = (await info(page)).drops;
     // Precondicion: calma antes de cortar. Los eventos que acaba de sellar el producto (p. ej. el endurecimiento de G1) caen
     // como gotas y pueden seguir cayendo; lo que se comprueba aqui es que SIN conexion no se inventa actividad NUEVA.
-    await until(page, () => KAIZEN.info().drops === 0, null, 120000, 'las gotas no se calman antes de cortar el backend');
+    // Calma SOSTENIDA, no instantanea: los eventos de G1 llegan al cliente por el pulso (~1-2 s) y solo despues caen como gotas,
+    // asi que "drops === 0 ahora" puede cumplirse justo antes de que lleguen. Se espera a verlos en el feed y a 4 s seguidos sin gotas.
+    await until(page, () => /paso de BAJA a CERO/.test(document.getElementById('feedList').textContent), null, 60000, 'el endurecimiento de G1 no llega al feed');
+    let calma = 0;
+    for (let t = 0; t < 120 && calma < 4; t++) { await sleep(1000); calma = (await info(page)).drops === 0 ? calma + 1 : 0; }
+    ok(calma >= 4, 'las gotas no se calman antes de cortar el backend');
     await parar();
     await until(page, () => KAIZEN.info().online === false, null, 25000, 'no detecta la caída');
     ok((await page.textContent('#alive-t')) === 'Sin conexión con Kaizen', 'texto sin conexión');
