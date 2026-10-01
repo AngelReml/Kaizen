@@ -2,6 +2,7 @@
 """Nivel de autonomia efectivo por empresa y cubo (core/autonomia.py, docs/AUTONOMIA_v0.md F3)."""
 import sys
 import threading
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -63,7 +64,7 @@ def test_nunca_baja_de_cero_y_no_emite_evento(aut):
     assert a.nivel("qa", "CERO") == "CERO"
     assert _eventos(k) == []
     # y el incidente queda anotado: no se reabre si luego el operador sube el nivel
-    a.fijar("qa", "CERO", "BAJA", por="angel")
+    a.fijar("qa", "CERO", "BAJA", por="angel", motivo="revisado")
     assert a.endurecer("qa", "CERO", causa="c", incidente="i1")["razon"] == "incidente_ya_aplicado"
     assert a.nivel("qa", "CERO") == "BAJA"
 
@@ -149,3 +150,56 @@ def test_concurrencia_no_pierde_bajadas(tmp_path):
         [h.join() for h in hilos]
         assert a.nivel("ops", "MEDIA") == "CERO", f"ronda {ronda}"
         assert set(k.get(T, COLECCION, "ops")["incidentes"]) == {"i0", "i1"}
+
+
+def test_subir_exige_motivo_dentro_de_fijar_y_no_cambia_nada_si_falta(aut):
+    a, k, _ = aut
+    for sin in ("", "   ", None):
+        with pytest.raises(ValueError, match="motivo"):
+            a.fijar("qa", "CERO", "BAJA", por="angel", motivo=sin)
+    assert a.registro("qa") is None and _eventos(k) == []
+    assert a.fijar("qa", "CERO", "BAJA", por="angel", motivo="ok")["aplicado"] is True
+    assert a.fijar("qa", "CERO", "CERO", por="angel")["aplicado"] is True     # bajar: sin motivo
+
+
+def test_el_motivo_libre_solo_deja_su_huella_en_la_bitacora_y_no_hay_pii_que_rechazar(aut):
+    import hashlib
+    a, k, b = aut
+    texto = "el cliente Fulano (fulano@example.com) debe 12000 EUR"
+    a.fijar("qa", "CERO", "BAJA", por="angel", motivo=texto)           # antes: PIIEnPayload
+    ev = _eventos(k)[-1]
+    assert ev["causa"] == "decision_del_operador"
+    assert ev["motivo_sha256"] == hashlib.sha256(texto.encode()).hexdigest()
+    assert "fulano" not in str(ev) and "12000" not in str(ev)
+    assert a.registro("qa")["historial"][-1]["causa"] == texto           # el texto vive en el historial
+    from panel_mando import nucleo as N
+    assert "fulano" not in N.render({"tipo": "plataforma.autonomia.cambiada", "payload": ev})
+    assert b.verificar()["integra"] is True
+
+
+def test_sin_interbloqueo_con_la_bitacora_real_publicando_a_la_vez(tmp_path):
+    """Regresion: endurecer/fijar sellaban DENTRO del candado de datos, y la bitacora toma sus
+    candados en orden contrario (ABBA): dos hilos se bloqueaban para siempre. Se detecta con un
+    plazo: si algun hilo sigue vivo, hay interbloqueo."""
+    from core.rue import Sobre
+    k = JsonKnowledge(tmp_path / "k.json")
+    b = Bitacora(k, T, fecha_alta="2026-07-10")
+    aut = AutonomiaCubos(k, T, bitacora=b)
+
+    def cambia_niveles():
+        for i in range(50):
+            aut.fijar("qa", "CERO", "BAJA" if i % 2 == 0 else "CERO", por="x", motivo="m")
+            aut.endurecer("ops", "MEDIA", causa="c", incidente=f"i{i}")
+
+    def publica():
+        for i in range(100):
+            b.publicar(Sobre(tenant_id=T, tipo="plataforma.diario.entrada", payload={"n": i},
+                             origen="t"))
+
+    hilos = [threading.Thread(target=f, daemon=True) for f in (cambia_niveles, publica, publica)]
+    [h.start() for h in hilos]
+    limite = time.monotonic() + 30
+    for h in hilos:
+        h.join(timeout=max(0.0, limite - time.monotonic()))
+    assert not any(h.is_alive() for h in hilos), "interbloqueo entre AutonomiaCubos y Bitacora"
+    assert b.verificar()["integra"] is True

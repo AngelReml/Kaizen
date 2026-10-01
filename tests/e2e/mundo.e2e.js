@@ -173,11 +173,17 @@ const info = page => page.evaluate(() => KAIZEN.info());
     await page.click('#t-sello'); await until(page, () => /se rompe/.test((document.getElementById('reg-sello') || {}).textContent || ''), null, 8000, 'no detecta la ruptura');
     ok(await page.evaluate(() => !!document.querySelector('#reg-sello .dot.bad')), 'punto rojo');
     await until(page, () => document.getElementById('alive-t').textContent === 'Sello del historial roto', null, 70000, 'la barra superior no avisa del sello roto');
+    // G1: el sello roto endurece a TODOS los cubos de la empresa un nivel (BAJA -> CERO; CERO se queda). El pulso
+    // lo comprueba como mucho cada 30 s, asi que se espera; el mundo debe mostrar el nivel vigente, no el del manifest.
+    await until(page, async () => { const j = await (await fetch('/api/mundo/estado?empresa=laboratorio')).json(); return j.cubos.length > 0 && j.cubos.every(c => c.autonomia === 'CERO'); }, null, 90000, 'el sello roto no endurecio la autonomia de los cubos');
     await page.click('[data-tab="sala"]');
   });
 
   await escenario('9 caída del backend: lo dice y no inventa; al volver, sin duplicados', async () => {
     const drops0 = (await info(page)).drops;
+    // Precondicion: calma antes de cortar. Los eventos que acaba de sellar el producto (p. ej. el endurecimiento de G1) caen
+    // como gotas y pueden seguir cayendo; lo que se comprueba aqui es que SIN conexion no se inventa actividad NUEVA.
+    await until(page, () => KAIZEN.info().drops === 0, null, 120000, 'las gotas no se calman antes de cortar el backend');
     await parar();
     await until(page, () => KAIZEN.info().online === false, null, 25000, 'no detecta la caída');
     ok((await page.textContent('#alive-t')) === 'Sin conexión con Kaizen', 'texto sin conexión');

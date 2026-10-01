@@ -6,7 +6,8 @@ por (empresa, cubo), un nivel que REEMPLAZA al defecto cuando existe:
 
 - endurecer (bajar un nivel) es programatico: lo hacen los gatillos del barrido (F4);
 - subir lo hace SOLO el operador (F5) y nunca hasta un nivel bloqueado (ALTA, esta temporada);
-- cada cambio se sella en la bitacora (`plataforma.autonomia.cambiada`, con cubo y causa);
+- cada cambio se sella en la bitacora (`plataforma.autonomia.cambiada`, con cubo y causa), SIEMPRE
+  fuera del candado de datos (orden de candados: ver `sellar_cambio_nivel`);
 - un mismo incidente baja el nivel UNA sola vez (guarda de incidentes ya aplicados);
 - nunca se baja de CERO.
 
@@ -18,10 +19,12 @@ No toca `sustrato/gates` (camino legado de Comercial, solo operador, con su prop
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import time
 from datetime import datetime, timezone
 
-from core.aprobaciones import NIVELES, NIVELES_BLOQUEADOS, cambiar_nivel
+from core.aprobaciones import (NIVELES, NIVELES_BLOQUEADOS, cambiar_nivel, decidir_cambio_nivel,
+                               sellar_cambio_nivel)
 
 COLECCION = "autonomia_cubo"
 
@@ -58,7 +61,9 @@ class AutonomiaCubos:
         return tx() if tx else contextlib.nullcontext()
 
     def endurecer(self, cubo: str, defecto: str, *, causa: str, incidente: str) -> dict:
-        """Baja UN nivel por un incidente. Idempotente por `incidente`; nunca baja de CERO."""
+        """Baja UN nivel por un incidente. Idempotente por `incidente`; nunca baja de CERO.
+        Se decide y guarda bajo el candado; el evento se sella DESPUES, fuera de el (ver
+        `sellar_cambio_nivel`)."""
         with self._tx():
             r = self.registro(cubo) or {"cubo": cubo, "nivel": None, "historial": [],
                                         "incidentes": []}
@@ -73,18 +78,24 @@ class AutonomiaCubos:
                 return {"cubo": cubo, "de": actual, "a": actual, "aplicado": False,
                         "razon": "ya_en_CERO"}
             pedido = NIVELES[NIVELES.index(actual) - 1]
-            nuevo = cambiar_nivel(actual, pedido, actor="sistema", bitacora=self.bitacora,
-                                  tenant=self.tenant, cubo=cubo, causa=causa)
+            nuevo, veredicto, motivo = decidir_cambio_nivel(actual, pedido, actor="sistema")
             r["nivel"] = nuevo
             r["historial"].append({"ts": _ahora(), "de": actual, "a": nuevo,
                                    "actor": "sistema", "causa": causa, "incidente": incidente})
             self.k.add(self.tenant, COLECCION, cubo, r)
-            return {"cubo": cubo, "de": actual, "a": nuevo, "aplicado": True, "razon": causa}
+        sellar_cambio_nivel(actual, pedido, actor="sistema", veredicto=veredicto, motivo=motivo,
+                            bitacora=self.bitacora, tenant=self.tenant, cubo=cubo, causa=causa)
+        return {"cubo": cubo, "de": actual, "a": nuevo, "aplicado": True, "razon": causa}
 
     def fijar(self, cubo: str, defecto: str, nivel: str, *, por: str, motivo: str = "") -> dict:
-        """Fija el nivel por decision del OPERADOR (subir o bajar). ALTA bloqueada."""
+        """Fija el nivel por decision del OPERADOR (subir o bajar). ALTA bloqueada. SUBIR exige
+        motivo (la comprobacion vive aqui, dentro del candado, no en quien llama).
+
+        El texto del motivo se guarda en el historial del cubo; a la bitacora (que alimenta el feed
+        del mundo) solo va su huella sha256, como la evidencia de `confirmar_hecha`."""
         if nivel not in NIVELES:
             raise ValueError(f"nivel desconocido: {nivel!r}")
+        motivo = (motivo or "").strip()
         if nivel in NIVELES_BLOQUEADOS:
             if self.bitacora is not None:                     # el intento tambien se sella
                 cambiar_nivel(self.nivel(cubo, defecto), nivel, actor="operador",
@@ -98,15 +109,19 @@ class AutonomiaCubos:
             if nivel == actual:
                 return {"cubo": cubo, "de": actual, "a": actual, "aplicado": False,
                         "razon": "sin_cambio"}
-            nuevo = cambiar_nivel(actual, nivel, actor="operador", bitacora=self.bitacora,
-                                  tenant=self.tenant, cubo=cubo,
-                                  causa=motivo or "decision_del_operador")
+            if NIVELES.index(nivel) > NIVELES.index(actual) and not motivo:
+                raise ValueError("subir el nivel de autonomia exige un motivo")
+            nuevo, veredicto, rechazo = decidir_cambio_nivel(actual, nivel, actor="operador")
             r["nivel"] = nuevo
             r["historial"].append({"ts": _ahora(), "de": actual, "a": nuevo, "actor": "operador",
                                    "por": por, "causa": motivo or "decision_del_operador"})
             self.k.add(self.tenant, COLECCION, cubo, r)
-            return {"cubo": cubo, "de": actual, "a": nuevo, "aplicado": True,
-                    "razon": motivo or "decision_del_operador"}
+        huella = {"motivo_sha256": hashlib.sha256(motivo.encode("utf-8")).hexdigest()} if motivo else {}
+        sellar_cambio_nivel(actual, nivel, actor="operador", veredicto=veredicto, motivo=rechazo,
+                            bitacora=self.bitacora, tenant=self.tenant, cubo=cubo,
+                            causa="decision_del_operador", extra=huella)
+        return {"cubo": cubo, "de": actual, "a": nuevo, "aplicado": True,
+                "razon": motivo or "decision_del_operador"}
 
 
 def manifest_efectivo(knowledge, tenant: str, cubo: str, manifest: dict) -> dict:

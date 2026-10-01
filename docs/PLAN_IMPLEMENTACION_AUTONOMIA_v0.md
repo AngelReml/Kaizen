@@ -1,6 +1,6 @@
 # Plan de implementación — Autonomía v0
 
-Estado: **plan, sin ejecutar** (2026-10-01).
+Estado: **ejecutado F0–F6 el 2026-10-01** (ver §6 Resultado). F7 = cierre.
 Decisiones de Ángel (confirmadas): **F1 G1 H1 I1 J1** (ver `docs/SUELO_Y_VOCABULARIO_v0.md` para el contexto firmado).
 Rama: `claude/clever-wozniak-p7mins`. No se toca Shinobi ni se mezclan Planta 1 / Planta 2.
 
@@ -98,3 +98,26 @@ Suite completa, e2e del Mundo (20/20), `docs/LINEA_BASE.md`, `docs/CONTRATO_MUND
 5. **Qué gana exactamente Inteligencia en BAJA** depende de qué herramientas REVERSIBLE tiene. Se comprueba en F2 antes de afirmarlo.
 
 **Recursos:** uso las herramientas del repo (lectura, pruebas, git) y, al cierre, las revisiones de código y de seguridad. Los conectores restantes (Vercel, HubSpot, Figma, Gmail, Canva, Asana, etc.) no aportan a esta tarea y usarlos sería decorado, no rigor.
+
+## 6. Resultado (lo que se hizo de verdad, con las desviaciones)
+
+| Fase | Commit | Estado | Desviación respecto al plan |
+|---|---|---|---|
+| F0 | docs | hecha | — |
+| F1 | niveles honestos + ALTA bloqueada en `core` | hecha | — |
+| F2 | Inteligencia a BAJA | hecha | Lo que gana hoy son las herramientas REVERSIBLE que ya tiene (`detectar`, `resolver_alerta`, `observar`) y proponer tarjetas. **No existe aún ninguna herramienta para escribir un dosier**: llegará con el formato de dosier (capas 2 y 3). Se cambió además la descripción del manifest, que decía "solo lee". |
+| F3 | `core/autonomia.py` | hecha | El override **reemplaza** al defecto (no `min`): el manifest declara un defecto, no un techo, y el operador debe poder subir por encima. |
+| F4 | gatillos | hecha | Freno de 30 s por empresa (verificar la cadena cuesta ~32 µs/evento medido, y el pulso corre por cada cliente conectado). El gatillo de gasto no se duplica: lo cubre `core/techos.py`. REVOCADA y CADUCADA no cuentan ni cortan una racha. |
+| F5 | `POST /cmd/ajustes/autonomia` | hecha | Subir exige motivo; bajar no. |
+| F6 | cola `EN_MANOS`/`HECHA` | **solo núcleo** | Tocó más de lo previsto: registro RUE (`eventos.json`, 3 tipos), frases del feed, `FIRMES` del rendimiento, la racha de G1 y el contador `en_manos` de la foto del mundo. **Sin endpoint ni pantalla**: cambiar `cmd_aprobar` para entregar a humano toca la mecha y depende del formato de dosier. Hoy solo se puede usar desde código. |
+
+### Qué salió mal por el camino (honesto)
+- Un test existente (`test_p0_panel_esqueleto`) falló al integrar F4 y **yo lo pasé por alto**: encadené el commit a un `| tail` que ocultaba el código de salida. Causa real: ese test construye su bitácora con otra `fecha_alta` que la del panel, así que el panel veía la cadena rota y el gatillo disparó como debía. Corregido en su commit (`41d495b`) y desde entonces compruebo `exit=$?`.
+- Mi afirmación de que MEDIA y ALTA "eran idénticos a BAJA" solo valía para la Colmena (§2).
+
+### Lo que sigue abierto
+1. `sustrato/gates` sigue permitiendo ALTA al operador (legado de Comercial, sellado, solo operador).
+2. Sello roto ⇒ baja todos los cubos de la empresa. El sello depende de `fecha_alta` del registro de empresas: **si alguien edita esa fecha, el panel verá la cadena rota y G1 endurecerá todo.** Es la misma señal roja que ya enseña el mundo, pero el efecto es mayor; se restaura con `/cmd/ajustes/autonomia`.
+3. Todo probado en Linux; **no en Windows**.
+4. F6 sin endpoint/pantalla; H1 y MEDIA no implementados (bloqueados por capas 2 y 3).
+5. `ENSAYO_SECO` no cuenta como decisión "firme" en el rendimiento (comportamiento previo; no tocado).

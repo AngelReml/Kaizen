@@ -60,7 +60,10 @@ def test_subir_con_motivo_devuelve_ficha_y_se_sella(montaje):
     assert _nivel_mundo(c, "qa") == "BAJA"
     ev = _cambios(k)[-1]
     assert (ev["actor"], ev["cubo"], ev["causa"], ev["veredicto"]) == \
-        ("operador", "qa", "ya revisa bien", "aplicado")
+        ("operador", "qa", "decision_del_operador", "aplicado")
+    import hashlib
+    assert ev["motivo_sha256"] == hashlib.sha256(b"ya revisa bien").hexdigest()
+    assert "ya revisa bien" not in str(ev)            # el texto libre no va a la bitacora ni al feed
     assert b.verificar()["integra"] is True
 
 

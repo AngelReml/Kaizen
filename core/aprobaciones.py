@@ -240,27 +240,42 @@ class ColaSustrato:
 
 # ── Candado de umbrales / autonomia (D00 §4.2) ──────────────────────────────
 
-def cambiar_nivel(actual: str, pedido: str, *, actor: str, bitacora=None, tenant: str = "",
-                 cubo: str = "", causa: str = "") -> str:
-    """Sub-agentes SOLO endurecen (bajar nivel). Relajar exige operador; el intento
-    de relajacion por sub-agente se RECHAZA y se REGISTRA."""
+def decidir_cambio_nivel(actual: str, pedido: str, *, actor: str) -> tuple[str, str, str]:
+    """Decision PURA (sin I/O): (nivel resultante, veredicto, motivo del rechazo).
+    Sub-agentes SOLO endurecen (bajar nivel); relajar exige operador; un nivel bloqueado
+    (ALTA esta temporada) no lo fija nadie, ni el operador."""
     ia, ip = NIVELES.index(actual), NIVELES.index(pedido)
-    relaja = ip > ia
-    veredicto = "aplicado"
-    motivo = ""
     if pedido in NIVELES_BLOQUEADOS and pedido != actual:
-        veredicto, motivo = "rechazado", "nivel_bloqueado"       # ni el operador, esta temporada
-    elif relaja and actor != "operador":
-        veredicto, motivo = "rechazado", "solo_operador_relaja"
-    if bitacora is not None:
-        bitacora.publicar(Sobre(tenant_id=tenant or bitacora.tenant,
-                                tipo="plataforma.autonomia.cambiada",
-                                payload={"de": actual, "a": pedido, "actor": actor,
-                                         "veredicto": veredicto,
-                                         **({"motivo": motivo} if motivo else {}),
-                                         **({"cubo": cubo} if cubo else {}),
-                                         **({"causa": causa} if causa else {})},
-                                origen="plataforma.autonomia"))
-    if veredicto == "rechazado":
-        return actual
-    return pedido
+        return actual, "rechazado", "nivel_bloqueado"
+    if ip > ia and actor != "operador":
+        return actual, "rechazado", "solo_operador_relaja"
+    return pedido, "aplicado", ""
+
+
+def sellar_cambio_nivel(actual: str, pedido: str, *, actor: str, veredicto: str, motivo: str = "",
+                        bitacora=None, tenant: str = "", cubo: str = "", causa: str = "",
+                        extra: dict | None = None) -> None:
+    """Sella `plataforma.autonomia.cambiada`. Va APARTE de la decision para que quien guarda estado
+    pueda decidir dentro de su candado y sellar FUERA: publicar en la bitacora toma el candado de
+    la bitacora, y tomarlo con otro candado de datos ya cogido invierte el orden que usa
+    `Bitacora._encadenar` (interbloqueo ABBA, comprobado)."""
+    if bitacora is None:
+        return
+    bitacora.publicar(Sobre(tenant_id=tenant or bitacora.tenant,
+                            tipo="plataforma.autonomia.cambiada",
+                            payload={"de": actual, "a": pedido, "actor": actor,
+                                     "veredicto": veredicto,
+                                     **({"motivo": motivo} if motivo else {}),
+                                     **({"cubo": cubo} if cubo else {}),
+                                     **({"causa": causa} if causa else {}),
+                                     **(extra or {})},
+                            origen="plataforma.autonomia"))
+
+
+def cambiar_nivel(actual: str, pedido: str, *, actor: str, bitacora=None, tenant: str = "",
+                  cubo: str = "", causa: str = "") -> str:
+    """Decide y sella (para quien no guarda estado propio). Rechazos: se REGISTRAN."""
+    nuevo, veredicto, motivo = decidir_cambio_nivel(actual, pedido, actor=actor)
+    sellar_cambio_nivel(actual, pedido, actor=actor, veredicto=veredicto, motivo=motivo,
+                        bitacora=bitacora, tenant=tenant, cubo=cubo, causa=causa)
+    return nuevo

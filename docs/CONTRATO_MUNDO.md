@@ -34,7 +34,8 @@ existen, todos los cubos salen `alta:false`. Campos:
   falla, `desconocido`).
 - `cubos[]`: uno por manifest instalado, en el orden de `CUBOS_ORDEN` de
   Colmena y luego los no listados por nombre. Cada uno: `cubo`, `nombre`
-  (nombre de Colmena), `mision`, `autonomia`, `irreversibles[]`, `nota_estado`,
+  (nombre de Colmena), `mision`, `autonomia` (nivel VIGENTE de esa empresa: el del manifest salvo
+  que se haya endurecido o fijado, `core/autonomia.py`), `irreversibles[]`, `nota_estado`,
   `alta`, `uid`/`role_id`/`ts_alta` (null si no hay alta), `salud`
   `{estado, detalle, eventos_24h}` (misma funcion que Colmena; si no se puede
   medir, `SIN DATOS`), `ultimo` `{texto, ts}` del chat individual o null.

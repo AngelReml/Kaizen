@@ -56,9 +56,22 @@ Inteligencia pasa de CERO a BAJA para poder escribir los dosieres del ciclo 0. C
 
 Los vetos del Suelo valen siempre: nada de mentiras, spam, reseñas falsas ni dinero político.
 
-## 8. Límites conocidos
+## 8. Qué está implementado (2026-10-01)
+
+| Decisión | Estado |
+|---|---|
+| F1 niveles | Implementado: MEDIA/ALTA reservados con texto honesto; ALTA bloqueada en `core` (`core/aprobaciones.py`). |
+| G1 subir solo el operador | Implementado: `POST /cmd/ajustes/autonomia` (motivo obligatorio al subir, ficha de rendimiento en la respuesta). |
+| G1 bajar ante incidentes | Implementado: racha de 3 denegadas y sello roto (`core/autonomia.vigilar`, freno 30 s). Gasto: lo cubre `core/techos.py`. |
+| H1 ciclo 0 manual | **No implementado** (necesita capas 2 y 3). |
+| I1 ejecuta el humano | Implementado el **núcleo** en la cola (`EN_MANOS`/`HECHA`). Sin endpoint ni pantalla todavía. |
+| J1 Inteligencia a BAJA | Implementado. Aún no tiene herramienta para escribir dosieres. |
+
+## 9. Límites conocidos
 
 - La autonomía vive en dos sitios (`core/aprobaciones` y `sustrato/gates`) con los niveles definidos en cinco módulos.
   No se unifican ahora.
-- El nivel que usa la Colmena era solo el valor por defecto del manifest; el nivel efectivo por empresa y cubo se crea en F3.
+- El nivel que usaba la Colmena era solo el defecto del manifest; ahora es el vigente por empresa y cubo (`core/autonomia.py`). El override **reemplaza** al defecto.
+- Sello roto endurece todos los cubos de la empresa; el sello depende de `fecha_alta` del registro de empresas.
+- `sustrato/gates` (legado de Comercial) sigue permitiendo ALTA al operador.
 - Todo lo nuevo está probado en Linux; no verificado en Windows.

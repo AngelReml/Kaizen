@@ -707,10 +707,6 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
             raise ValueError("cubo desconocido")
         defecto = manifiestos[cubo].get("nivel_autonomia_defecto", "CERO")
         aut = AUT.AutonomiaCubos(st.k, empresa, bitacora=bit(empresa))
-        if nivel in AUT.NIVELES and nivel not in AUT.NIVELES_BLOQUEADOS \
-                and AUT.NIVELES.index(nivel) > AUT.NIVELES.index(aut.nivel(cubo, defecto)) \
-                and not motivo:
-            raise ValueError("subir el nivel de autonomia exige un motivo")
         resultado = aut.fijar(cubo, defecto, nivel, por=quien, motivo=motivo)
         return {"resultado": resultado, "ficha": st.ficha_cubo(empresa, cubo)}
 
