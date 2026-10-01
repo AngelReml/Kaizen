@@ -265,6 +265,17 @@ const info = page => page.evaluate(() => KAIZEN.info());
     return 'resumen real tras 5 h fuera; no sale sin ausencia';
   });
 
+  await escenario('10g panel izquierdo minimizable: se pliega, se recuerda al recargar y se reabre', async () => {
+    await page.evaluate(() => { try { localStorage.removeItem('kaizen-panel'); } catch (e) {} });
+    await page.reload(); await until(page, () => window.KAIZEN && KAIZEN.info().online === true, null, 30000);
+    ok(await page.locator('#tabbody').isVisible(), 'el panel debería empezar abierto');
+    await page.click('#left-min'); ok(!(await page.locator('#tabbody').isVisible()), 'no se pliega');
+    await page.reload(); await until(page, () => window.KAIZEN && KAIZEN.info().online === true, null, 30000);
+    ok(!(await page.locator('#tabbody').isVisible()), 'no recuerda que estaba minimizado');
+    await page.click('#left-min'); ok(await page.locator('#tabbody').isVisible(), 'no se reabre');
+    return 'plegado, recordado y reabierto';
+  });
+
   // ── segundo servidor, con clave: sesión, cookie y CSRF de verdad ──
   await escenario('10d modo con clave: sin sesión redirige, con sesión funciona el CSRF y al caducar vuelve al acceso', async () => {
     await parar(); const P2 = PORT + 1, B2 = 'http://127.0.0.1:' + P2, CLAVE = 'clave-de-ensayo-123';

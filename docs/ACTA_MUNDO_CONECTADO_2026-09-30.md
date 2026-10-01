@@ -88,3 +88,9 @@ Perfil de CPU a x1 (8 s): 92,5 % en trabajo nativo del navegador (rasterizado y 
 JavaScript del juego suma menos del 1 %. Conclusion: no hay un cuello de botella en nuestro JS que optimizar; el coste esta en el
 dibujado, que en un PC con GPU es mucho menor. El juego ya sugiere «Nitidez x1» si el fotograma supera 42 ms.
 Limite: no hay cifras en hardware real; las de arriba solo sirven para comparar niveles entre si.
+
+Adenda 7b (carga alta, 2026-10-01): a 2560x1440 el dibujado no empeora respecto a 1280x720 (x1 ~22 ms; x2 ~50 ms) y una rafaga de 300 eventos en vivo no lo mueve.
+Foto del backend: ~0,2 s con ~1800 eventos y datos masivos; creciendo con los eventos (182 -> 379 ms en la serie que se corto). PENDIENTE sin cerrar: sembrando
+eventos de forma CONCURRENTE (300 peticiones a la vez) el sello salio roto (el juego lo mostro como «Sello del historial roto» y sellados=0); en serie (hasta 600
+pasos, directorio limpio) el sello se mantiene integro. No se ha determinado si la concurrencia rompe la cadena en el producto o solo en la ruta de pruebas;
+queda como riesgo abierto hasta probar publicadores concurrentes reales contra la bitacora.

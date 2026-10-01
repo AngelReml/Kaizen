@@ -203,6 +203,15 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
 .carta .hoja { max-width: 560px; max-height: 86%; overflow-y: auto; padding: 28px 32px; border-radius: 20px; background: #f6edd9; color: #3a2a1c; box-shadow: 0 24px 70px rgba(0,0,0,.5), inset 0 0 0 1px #d9c9a4; font: 500 15px/1.7 var(--f-title); position: relative; }
 .carta .hoja h3 { font: 700 22px var(--f-title); margin: 0 0 10px; } .carta .hoja p { margin: 0 0 10px; } .carta .hoja .firma { text-align: right; font-style: italic; margin-top: 14px; }
 .carta .hoja .hanko { display: inline-block; width: 26px; height: 26px; border-radius: 6px; background: #b8341f; color: #fff6ee; font: 700 14px/26px var(--f-title); text-align: center; vertical-align: middle; margin-left: 8px; }
+
+/* panel izquierdo minimizable: se pliega a una pastilla con su nombre y deja todo el mundo a la vista */
+.side.left { transition: opacity .25s, transform .3s cubic-bezier(.2,.8,.2,1); }
+.side.left .min { position: absolute; right: 10px; top: 10px; z-index: 2; font-size: 18px; }
+.side.left.mini { width: auto !important; max-height: none !important; }
+.side.left.mini .tabs, .side.left.mini .panel-body { display: none; }
+.side.left.mini .min { position: static; width: auto; height: auto; padding: 8px 16px; border-radius: 999px; background: none; font: 600 13px var(--f-body); color: var(--text); }
+.side.left.mini .min:hover { transform: none; background: rgba(243,182,200,.45); }
+@media (max-width: 1099px) { .side.left .min { top: 8px; } }
 </style>
 
 </head>
@@ -232,6 +241,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     </div>
 
     <aside class="side left" id="left">
+      <button class="x min" id="left-min" type="button" aria-label="Minimizar el panel" aria-expanded="true" title="Minimizar">–</button>
       <div class="tabs" role="tablist" aria-label="Paneles">
         <button class="tab" role="tab" aria-selected="true" data-tab="sala" type="button">Sala</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="cubos" type="button">Cubos</button>
@@ -3266,6 +3276,9 @@ void main(){
   TREES.push({ x: 2.2, y: 18.6, kind: 'sakura', ph: 1, c: null }, { x: 16.2, y: 18.4, kind: 'sakura', ph: 2.3, c: null }, { x: 22.4, y: 12.4, kind: 'maple', ph: .7, c: null }, { x: 20.2, y: 15.3, kind: 'pine', ph: 3.1, c: null }, { x: 33.4, y: 18.4, kind: 'sakura', ph: 4.2, c: null }, { x: -3.6, y: 21, kind: 'maple', ph: 5.1, c: null }, { x: 0.6, y: 27, kind: 'sakura', ph: 1.7, c: null }, { x: 11.5, y: 33, kind: 'pine', ph: 2.9, c: null }, { x: 28.5, y: 33, kind: 'pine', ph: .3, c: null }, { x: -8, y: 15.5, kind: 'sakura', ph: 3.6, c: null }, { x: 35, y: 8, kind: 'maple', ph: 4.7, c: null });
   // el mundo se construye tras el primer dibujo, para que se vea «Preparando el jardín…» y no un lienzo en blanco; después se pide la foto al backend
   setTimeout(() => { TREES.forEach(t => { t.c = treeCanvas(t.kind); }); buildStatic(); buildStalks(); buildObjects(); refreshDust(); const ld = document.getElementById('loading'); if (ld) ld.remove(); pollEstado(true); setInterval(() => { if (BK.loaded) pollEstado(false); }, 12000); }, 40);
+  // minimizar el panel izquierdo (se recuerda en este navegador)
+  { const L = document.getElementById('left'), b = document.getElementById('left-min'); const set = m => { L.classList.toggle('mini', m); b.textContent = m ? '☰ Panel' : '–'; b.setAttribute('aria-expanded', String(!m)); b.title = m ? 'Abrir el panel' : 'Minimizar'; b.setAttribute('aria-label', m ? 'Abrir el panel' : 'Minimizar el panel'); try { localStorage.setItem('kaizen-panel', m ? 'min' : 'abierto'); } catch (e) {} };
+    b.addEventListener('click', () => set(!L.classList.contains('mini'))); let m0 = false; try { m0 = localStorage.getItem('kaizen-panel') === 'min'; } catch (e) {} set(m0); }
   setModeLabel(); setLive();
   renderTab();
   new ResizeObserver(() => { fitCanvas(); }).observe(document.getElementById('stage'));
