@@ -14,10 +14,10 @@ Regla del juego: **lo que se ve es real**. El Mundo no dibuja nada que no venga 
 | `finanzas` | finanzas | 12 | el director de ese cubo habla + gota al Registro |
 | `operacion` | ops | 12 | el director de ese cubo habla + gota al Registro |
 | `marketing` | marketing | 11 | el director de ese cubo habla + gota al Registro |
-| `inteligencia` | inteligencia | 8 | el director de ese cubo habla + gota al Registro |
+| `inteligencia` | inteligencia | 18 | el director de ese cubo habla + gota al Registro |
 | `cumplimiento` | legal | 12 | el director de ese cubo habla + gota al Registro |
 
-Total: 95 tipos en 8 familias.
+Total: 105 tipos en 8 familias.
 
 ## 2. Gestos propios (además del genérico)
 

@@ -179,27 +179,39 @@ def test_el_motivo_libre_solo_deja_su_huella_en_la_bitacora_y_no_hay_pii_que_rec
 
 def test_sin_interbloqueo_con_la_bitacora_real_publicando_a_la_vez(tmp_path):
     """Regresion: endurecer/fijar sellaban DENTRO del candado de datos, y la bitacora toma sus
-    candados en orden contrario (ABBA): dos hilos se bloqueaban para siempre. Se detecta con un
-    plazo: si algun hilo sigue vivo, hay interbloqueo."""
-    from core.rue import Sobre
-    k = JsonKnowledge(tmp_path / "k.json")
-    b = Bitacora(k, T, fecha_alta="2026-07-10")
-    aut = AutonomiaCubos(k, T, bitacora=b)
-
-    def cambia_niveles():
-        for i in range(50):
-            aut.fijar("qa", "CERO", "BAJA" if i % 2 == 0 else "CERO", por="x", motivo="m")
-            aut.endurecer("ops", "MEDIA", causa="c", incidente=f"i{i}")
-
-    def publica():
-        for i in range(100):
-            b.publicar(Sobre(tenant_id=T, tipo="plataforma.diario.entrada", payload={"n": i},
-                             origen="t"))
-
-    hilos = [threading.Thread(target=f, daemon=True) for f in (cambia_niveles, publica, publica)]
-    [h.start() for h in hilos]
-    limite = time.monotonic() + 30
-    for h in hilos:
-        h.join(timeout=max(0.0, limite - time.monotonic()))
-    assert not any(h.is_alive() for h in hilos), "interbloqueo entre AutonomiaCubos y Bitacora"
-    assert b.verificar()["integra"] is True
+    candados en orden contrario (ABBA): dos hilos se bloqueaban para siempre. Se ejecuta en un
+    SUBPROCESO con plazo: un interbloqueo deja candados del proceso retenidos y colgaria tambien a
+    los tests siguientes si ocurriera aqui dentro."""
+    import subprocess
+    codigo = """
+import sys, threading, time
+sys.path.insert(0, %r)
+from core.autonomia import AutonomiaCubos
+from core.knowledge import JsonKnowledge
+from core.rue import Bitacora, Sobre
+T = "t1"
+k = JsonKnowledge(sys.argv[1])
+b = Bitacora(k, T, fecha_alta="2026-07-10")
+aut = AutonomiaCubos(k, T, bitacora=b)
+def cambia():
+    for i in range(50):
+        aut.fijar("qa", "CERO", "BAJA" if i %% 2 == 0 else "CERO", por="x", motivo="m")
+        aut.endurecer("ops", "MEDIA", causa="c", incidente="i%%d" %% i)
+def publica():
+    for i in range(100):
+        b.publicar(Sobre(tenant_id=T, tipo="plataforma.diario.entrada", payload={"n": i}, origen="t"))
+hs = [threading.Thread(target=f, daemon=True) for f in (cambia, publica, publica)]
+[h.start() for h in hs]
+limite = time.monotonic() + 30
+for h in hs:
+    h.join(timeout=max(0.0, limite - time.monotonic()))
+if any(h.is_alive() for h in hs):
+    sys.exit(3)
+sys.exit(0 if b.verificar()["integra"] else 4)
+""" % str(Path(__file__).parent.parent)
+    try:
+        r = subprocess.run([sys.executable, "-c", codigo, str(tmp_path / "k.json")], timeout=90,
+                           capture_output=True, text=True)
+    except subprocess.TimeoutExpired:
+        pytest.fail("interbloqueo entre AutonomiaCubos y Bitacora (el subproceso no termino)")
+    assert r.returncode == 0, f"codigo {r.returncode}: {r.stdout[-300:]} {r.stderr[-500:]}"
