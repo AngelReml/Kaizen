@@ -63,9 +63,9 @@ Los vetos del Suelo valen siempre: nada de mentiras, spam, reseñas falsas ni di
 | F1 niveles | Implementado: MEDIA/ALTA reservados con texto honesto; ALTA bloqueada en `core` (`core/aprobaciones.py`). |
 | G1 subir solo el operador | Implementado: `POST /cmd/ajustes/autonomia` (motivo obligatorio al subir, ficha de rendimiento en la respuesta). |
 | G1 bajar ante incidentes | Implementado: racha de 3 denegadas y sello roto (`core/autonomia.vigilar`, freno 30 s). Gasto: lo cubre `core/techos.py`. |
-| H1 ciclo 0 manual | **No implementado** (necesita capas 2 y 3). |
+| H1 ciclo 0 manual | Implementado como **tanda** lanzada por el operador (`docs/APUESTAS_Y_DOSIER_v0.md`); respeta el nivel de Inteligencia (CERO = no escribe). |
 | I1 ejecuta el humano | Implementado el **núcleo** en la cola (`EN_MANOS`/`HECHA`). Sin endpoint ni pantalla todavía. |
-| J1 Inteligencia a BAJA | Implementado. Aún no tiene herramienta para escribir dosieres. |
+| J1 Inteligencia a BAJA | Implementado. Los dosieres los escribe la tanda por código (no hay herramienta de chat); la tanda comprueba que Inteligencia no esté en CERO. |
 
 ## 9. Límites conocidos
 

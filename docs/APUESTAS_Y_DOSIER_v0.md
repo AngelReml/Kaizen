@@ -1,6 +1,6 @@
 # Apuestas y dosier — v0
 
-Estado: **borrador para firma de Ángel** (2026-10-01). Solo concepto: no cambia código ni manifiestos.
+Estado: **decidido por Ángel e implementado el 2026-10-01** (ver §12); la firma formal de la tabla del §11 no consta. Plan: `docs/PLAN_IMPLEMENTACION_APUESTAS_v0.md`.
 Decisiones de Ángel: **K1, L1, M1 (con la corrección "lo decido yo sobre todo"), N1**, y el requisito nuevo de
 **diversidad y no repetición con una prueba nocturna**. Marco firmado: `docs/SUELO_Y_VOCABULARIO_v0.md`;
 autonomía: `docs/AUTONOMIA_v0.md`.
@@ -53,16 +53,19 @@ el código rechaza lo que caiga en una lista de categorías vetadas; el resto lo
 
 ## 4. Evidencia honesta (L1)
 
-Inteligencia **no puede buscar en internet** (no hay herramienta de búsqueda en el repo): razona con el modelo y con los
-datos del propio sistema. Por eso cada afirmación del dosier lleva una etiqueta:
+Kaizen busca en la web con `ddgs` (DuckDuckGo, ya usado en la prospección). Por eso cada afirmación del dosier lleva una etiqueta:
 
 | Etiqueta | Significa | Requisito |
 |---|---|---|
-| VERIFICADA | Comprobada por herramienta o por Ángel | URL, fecha y extracto |
-| RECORDADA | Lo dice el modelo; sin verificar | — |
+| VERIFICADA | El modelo cita una fuente **real recuperada por la búsqueda** | URL, fecha de **consulta** y extracto, copiados por el CÓDIGO del resultado (el modelo nunca los escribe); una cita a una fuente inexistente se rebaja a RECORDADA |
+| RECORDADA | Lo dice el modelo; sin fuente | — |
 | SUPUESTO | Hipótesis sin base comprobada | — |
 
-El ciclo 0 saldrá casi todo RECORDADA y SUPUESTO, y **se declara abiertamente**. Un dosier sirve como lista ordenada de
+**Límite de VERIFICADA:** el código comprueba que la fuente existe y copia su extracto; que ese extracto **sostenga** la afirmación lo
+juzga el modelo. Por eso el informe muestra el extracto y lo dice: el operador lo lee. Las búsquedas de WebLLM (Perplexity, Felo...) NO se usan.
+Si la búsqueda falla, el dosier se hace igual con todo RECORDADA/SUPUESTO y el informe lo cuenta.
+
+El ciclo 0 puede salir con poca evidencia verificada, y **se declara abiertamente**. Un dosier sirve como lista ordenada de
 hipótesis, no como prueba. Su primer paso es una **verificación gratuita** que ejecuta Ángel. Nunca se presenta una
 afirmación RECORDADA como si fuera un hecho.
 
@@ -103,17 +106,17 @@ tenga ideas buenas. La calidad de las ideas solo se ve con un modelo real.
 
 H1 sigue siendo "lo lanza Ángel". Una **tanda** es una orden suya, acotada y única; **no** deja nada programado:
 
-- **Parámetros (propuesta):** hasta 4 ciclos de 5 dosieres, tope de coste de cómputo y tope de horas fijados al lanzarla.
-- **Frenos automáticos:** tope de coste o de horas, PARAR TODO, sello roto, o **2 ciclos seguidos con menos de 2 dosieres
-  válidos** (señal de atasco o repetición).
+- **Parámetros:** por defecto 3 ciclos de 5 dosieres y 8 horas como máximo (`--ciclos`, `--horas`).
+- **Frenos automáticos:** tope diario del proveedor (429), **PARAR TODO, tope de horas y autonomía de Inteligencia en CERO: se miran antes de cada pregunta
+  al modelo** (un ciclo puede durar horas); el **sello roto** solo entre ciclos (recorre toda la cadena); y **2 ciclos seguidos con menos de 2 dosieres**
+  (atasco o repetición).
 - **Informe de la noche** al terminar: ciclos hechos, dosieres válidos y rechazados **con su motivo**, tasa de repetición
   (rechazos por similitud / intentos), cobertura por coordenadas, coste real, errores. Los dosieres se listan con su coste y
   su tiempo hasta la señal, **sin ranking subjetivo**: una puntuación hecha por el propio modelo sería opinión.
-- **Dónde corre:** en el PC de Ángel (necesita la clave del modelo de su `.env`). En la nube de desarrollo **no hay clave**,
-  así que allí solo se prueba con un modelo simulado: que los repetidos se rechazan, que las cuotas y la rotación funcionan
-  y que los frenos paran. La prueba de **diversidad real con el modelo real** la hace Ángel, y es lo que dirá si esto sirve.
-- **Coste:** hoy hay dos contadores de gasto (`claude_client`, 16 € por día por defecto, y el techo diario por empresa de
-  `core/techos.py`, 5 €). La tanda lleva su **propio tope explícito** y lo comprueba además de ambos.
+- **Dónde corre:** en el PC de Ángel, con `lanzadores\NICHOS.cmd`. Modelos: los tres gratuitos de WebLLM por `/external/v1` (zai, groq, nemotron), rotados
+  entre preguntas; tope de 100 preguntas al día del propio WebLLM, que es el freno natural. **Coste: 0 €.** En la nube de desarrollo no hay clave ni acceso a
+  WebLLM, así que allí solo se probó con un modelo y un servidor simulados.
+- La decisión R (tope de coste de la primera tanda) **se retiró**: no hay gasto que aprobar.
 
 ## 8. Eventos y almacén
 
@@ -130,7 +133,7 @@ EN_PRUEBA solo admite coste 0 hasta entonces.
 
 - **P** mecanismo de diversidad: propuesta = §6 completo.
 - **Q** forma de la tanda: propuesta = §7.
-- **R** tope de coste de la primera tanda: propuesta = 3 € (cómputo, no los 50 € del monedero).
+- ~~R~~ retirada (sin gasto en el ciclo 0).
 - Los umbrales (0,5 de similitud, cuotas, 10 lentes, 4 ciclos) son **propuestas** que se afinan con la primera tanda real.
 
 ## 11. Firma
@@ -140,3 +143,26 @@ EN_PRUEBA solo admite coste 0 hasta entonces.
 | Aprobado por | |
 | Fecha | |
 | Cambios pedidos | |
+
+
+## 12. Qué está implementado (2026-10-01)
+
+| Pieza | Estado |
+|---|---|
+| Estados K1, dosier (7 campos), evidencia L1, vetos, novedad, cuotas | Implementado (`core/apuestas.py`). |
+| M1: decide el operador; la regla solo propone | Implementado. Aviso de plazo vencido: un **número** en la foto del Mundo (no un evento). |
+| Diversidad §6 (coordenadas, novedad, cuotas, lentes rotativos, memoria, variación) | Implementado (`core/exploracion.py`). Umbrales y lentes son propuestas **sin calibrar con un modelo real**. |
+| Tanda con frenos e informe | Implementado; lanzador `herramientas/apuestas.py` y `lanzadores/NICHOS.cmd`. |
+| N1 `redactar_dosier` como herramienta de Inteligencia en el chat | **No implementado: desviación.** Los dosieres los escribe la tanda por código; el director de Inteligencia en el chat NO puede escribirlos. |
+| Pantalla web de apuestas | No: hay API (`/api/apuestas/{empresa}`), números en el Mundo y el CLI. |
+| Búsqueda `ddgs` en vivo | Código listo; **no se pudo probar en vivo desde la nube** (sin salida a DuckDuckGo). |
+| `NICHOS.cmd` | **No ejecutado en Windows** (se razonó la semántica de cmd). |
+| Calidad de las ideas con modelos reales | **Desconocida**: es lo que dirá la primera tanda real. |
+
+## 13. Cómo lanzarlo en el PC (cmd)
+
+1. WebLLM encendido y su puerta externa activada (una vez): en su carpeta, `python -m scripts.external_api_admin enable` (imprime el token UNA vez).
+2. En el `.env` de Kaizen añade `KAIZEN_WEBLLM_TOKEN=<el token>` (no lo pegues en ningún chat). Opcional: `KAIZEN_WEBLLM_URL` si no es `http://127.0.0.1:20130`.
+3. Doble clic en `lanzadores\NICHOS.cmd` → opción 1. Al acabar deja un informe `.md` y los dosieres quedan en estado DOSIER.
+4. Leer: opción 2 y 3; decidir: opciones 4 (elegir) y 5 (descartar). Probar, medir y cerrar: `python -X utf8 herramientas\apuestas.py probar|medir|cerrar ID ...`.
+Para dejarlo encendido toda la noche: `python -X utf8 herramientas\apuestas.py tanda --ciclos 6 --horas 8` (el PC no debe suspenderse). Con 100 preguntas/día de WebLLM caben unos 6–8 ciclos; al agotarse, para solo y lo dice.
