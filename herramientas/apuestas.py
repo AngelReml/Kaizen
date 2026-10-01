@@ -66,7 +66,19 @@ def _dependencias(empresa: str | None) -> dict:
     except Exception:                                            # noqa: BLE001 — igual que el panel
         fecha_alta = ""
     ruta_panico = R.dir_state() / "panico" / "estado.json"
+    from core.autonomia import AutonomiaCubos
+    from cubos.base import manifiestos_instalados
+
+    def nivel_inteligencia() -> str:
+        """Nivel VIGENTE de Inteligencia (override de la empresa o, si no hay, el defecto de su manifest)."""
+        import json as _json
+        try:
+            defecto = _json.loads(manifiestos_instalados()["inteligencia"].read_text(encoding="utf-8")).get("nivel_autonomia_defecto", "CERO")
+        except Exception:                                        # noqa: BLE001 — sin manifest legible: lo prudente
+            defecto = "CERO"
+        return AutonomiaCubos(k, empresa).nivel("inteligencia", defecto)
     return {"k": k, "empresa": empresa, "bitacora": Bitacora(k, empresa, fecha_alta=fecha_alta),
+            "nivel_autonomia": nivel_inteligencia,
             "parar": lambda: Panico(ruta_estado=ruta_panico).activo,    # se relee en cada comprobacion
             "informes": R.dir_empresa(empresa) / "exploracion", "cliente": None, "buscar": buscar_ddgs}
 
@@ -106,7 +118,8 @@ def _tanda(args, d: dict, out: Salida) -> int:
                      f"({r['rechazados_por_repeticion']} por repeticion), {r['preguntas_modelo']} preguntas al modelo"
                      + (f"  [PARADA: {r['parar_por']}]" if r["parar_por"] else ""))
     t = E.ejecutar_tanda(ctx, ciclos=args.ciclos, horas_max=args.horas, parar=d["parar"],
-                         sello_integro=lambda: d["bitacora"].verificar().get("integra", False), al_terminar_ciclo=progreso)
+                         sello_integro=lambda: d["bitacora"].verificar().get("integra", False),
+                         nivel_autonomia=d.get("nivel_autonomia"), al_terminar_ciclo=progreso)
     carpeta = Path(args.informe_dir) if args.informe_dir else Path(d["informes"])
     carpeta.mkdir(parents=True, exist_ok=True)
     marca = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")

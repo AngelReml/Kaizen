@@ -197,3 +197,10 @@ def test_el_lanzador_cmd_existe_y_usa_expansion_diferida():
     cmd = (RAIZ / "lanzadores" / "NICHOS.cmd").read_text(encoding="utf-8")
     assert "enabledelayedexpansion" in cmd and "!id!" in cmd and "%id%" not in cmd
     assert "herramientas\\apuestas.py tanda" in cmd and "python -X utf8" in cmd
+
+
+def test_la_tanda_del_lanzador_respeta_el_nivel_de_autonomia(entorno):
+    k, b, correr, _ = entorno
+    codigo, c = correr(["tanda"], nivel_autonomia=lambda: "CERO")
+    assert codigo == 0 and "Terminada: autonomia_insuficiente" in c.texto and "Aviso: Inteligencia esta en nivel CERO" in c.texto
+    assert A.Apuestas(k, EMP).listar() == []

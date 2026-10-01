@@ -541,3 +541,16 @@ def test_informe_de_webllm_dice_coste_cero(mundo):
     m = modelo_de_ciclos(); m.nombre = "webllm"
     c = ctx(m)
     assert "0 € (modelos gratuitos de WebLLM" in E.generar_informe(c, E.ejecutar_tanda(c, ciclos=1))
+
+
+def test_freno_de_autonomia_inteligencia_en_cero_no_escribe_apuestas(mundo):
+    ctx, k, b, ap, _ = mundo
+    t = E.ejecutar_tanda(ctx(), ciclos=3, nivel_autonomia=lambda: "CERO")
+    assert t["motivo"] == "autonomia_insuficiente" and t["ciclos_hechos"] == 0 and "nivel CERO" in t["error"]
+    assert ap.listar() == []
+    # BAJA (o superior) sigue adelante
+    assert E.ejecutar_tanda(ctx(modelo_de_ciclos()), ciclos=1, nivel_autonomia=lambda: "BAJA")["motivo"] == "completada"
+    # y si se baja a mitad de tanda, se para en el siguiente ciclo
+    niveles = iter(["BAJA", "CERO"])
+    t = E.ejecutar_tanda(ctx(modelo_de_ciclos()), ciclos=4, nivel_autonomia=lambda: next(niveles))
+    assert t["motivo"] == "autonomia_insuficiente" and t["ciclos_hechos"] == 1

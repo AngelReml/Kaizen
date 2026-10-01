@@ -476,9 +476,10 @@ def _dosier(ctx: Contexto, res: dict, r: dict, cand: dict) -> None:
 # ── la tanda ────────────────────────────────────────────────────────────────
 
 def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, parar=None,
-                   sello_integro=None, al_terminar_ciclo=None) -> dict:
+                   sello_integro=None, nivel_autonomia=None, al_terminar_ciclo=None) -> dict:
     """Una orden acotada: hasta `ciclos` ciclos con frenos. Devuelve el resumen (tambien guardado y
     sellado). `parar()` -> True si hay PARAR TODO; `sello_integro()` -> False si la cadena esta rota;
+    `nivel_autonomia()` -> nivel vigente de Inteligencia: en CERO (solo lee) no escribe dosieres;
     `al_terminar_ciclo(resultado)` solo informa del progreso (no decide nada)."""
     tanda_id = "t" + uuid.uuid4().hex[:10]          # empieza por letra: jamas parece un telefono (R-07)
     t0 = ctx.ahora()
@@ -491,6 +492,10 @@ def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, pa
             break
         if sello_integro is not None and not sello_integro():
             motivo = "sello_roto"
+            break
+        if nivel_autonomia is not None and nivel_autonomia() == "CERO":
+            motivo = "autonomia_insuficiente"
+            error = "Inteligencia esta en nivel CERO (solo lee): no puede escribir apuestas. Sube su nivel en /cmd/ajustes/autonomia."
             break
         if (ctx.ahora() - t0).total_seconds() >= horas_max * 3600:
             motivo = "tope_horas"
