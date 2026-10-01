@@ -1361,14 +1361,16 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
         for (let i = 0; i < N; i++) {
           const t0 = i / N, t1 = (i + 1) / N, ya = y0 + (y1 - y0) * t0, yb = y0 + (y1 - y0) * t1, ha = arch(t0), hb = arch(t1);
           const A = up(P(bx - hw, ya), ha), B = up(P(bx + hw, ya), ha), C = up(P(bx + hw, yb), hb), D = up(P(bx - hw, yb), hb);
-          poly(g, R.wood[0], [up(D, 5), up(C, 5), C, D]); poly(g, i % 2 ? R.wood[3] : R.wood[4], [A, B, C, D]);
+          poly(g, R.wood[0], [up(D, 5), up(C, 5), C, D]); poly(g, isW() ? (i % 2 ? '#dfe8f5' : '#f3f7fd') : (i % 2 ? R.wood[3] : R.wood[4]), [A, B, C, D]);
           isoLine(g, R.wood[2], D, C);
         }
         // barandilla lejana (la cercana va en otro objeto) y cuerpo bajo el tablero
-        for (let i = 0; i <= N; i++) { const t = i / N, ya = y0 + (y1 - y0) * t, p = up(P(bx - hw, ya), arch(t)); if (i > 0) { const q = up(P(bx - hw, y0 + (y1 - y0) * (i - 1) / N), arch((i - 1) / N)); line(g, R.red[2], q[0], q[1] - 9, p[0], p[1] - 9, Math.max(1, S - 1)); line(g, R.red[3], q[0], q[1] - 10, p[0], p[1] - 10, Math.max(1, S - 1)); } if (i % 2 === 0) { rect(g, R.red[1], p[0], p[1] - 10, 2, 10); } }
+        for (let i = 0; i <= N; i++) { const t = i / N, ya = y0 + (y1 - y0) * t, p = up(P(bx - hw, ya), arch(t)); if (i > 0) { const q = up(P(bx - hw, y0 + (y1 - y0) * (i - 1) / N), arch((i - 1) / N)); line(g, R.red[2], q[0], q[1] - 9, p[0], p[1] - 9, Math.max(1, S - 1)); line(g, R.red[3], q[0], q[1] - 10, p[0], p[1] - 10, Math.max(1, S - 1)); } if (i % 2 === 0) { rect(g, R.red[1], p[0], p[1] - 10, 2, 10); if (isW()) rect(g, '#f3f7fd', p[0], p[1] - 11, 2, 2); } }
+        if (isW()) for (let i = 0; i < N; i++) { const t = (i + .5) / N, p = up(P(bx - hw, y0 + (y1 - y0) * t), arch(t)); rect(g, '#eef3fb', p[0] - 1, p[1] - 11, 3, 2); }
       });
       addStatic(bx + hw + y1 + .3, [P(bx - hw, y1)[0] - 10, P(bx - hw, y0)[1] - Hb - 28, P(bx + hw, y0)[0] + 10, P(bx + hw, y1)[1] + 12], g => {
-        for (let i = 0; i <= N; i++) { const t = i / N, ya = y0 + (y1 - y0) * t, p = up(P(bx + hw, ya), arch(t)); if (i > 0) { const q = up(P(bx + hw, y0 + (y1 - y0) * (i - 1) / N), arch((i - 1) / N)); line(g, R.red[2], q[0], q[1] - 9, p[0], p[1] - 9, Math.max(1, S - 1)); line(g, R.red[3], q[0], q[1] - 10, p[0], p[1] - 10, Math.max(1, S - 1)); } if (i % 2 === 0) { rect(g, R.red[1], p[0] - 1, p[1] - 10, 2, 10); rect(g, R.gold[2], p[0] - 1, p[1] - 12, 3, 2); } }
+        for (let i = 0; i <= N; i++) { const t = i / N, ya = y0 + (y1 - y0) * t, p = up(P(bx + hw, ya), arch(t)); if (i > 0) { const q = up(P(bx + hw, y0 + (y1 - y0) * (i - 1) / N), arch((i - 1) / N)); line(g, R.red[2], q[0], q[1] - 9, p[0], p[1] - 9, Math.max(1, S - 1)); line(g, R.red[3], q[0], q[1] - 10, p[0], p[1] - 10, Math.max(1, S - 1)); } if (i % 2 === 0) { rect(g, R.red[1], p[0] - 1, p[1] - 10, 2, 10); rect(g, isW() ? '#f3f7fd' : R.gold[2], p[0] - 1, p[1] - 12, 3, 2); } }
+        if (isW()) for (let i = 0; i < N; i++) { const t = (i + .5) / N, p = up(P(bx + hw, y0 + (y1 - y0) * t), arch(t)); rect(g, '#eef3fb', p[0] - 1, p[1] - 11, 3, 2); }
       });
     }
     {
