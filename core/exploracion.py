@@ -476,9 +476,10 @@ def _dosier(ctx: Contexto, res: dict, r: dict, cand: dict) -> None:
 # ── la tanda ────────────────────────────────────────────────────────────────
 
 def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, parar=None,
-                   sello_integro=None) -> dict:
+                   sello_integro=None, al_terminar_ciclo=None) -> dict:
     """Una orden acotada: hasta `ciclos` ciclos con frenos. Devuelve el resumen (tambien guardado y
-    sellado). `parar()` -> True si hay PARAR TODO; `sello_integro()` -> False si la cadena esta rota."""
+    sellado). `parar()` -> True si hay PARAR TODO; `sello_integro()` -> False si la cadena esta rota;
+    `al_terminar_ciclo(resultado)` solo informa del progreso (no decide nada)."""
     tanda_id = "t" + uuid.uuid4().hex[:10]          # empieza por letra: jamas parece un telefono (R-07)
     t0 = ctx.ahora()
     est = _estado(ctx)
@@ -496,6 +497,11 @@ def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, pa
             break
         res = ejecutar_ciclo(ctx, ciclo_n=n0 + i, tanda_id=tanda_id)
         hechos.append(res)
+        if al_terminar_ciclo is not None:
+            try:
+                al_terminar_ciclo(res)                      # solo informa (p. ej. imprime progreso); no decide
+            except Exception:                               # noqa: BLE001
+                pass
         if res["parar_por"]:
             motivo, error = res["parar_por"], res.get("error_fatal", "")
             break
@@ -525,6 +531,44 @@ def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, pa
 
 def _celda(v, maximo: int = 200) -> str:
     return re.sub(r"\s+", " ", str(v if v is not None else "")).replace("|", "/").strip()[:maximo]
+
+
+def ficha_markdown(x: dict) -> list[str]:
+    """Lineas de markdown de UNA apuesta (borrador + dosier si lo tiene). Sin ranking ni puntuacion."""
+    b, c, d = x["borrador"], x["coordenadas"], x.get("dosier")
+    L = [f"### {_celda(b['titulo'], 150)}", f"- id: `{x['id']}` · estado: **{x['estado']}**",
+         f"- {_celda(c['modelo_ingreso'])} · {_celda(c['cliente'])} · {_celda(c['canal'])} · {_celda(c['mercado'])} · sector: {_celda(c['sector'])}",
+         f"- Problema: {_celda(b['problema'], 400)}", f"- Publico: {_celda(b['publico'], 300)}"]
+    if d:
+        ev = d["evidencia"]
+        cuenta = {e: sum(1 for i in ev if i["etiqueta"] == e) for e in A.ETIQUETAS}
+        L += [f"- Coste de probarlo: {d['coste']['importe_eur']} € ({_celda(d['coste']['concepto'])}) · alternativa gratuita: {_celda(d['coste']['alternativa_gratuita'], 300)}",
+              f"- Senal: {_celda(d['senal']['que_se_mide'])} {d['senal']['comparador']} {d['senal']['umbral']} en {d['senal']['plazo_dias']} dias · dato de: {_celda(d['senal']['fuente_dato'])}",
+              f"- Tiempo hasta la senal: {_celda(c['tiempo_senal'])} · coste inicial: {_celda(c['coste_inicial'])} €",
+              f"- Evidencia: VERIFICADA {cuenta['VERIFICADA']} · RECORDADA {cuenta['RECORDADA']} · SUPUESTO {cuenta['SUPUESTO']}"]
+        for i in ev:
+            if i["etiqueta"] == "VERIFICADA":
+                L.append(f"  - ✔ {_celda(i['afirmacion'], 250)} — fuente: {_celda(i['fuente']['url'], 300)} ({i['fuente']['fecha']})")
+            elif i.get("nota"):
+                L.append(f"  - ⚠ {_celda(i['afirmacion'], 250)} ({_celda(i['nota'])})")
+        L += [f"- Senal de personas reales: {_celda(d['senal_real']['que_personas'])} — {_celda(d['senal_real']['como_se_obtiene'], 300)}",
+              f"- **Primer paso gratuito (lo haces tu):** {_celda(d['primer_paso_gratuito'], 300)}",
+              f"- Necesita de ti: {_celda('; '.join(d['necesita_del_operador']), 300)}",
+              f"- Capacidades que faltan: {_celda('; '.join(d['capacidades']['faltan']) or 'ninguna', 200)}",
+              f"- Riesgo legal: {d['riesgo_legal']['nivel']} — {_celda(d['riesgo_legal']['por_que'], 200)}"]
+    else:
+        L.append("- (sin dosier completo: el modelo no consiguio uno valido)")
+    if x.get("criterio"):
+        c2 = x["criterio"]
+        L.append(f"- Prueba (ronda {x['ronda']}): {_celda(c2['senal'])} {c2['comparador']} {c2['umbral']} antes del {c2['fecha_limite']} (coste maximo {c2['coste_max_eur']} €)")
+    if x.get("medicion"):
+        m = x["medicion"]
+        L.append(f"- Medicion: {m['valor']} ({_celda(m['referencia'])}) · la regla propone **{x['propuesta_regla']['decision']}** (decides tu)")
+    if x.get("aprendizaje"):
+        a2 = x["aprendizaje"]
+        L.append(f"- Aprendizaje: esperaba «{_celda(a2['esperaba'], 200)}»; paso «{_celda(a2['paso'], 200)}»; haria distinto «{_celda(a2['haria_distinto'], 200)}»")
+    L.append("")
+    return L
 
 
 def generar_informe(ctx: Contexto, tanda: dict) -> str:
@@ -560,30 +604,7 @@ def generar_informe(ctx: Contexto, tanda: dict) -> str:
         L.append(f"- **{eje}**: " + (", ".join(f"{k} ×{v}" for k, v in sorted(cuenta.items())) or "—"))
     L += ["", "## Dosieres", ""]
     for x in mias:
-        b, c, d = x["borrador"], x["coordenadas"], x.get("dosier")
-        L += [f"### {_celda(b['titulo'], 150)}", f"- id: `{x['id']}` · estado: **{x['estado']}**",
-              f"- {_celda(c['modelo_ingreso'])} · {_celda(c['cliente'])} · {_celda(c['canal'])} · {_celda(c['mercado'])} · sector: {_celda(c['sector'])}",
-              f"- Problema: {_celda(b['problema'], 400)}", f"- Publico: {_celda(b['publico'], 300)}"]
-        if d:
-            ev = d["evidencia"]
-            cuenta = {e: sum(1 for i in ev if i["etiqueta"] == e) for e in A.ETIQUETAS}
-            L += [f"- Coste de probarlo: {d['coste']['importe_eur']} € ({_celda(d['coste']['concepto'])}) · alternativa gratuita: {_celda(d['coste']['alternativa_gratuita'], 300)}",
-                  f"- Senal: {_celda(d['senal']['que_se_mide'])} {d['senal']['comparador']} {d['senal']['umbral']} en {d['senal']['plazo_dias']} dias · dato de: {_celda(d['senal']['fuente_dato'])}",
-                  f"- Tiempo hasta la senal: {_celda(c['tiempo_senal'])} · coste inicial: {_celda(c['coste_inicial'])} €",
-                  f"- Evidencia: VERIFICADA {cuenta['VERIFICADA']} · RECORDADA {cuenta['RECORDADA']} · SUPUESTO {cuenta['SUPUESTO']}"]
-            for i in ev:
-                if i["etiqueta"] == "VERIFICADA":
-                    L.append(f"  - ✔ {_celda(i['afirmacion'], 250)} — fuente: {_celda(i['fuente']['url'], 300)} ({i['fuente']['fecha']})")
-                elif i.get("nota"):
-                    L.append(f"  - ⚠ {_celda(i['afirmacion'], 250)} ({_celda(i['nota'])})")
-            L += [f"- Senal de personas reales: {_celda(d['senal_real']['que_personas'])} — {_celda(d['senal_real']['como_se_obtiene'], 300)}",
-                  f"- **Primer paso gratuito (lo haces tu):** {_celda(d['primer_paso_gratuito'], 300)}",
-                  f"- Necesita de ti: {_celda('; '.join(d['necesita_del_operador']), 300)}",
-                  f"- Capacidades que faltan: {_celda('; '.join(d['capacidades']['faltan']) or 'ninguna', 200)}",
-                  f"- Riesgo legal: {d['riesgo_legal']['nivel']} — {_celda(d['riesgo_legal']['por_que'], 200)}"]
-        else:
-            L.append("- (sin dosier completo: el modelo no consiguio uno valido)")
-        L.append("")
+        L += ficha_markdown(x)
     sin = [b for c in tanda["ciclos"] for b in c["borradores_sin_dosier"]]
     if sin:
         L += ["## Borradores sin dosier", ""] + [f"- `{b['id']}` {_celda(b['titulo'], 120)}: {_celda('; '.join(b['errores']), 250)}" for b in sin] + [""]
