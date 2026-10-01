@@ -230,3 +230,101 @@ def test_inteligencia_en_cero_no_puede_proponer_buscar_nichos(mundo, monkeypatch
     ses = _sesion(c, "inteligencia")
     _decir(c, ses, "busca nichos")
     assert not [m for m in _hilo(c, ses)["mensajes"] if m["ap_id"]]
+
+
+# ── el boton del Mundo: POST /cmd/apuestas/buscar + estado en GET /api/apuestas ─
+
+def _buscar(c, **kw):
+    return c.post("/cmd/apuestas/buscar", json={"empresa": EMP, "quien": "operador", **kw})
+
+
+def test_boton_buscar_lanza_en_segundo_plano_y_la_lectura_muestra_el_resultado(mundo):
+    k, b, app, c, tmp = mundo
+    app.state.fabrica_exploracion = _fabrica_falsa(tmp)
+    r = _buscar(c, ciclos=1)
+    assert r.status_code == 200 and r.json()["lanzada"] is True
+    assert F.esperar(EMP, 20)
+    j = c.get(f"/api/apuestas/{EMP}").json()
+    assert j["conteo"]["DOSIER"] == 5 and j["en_curso"] is None
+    assert j["ultima"]["dosieres"] == 5 and j["ultima"]["motivo"] and Path(j["ultima"]["informe"]).exists()
+
+
+def test_boton_buscar_sin_token_explica_que_hacer_y_no_lanza_nada(mundo):
+    k, b, app, c, tmp = mundo                                  # sin fabrica inyectada: la real, sin token
+    r = _buscar(c, ciclos=1)
+    assert r.status_code == 409 and r.json()["lanzada"] is False and "external_api_admin enable" in r.json()["mensaje"]
+    assert A.Apuestas(k, EMP).listar() == [] and c.get(f"/api/apuestas/{EMP}").json()["en_curso"] is None
+
+
+def test_boton_buscar_rechaza_una_segunda_tanda_a_la_vez(mundo):
+    k, b, app, c, tmp = mundo
+    suelta, dentro = threading.Event(), threading.Event()
+    class Lento:
+        nombre = "lento"
+        base = modelo_de_ciclos()
+
+        def preguntar(self, *a, **kw):
+            dentro.set()
+            assert suelta.wait(20)
+            return self.base.preguntar(*a, **kw)
+    app.state.fabrica_exploracion = _fabrica_falsa(tmp, modelo=Lento())
+    assert _buscar(c, ciclos=1).json()["lanzada"] is True
+    assert dentro.wait(20)
+    assert c.get(f"/api/apuestas/{EMP}").json()["en_curso"] is not None
+    r = _buscar(c, ciclos=1)
+    assert r.status_code == 409 and "en marcha" in r.json()["mensaje"]
+    suelta.set()
+    assert F.esperar(EMP, 20)
+
+
+@pytest.mark.parametrize("ciclos", [0, -1, 99, "3", 2.5, True, [1]])
+def test_boton_buscar_valida_los_ciclos(mundo, ciclos):
+    k, b, app, c, tmp = mundo
+    app.state.fabrica_exploracion = _fabrica_falsa(tmp)
+    r = _buscar(c, ciclos=ciclos)
+    assert r.status_code == 409 and r.json()["lanzada"] is False and "ciclos" in r.json()["mensaje"]
+    assert A.Apuestas(k, EMP).listar() == []
+
+
+def test_boton_buscar_con_parar_todo_activo_no_lanza(mundo):
+    k, b, app, c, tmp = mundo
+    app.state.fabrica_exploracion = _fabrica_falsa(tmp)
+    app.state.panico.activar(por="operador", motivo="prueba")
+    r = _buscar(c, ciclos=1)
+    assert r.status_code == 409 and "PARADO" in r.json()["mensaje"] and A.Apuestas(k, EMP).listar() == []
+
+
+def test_boton_buscar_con_inteligencia_en_cero_lo_dice(mundo):
+    from core.autonomia import AutonomiaCubos
+    k, b, app, c, tmp = mundo
+    fab = _fabrica_falsa(tmp)
+    app.state.fabrica_exploracion = lambda e, kk, bb: {**fab(e, kk, bb), "nivel_autonomia": lambda: "CERO"}
+    r = _buscar(c, ciclos=1)
+    assert r.status_code == 409 and "CERO" in r.json()["mensaje"] and A.Apuestas(k, EMP).listar() == []
+
+
+def test_boton_buscar_exige_clave_si_hay_token(tmp_path, monkeypatch):
+    monkeypatch.setenv("KAIZEN_DB_PATH", str(tmp_path / "kaizen.db"))
+    k = InMemoryKnowledge()
+    app = crear_app(k, token="clave-x", mecha_s=0)
+    c = TestClient(app, raise_server_exceptions=False)
+    r = c.post("/cmd/apuestas/buscar", json={"empresa": EMP, "quien": "operador", "ciclos": 1})
+    assert r.status_code in (401, 403)
+
+
+def test_parar_todo_pulsado_durante_la_tanda_la_detiene_antes_de_la_siguiente_pregunta(mundo):
+    k, b, app, c, tmp = mundo
+    llamadas = []
+
+    class Modelo:
+        nombre = "m"
+        base = modelo_de_ciclos()
+
+        def preguntar(self, *a, **kw):
+            llamadas.append(1)
+            app.state.panico.activar(por="operador", motivo="prueba")    # el operador pulsa PARAR TODO en plena tanda
+            return self.base.preguntar(*a, **kw)
+    app.state.fabrica_exploracion = _fabrica_falsa(tmp, modelo=Modelo())
+    assert _buscar(c, ciclos=3).json()["lanzada"] is True
+    assert F.esperar(EMP, 20)
+    assert len(llamadas) == 1 and "parar" in c.get(f"/api/apuestas/{EMP}").json()["ultima"]["motivo"].lower()

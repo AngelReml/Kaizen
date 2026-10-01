@@ -26,6 +26,8 @@ from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
 
 import claude_client
 from core import apuestas as AP
+from core import exploracion_fondo as EXF
+from core import exploracion_modelos as EXM
 from core import autonomia as AUT
 from core import tenants as T
 from core.aprobaciones import ColaSustrato, TransicionAprobacionInvalida
@@ -93,6 +95,7 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
     # R-07: ledger persistente unico; sin rutas (tests) queda inerte y todo sigue igual.
     st.ledger = LedgerCoste(ruta_ledger, legacy_json=ruta_legacy_coste)
     st.mechas = N.Mechas(mecha_s if mecha_s is not None else N.MECHA_SEGUNDOS)
+    st.fabrica_exploracion = None   # pruebas: inyecta modelo/busqueda simulados
     st.vigilancia = {}          # freno por empresa de core.autonomia.vigilar (G1)
     st.ruta_registro = ruta_registro
     st.tema = N.TEMA_DEFECTO
@@ -722,7 +725,42 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
             raise HTTPException(404, "empresa desconocida")
         ap = AP.Apuestas(st.k, empresa)
         return {"empresa": empresa, "conteo": ap.conteo_por_estado(), "pide_medicion": ap.pide_medicion(),
-                "apuestas": ap.listar()}
+                "apuestas": ap.listar(), **EXF.estado(st.k, empresa)}
+
+    def _fabrica_exploracion(empresa, k, bitacora):
+        """Dependencias reales (o las inyectadas en pruebas) + el PARAR TODO de ESTE panel + nivel de Inteligencia."""
+        deps = dict((st.fabrica_exploracion or EXF.fabrica_real)(empresa, k, bitacora))
+        previo = deps.get("parar")
+        deps["parar"] = lambda: bool(st.panico.activo) or bool(previo and previo())
+        nivel = deps.get("nivel_autonomia")
+        if nivel and nivel() == "CERO":
+            raise AP.ApuestaInvalida("Inteligencia esta en nivel CERO (solo lee): no puede buscar nichos. "
+                                     "Subele el nivel a BAJA desde Ajustes si quieres que busque.")
+        return deps
+
+    @app.post("/cmd/apuestas/buscar")
+    async def cmd_buscar_nichos(request: Request):
+        """El clic del operador en «Buscar nichos». Lanza una tanda ACOTADA en segundo plano y vuelve enseguida.
+        Los fallos esperables (falta el token, ya hay una en marcha, PARAR TODO) se explican, no se esconden."""
+        auth(request)
+        d = await request.json()
+        if not isinstance(d, dict):
+            raise ValueError("cuerpo invalido: se esperaba un objeto JSON")
+        identidad(d, request)
+        empresa = d.get("empresa")
+        if not isinstance(empresa, str) or empresa not in _empresas(st.k):
+            raise ValueError("empresa desconocida")
+        ciclos = 3 if d.get("ciclos") is None else d["ciclos"]
+        if st.panico.activo:
+            return JSONResponse({"lanzada": False, "mensaje": "TODO PARADO esta activo: reanuda antes de buscar."},
+                                status_code=409)
+        try:
+            await asyncio.to_thread(EXF.lanzar, st.k, empresa, bit(empresa), ciclos=ciclos,
+                                    fabrica=_fabrica_exploracion)
+        except (AP.ApuestaInvalida, EXF.YaEnMarcha, EXM.ErrorModelo) as e:
+            return JSONResponse({"lanzada": False, "mensaje": str(e)}, status_code=409)
+        return {"lanzada": True, "ciclos": ciclos,
+                "mensaje": f"Buscando nichos ({ciclos} vueltas). Los iras viendo aparecer en la pestana Nichos."}
 
     ACCIONES_APUESTA = ("elegir", "iniciar_prueba", "registrar_medicion", "cerrar", "descartar")
 
