@@ -25,6 +25,10 @@ from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                RedirectResponse, StreamingResponse)
 
 import claude_client
+from core import apuestas as AP
+from core import exploracion_fondo as EXF
+from core import exploracion_modelos as EXM
+from core import autonomia as AUT
 from core import tenants as T
 from core.aprobaciones import ColaSustrato, TransicionAprobacionInvalida
 from core.ledger import LedgerCoste
@@ -32,6 +36,7 @@ from core.panico import Panico, PanicoActivo, PalancaCerrada
 from core.rue import Bitacora, Sobre
 from core.techos import LibroCoste, TechoAlcanzado
 from panel_mando import nucleo as N
+from sustrato.consola import log
 
 RAIZ = Path(__file__).resolve().parent.parent
 CSS = (Path(__file__).parent / "assets" / "panel.css")
@@ -90,6 +95,8 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
     # R-07: ledger persistente unico; sin rutas (tests) queda inerte y todo sigue igual.
     st.ledger = LedgerCoste(ruta_ledger, legacy_json=ruta_legacy_coste)
     st.mechas = N.Mechas(mecha_s if mecha_s is not None else N.MECHA_SEGUNDOS)
+    st.fabrica_exploracion = None   # pruebas: inyecta modelo/busqueda simulados
+    st.vigilancia = {}          # freno por empresa de core.autonomia.vigilar (G1)
     st.ruta_registro = ruta_registro
     st.tema = N.TEMA_DEFECTO
     # R-01: sesiones de navegador (cookie kz_sesion). sid -> epoch de caducidad.
@@ -288,6 +295,16 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         for e in _empresas(st.k):
             for c in cola(e).barrer_caducadas():
                 hechas.append({"aprobacion": c["id"], "caducada": c["estado"]})
+        # G1 (docs/AUTONOMIA_v0.md): endurecer el nivel de un cubo ante incidentes. NO se anade a
+        # `hechas` (es la respuesta de /cmd/*): el registro es el evento sellado en la bitacora.
+        for e in _empresas(st.k):
+            try:
+                AUT.vigilar(st.k, e, cola=cola(e), bitacora=bit(e), ultima=st.vigilancia,
+                            defectos=lambda: {c: m.get("nivel_autonomia_defecto", "CERO")
+                                              for c, m in CLM._manifiestos().items()})
+            except Exception as exc:                      # noqa: BLE001 — no debe romper el pulso
+                log("WARN", "autonomia", "vigilancia fallida", empresa=e,
+                    error=type(exc).__name__)
         return hechas
 
     # ── manejador escudo (§6) ──
@@ -439,7 +456,10 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         # una herramienta real (Fase 4) puede tardar; sin esto, el panel
         # entero se congela para todo el mundo mientras dura la aprobacion.
         n2 = await asyncio.to_thread(cola(d["empresa"]).ejecutar, d["id"], ejecutor)
-        return {"estado": n2["estado"], "quemadas": quemadas}
+        resp = {"estado": n2["estado"], "quemadas": quemadas}
+        if n2["estado"] == "ANULADA" and n2.get("motivo"):      # el SI no pudo cumplirse: se te dice por que y que hacer
+            resp["mensaje"] = f"No se pudo hacer: {n2['motivo']}"
+        return resp
 
     @app.post("/cmd/deshacer")
     async def cmd_deshacer(request: Request):
@@ -503,9 +523,8 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
                 "mensaje": f"ATENCION: el sello se rompe en el paso {int(v['punto_ruptura'])}. Nada anterior ha cambiado; investiga ese punto.",
                 "detalle_tecnico": v}
 
-    @app.get("/api/dinero/{empresa}")
-    def api_dinero(empresa: str, request: Request):
-        auth(request)
+    def dinero_de(empresa: str) -> dict:
+        """Una sola logica para /api/dinero y /api/mundo/estado (cero copias)."""
         lb = libro()
         gasto = lb.gasto_dia(empresa)
         try:
@@ -519,6 +538,11 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         return {"frase": frase,
                 "gasto_eur": gasto, "tope_eur": tope, "sin_atribuir_eur": sa,
                 "modo_ahorro": bool(tope and gasto >= tope)}
+
+    @app.get("/api/dinero/{empresa}")
+    def api_dinero(empresa: str, request: Request):
+        auth(request)
+        return dinero_de(empresa)
 
     @app.get("/api/dinero/{empresa}/export.csv")
     def api_dinero_csv(empresa: str, request: Request, mes: str = ""):
@@ -673,6 +697,96 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         return {"empresa": d["empresa"], "tope_eur": nuevo,
                 "volver_recomendado": 5.0}
 
+    @app.post("/cmd/ajustes/autonomia")
+    async def cmd_autonomia(request: Request):
+        """Fija el nivel de autonomia de un cubo. SOLO el operador (G1, docs/AUTONOMIA_v0.md):
+        subir exige motivo; ALTA esta bloqueada esta temporada; todo cambio se sella. Devuelve la
+        ficha de rendimiento del cubo para decidir con datos delante."""
+        auth(request)
+        d = await request.json()
+        quien = identidad(d, request)
+        empresa, cubo, nivel = d.get("empresa", ""), d.get("cubo", ""), d.get("nivel", "")
+        motivo = (d.get("motivo") or "").strip()
+        if empresa not in _empresas(st.k):
+            raise ValueError("empresa desconocida")
+        manifiestos = CLM._manifiestos()
+        if cubo not in manifiestos:
+            raise ValueError("cubo desconocido")
+        defecto = manifiestos[cubo].get("nivel_autonomia_defecto", "CERO")
+        aut = AUT.AutonomiaCubos(st.k, empresa, bitacora=bit(empresa))
+        resultado = aut.fijar(cubo, defecto, nivel, por=quien, motivo=motivo)
+        return {"resultado": resultado, "ficha": st.ficha_cubo(empresa, cubo)}
+
+    # ═══ Apuestas (docs/APUESTAS_Y_DOSIER_v0.md): leer y decidir. Decide SIEMPRE el operador. ═══
+    @app.get("/api/apuestas/{empresa}")
+    def api_apuestas(empresa: str, request: Request):
+        auth(request)
+        if empresa not in _empresas(st.k):
+            raise HTTPException(404, "empresa desconocida")
+        ap = AP.Apuestas(st.k, empresa)
+        return {"empresa": empresa, "conteo": ap.conteo_por_estado(), "pide_medicion": ap.pide_medicion(),
+                "apuestas": ap.listar(), **EXF.estado(st.k, empresa)}
+
+    def _fabrica_exploracion(empresa, k, bitacora):
+        """Dependencias reales (o las inyectadas en pruebas) + el PARAR TODO de ESTE panel + nivel de Inteligencia."""
+        deps = dict((st.fabrica_exploracion or EXF.fabrica_real)(empresa, k, bitacora))
+        previo = deps.get("parar")
+        deps["parar"] = lambda: bool(st.panico.activo) or bool(previo and previo())
+        return deps
+
+    @app.post("/cmd/apuestas/buscar")
+    async def cmd_buscar_nichos(request: Request):
+        """El clic del operador en «Buscar nichos». Lanza una tanda ACOTADA en segundo plano y vuelve enseguida.
+        Los fallos esperables (falta el token, ya hay una en marcha, PARAR TODO) se explican, no se esconden."""
+        auth(request)
+        d = await request.json()
+        if not isinstance(d, dict):
+            raise ValueError("cuerpo invalido: se esperaba un objeto JSON")
+        identidad(d, request)
+        empresa = d.get("empresa")
+        if not isinstance(empresa, str) or empresa not in _empresas(st.k):
+            raise ValueError("empresa desconocida")
+        ciclos = 3 if d.get("ciclos") is None else d["ciclos"]
+        if st.panico.activo:
+            return JSONResponse({"lanzada": False, "mensaje": "TODO PARADO esta activo: reanuda antes de buscar."},
+                                status_code=409)
+        try:
+            await asyncio.to_thread(EXF.lanzar, st.k, empresa, bit(empresa), ciclos=ciclos,
+                                    fabrica=_fabrica_exploracion)
+        except (AP.ApuestaInvalida, EXF.YaEnMarcha, EXM.ErrorModelo) as e:
+            return JSONResponse({"lanzada": False, "mensaje": str(e)}, status_code=409)
+        return {"lanzada": True, "ciclos": ciclos,
+                "mensaje": f"Buscando nichos ({ciclos} vueltas). Los iras viendo aparecer en la pestana Nichos."}
+
+    ACCIONES_APUESTA = ("elegir", "iniciar_prueba", "registrar_medicion", "cerrar", "descartar")
+
+    @app.post("/cmd/apuestas/transicion")
+    async def cmd_apuesta(request: Request):
+        auth(request)
+        d = await request.json()
+        if not isinstance(d, dict):
+            raise ValueError("cuerpo invalido: se esperaba un objeto JSON")
+        quien = identidad(d, request)
+        empresa, ap_id, accion = d.get("empresa"), d.get("id"), d.get("accion")
+        if not isinstance(empresa, str) or empresa not in _empresas(st.k):
+            raise ValueError("empresa desconocida")
+        if not isinstance(ap_id, str) or not ap_id:
+            raise ValueError("falta el id de la apuesta")
+        if accion not in ACCIONES_APUESTA:
+            raise ValueError(f"accion desconocida: usa una de {list(ACCIONES_APUESTA)}")
+        ap = AP.Apuestas(st.k, empresa, bitacora=bit(empresa))
+        if accion == "elegir":
+            r = ap.elegir(ap_id, por=quien)
+        elif accion == "iniciar_prueba":
+            r = ap.iniciar_prueba(ap_id, por=quien, criterio=d.get("criterio"))
+        elif accion == "registrar_medicion":
+            r = ap.registrar_medicion(ap_id, por=quien, valor=d.get("valor"), referencia=d.get("referencia"))
+        elif accion == "cerrar":
+            r = ap.cerrar(ap_id, d.get("decision"), por=quien, aprendizaje=d.get("aprendizaje"))
+        else:
+            r = ap.descartar(ap_id, por=quien, razon=d.get("razon"), aprendizaje=d.get("aprendizaje"))
+        return {"apuesta": r}
+
     # ═══ P2/P3/P5 · paginas ═══
     def _pagina(titulo: str, cuerpo: str, tema: str) -> str:
         # R-20: `tema` es un query param de usuario; sin whitelist, un valor como
@@ -821,6 +935,11 @@ paridad de tipos de evento cubiertos: <span id="par" data-src="/api/paridad"></s
     CLM.registrar(app, auth=auth, auth_pagina=auth_pagina, identidad=identidad,
                   cola=cola, bit=bit, libro=libro, pagina=_pagina,
                   empresas=lambda: _empresas(st.k))
+    # Mundo (vista isometrica): /mundo + lectura /api/mundo/*; solo proyeccion.
+    from panel_mando import mundo as MND
+    MND.registrar(app, auth=auth, auth_pagina=auth_pagina, cola=cola, bit=bit,
+                  empresas=lambda: _empresas(st.k), empresa_valida=_empresa_valida,
+                  dinero=dinero_de, quemar_vencidas=quemar_vencidas)
     return app
 
 
@@ -839,10 +958,13 @@ def main() -> None:                                # pragma: no cover
     ap = argparse.ArgumentParser(prog="panel_mando")
     ap.add_argument("--abrir", action="store_true",
                     help="abre el navegador ya autenticado (un toque, R8)")
+    ap.add_argument("--pagina", default="/",
+                    help="pagina que abre el navegador (por defecto La Manana; /mundo abre el juego)")
     args = ap.parse_args()
+    pagina = args.pagina if args.pagina.startswith("/") and not args.pagina.startswith("//") else "/"
     token = os.getenv("KAIZEN_TOKEN") or None
-    url = ("http://127.0.0.1:8600/" if not token
-           else f"http://127.0.0.1:8600/login?token={token}")
+    url = (f"http://127.0.0.1:8600{pagina}" if not token
+           else f"http://127.0.0.1:8600/login?token={token}&ir={pagina}")
 
     # Mismo patron que panel_mando/colmena.py::main(): sin este chequeo, un
     # doble clic en CENTRO DE MANDO.cmd cuando el panel ya corria intentaba

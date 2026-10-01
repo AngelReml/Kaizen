@@ -19,6 +19,7 @@ import copy
 import json
 import os
 import threading
+from contextlib import contextmanager
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -147,7 +148,8 @@ class JsonKnowledge(KnowledgeStore):
         # ENTRE PROCESOS (`core.bloqueo.bloqueo_exclusivo`) se toma dentro de este,
         # en cada operación — un `threading.Lock` no sirve cuando el CLI y el panel
         # son procesos distintos escribiendo el mismo fichero (auditoría 2026-08-02).
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._depth = 0
         self._mtime: float | None = None
         if self.path.exists():
             try:
@@ -158,6 +160,30 @@ class JsonKnowledge(KnowledgeStore):
                 raise RuntimeError(f"Knowledge corrupto en {self.path}: {e}") from e
         else:
             self._data = {}
+
+    @contextmanager
+    def _exclusivo(self):
+        """Candado de hilo + candado entre procesos, RE-ENTRANTE: dentro de una `transaccion()` las operaciones
+        sueltas no vuelven a tomar el candado del fichero (hacerlo bloquearia al propio proceso)."""
+        with self._lock:
+            if self._depth:
+                self._depth += 1
+                try:
+                    yield
+                finally:
+                    self._depth -= 1
+            else:
+                with bloqueo_exclusivo(self.path):
+                    self._depth = 1
+                    try:
+                        yield
+                    finally:
+                        self._depth = 0
+
+    def transaccion(self):
+        """Mantiene el almacen bloqueado (entre hilos Y procesos) durante varias operaciones: el ciclo
+        «leer el ultimo hash y escribir el siguiente» de la bitacora tiene que ser una sola pieza."""
+        return self._exclusivo()
 
     def _recargar_si_cambio_locked(self) -> None:
         """Recarga `self._data` desde disco si otro proceso escribió desde la última
@@ -177,19 +203,19 @@ class JsonKnowledge(KnowledgeStore):
             raise RuntimeError(f"Knowledge corrupto en {self.path}: {e}") from e
 
     def add(self, company: str, tipo: str, key: str, data: dict) -> None:
-        with self._lock, bloqueo_exclusivo(self.path):
+        with self._exclusivo():
             self._recargar_si_cambio_locked()
             self._data.setdefault(company, {}).setdefault(tipo, {})[key] = data
             self._flush_locked()
 
     def get(self, company: str, tipo: str, key: str) -> dict | None:
-        with self._lock, bloqueo_exclusivo(self.path):
+        with self._exclusivo():
             self._recargar_si_cambio_locked()
             valor = self._data.get(company, {}).get(tipo, {}).get(key)
             return copy.deepcopy(valor)
 
     def all(self, company: str, tipo: str | None = None) -> dict:
-        with self._lock, bloqueo_exclusivo(self.path):
+        with self._exclusivo():
             self._recargar_si_cambio_locked()
             comp = self._data.get(company, {})
             if tipo is None:
@@ -197,13 +223,13 @@ class JsonKnowledge(KnowledgeStore):
             return copy.deepcopy(dict(comp.get(tipo, {})))
 
     def companies(self) -> list[str]:
-        with self._lock, bloqueo_exclusivo(self.path):
+        with self._exclusivo():
             self._recargar_si_cambio_locked()
             return sorted(self._data)
 
     def delete(self, company: str, tipo: str, key: str) -> bool:
         """Útil para limpieza puntual (p. ej. retirar de la cola de aprobación)."""
-        with self._lock, bloqueo_exclusivo(self.path):
+        with self._exclusivo():
             self._recargar_si_cambio_locked()
             if key in self._data.get(company, {}).get(tipo, {}):
                 del self._data[company][tipo][key]

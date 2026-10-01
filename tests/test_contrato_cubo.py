@@ -56,6 +56,16 @@ def test_manifest_invalido_rechazado(tmp_path):
     validar_manifest(Path(__file__).parent.parent / "cubos" / "comercial" / "manifest.json")
 
 
+def test_salud_instalacion_nueva_es_sin_datos_no_averia(tmp_path):
+    """Sin tablas del registro (BD recien creada) el cubo no esta roto: aun no hay datos.
+    Antes salia ERROR «registro inaccesible» y el panel lo pintaba en rojo sin motivo."""
+    conn = sbus.conexion(tmp_path / "nueva.db")
+    cubo = CuboComercial(conn=conn, cliente_id="__test__")          # sin instalar()
+    s = cubo.salud()
+    assert s["estado"] == "SIN DATOS" and "sin inicializar" in s["detalle"]
+    assert s["contadores"] == {"leads": 0, "compromisos_pendientes": 0, "eventos_publicados_24h": 0}
+
+
 def test_salud_formato(tmp_path):
     conn, cubo = _cubo_tmp(tmp_path)
     s = cubo.salud()

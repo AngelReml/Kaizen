@@ -278,3 +278,54 @@ def test_rio_entrega_mensajes_y_meta(entorno, monkeypatch):
     assert r.status_code == 200
     assert "event: meta" in r.text and ": latido" in r.text
     assert "Al dia." in r.text                        # el mensaje viaja por el rio
+
+
+# ── nivel de autonomia efectivo (core/autonomia.py) ─────────────────────────
+
+def _app_con_k():
+    from core.knowledge import InMemoryKnowledge as _K
+    k = _K()
+    return k, crear_app(k, token=None, mecha_s=0)
+
+
+def _tarjetas_del_hilo(c, ses):
+    return [m for m in _hilo(c, ses)["mensajes"] if m["ap_id"]]
+
+
+def test_endurecer_quita_al_director_la_capacidad_de_proponer(entorno, monkeypatch):
+    from core.autonomia import AutonomiaCubos
+    monkeypatch.setattr(colmena, "_llm", _llm_fijo(PROPONE_REV))
+    k, app = _app_con_k()
+    c = TestClient(app)
+    ses = _sesion_de(_agentes(c), "marketing")                    # defecto BAJA
+    _decir(c, ses, "prepara el informe")
+    assert len(_tarjetas_del_hilo(c, ses)) == 1
+    AutonomiaCubos(k, EMPRESA).endurecer("marketing", "BAJA", causa="prueba", incidente="i1")
+    _decir(c, ses, "otra vez")
+    assert len(_tarjetas_del_hilo(c, ses)) == 1                   # no hay tarjeta nueva
+    assert any("autonomia CERO" in m["texto"] for m in _hilo(c, ses)["mensajes"]
+               if m["autor_tipo"] == "sistema")
+    ag = {a["cubo"]: a["autonomia"] for a in _agentes(c)["agentes"]}
+    assert ag["marketing"] == "CERO" and ag["comercial"] == "BAJA"
+
+
+def test_el_operador_sube_a_qa_de_cero_a_baja_y_ya_propone(entorno, monkeypatch):
+    from core.autonomia import AutonomiaCubos
+    monkeypatch.setattr(colmena, "_llm", _llm_fijo(PROPONE_REV))
+    k, app = _app_con_k()
+    c = TestClient(app)
+    ses = _sesion_de(_agentes(c), "qa")
+    _decir(c, ses, "propon algo")
+    assert _tarjetas_del_hilo(c, ses) == []                       # CERO: rechazada
+    AutonomiaCubos(k, EMPRESA).fijar("qa", "CERO", "BAJA", por="angel", motivo="prueba")
+    _decir(c, ses, "propon algo")
+    assert len(_tarjetas_del_hilo(c, ses)) == 1
+
+
+def test_inteligencia_en_baja_propone_tarjetas_j1(entorno, monkeypatch):
+    """J1: Inteligencia ya no esta en CERO, asi que puede proponer (antes se rechazaba)."""
+    monkeypatch.setattr(colmena, "_llm", _llm_fijo(PROPONE_REV))
+    c = TestClient(_app())
+    ses = _sesion_de(_agentes(c), "inteligencia")
+    _decir(c, ses, "prepara el informe")
+    assert len(_tarjetas_del_hilo(c, ses)) == 1

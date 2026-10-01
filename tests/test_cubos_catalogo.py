@@ -46,11 +46,14 @@ def test_arranque_sin_pares_y_salud(nombre, tmp_path):
     cubo.parar()
 
 
-def test_rrhh_declara_su_posposicion(tmp_path):
+def test_rrhh_ya_no_esta_pospuesto(tmp_path):
+    """El operador decidio que RRHH es sustrato (gestion de los agentes propios) y entra en el
+    juego desde el principio: el manifest ya no declara ninguna posposicion."""
     conn = sbus.conexion(tmp_path / "rrhh.db")
     cubo = cubos_base.construir("rrhh", conn=conn)
     cubo.instalar()
-    assert "pospuesto" in cubo.salud()["detalle"]
+    assert "nota_estado" not in cubo.manifest
+    assert "pospuesto" not in cubo.salud()["detalle"]
 
 
 def test_accion_irreversible_de_manifest_exige_alta_y_comite(tmp_path, monkeypatch):
@@ -114,3 +117,13 @@ def test_salud_sin_knowledge_no_cuenta_bitacora_y_no_rompe(tmp_path):
     s = cubo.salud()
     assert s["contadores"]["eventos_bitacora_24h"] == 0
     cubo.parar()
+
+
+def test_autonomia_por_defecto_inteligencia_baja_calidad_y_rrhh_cero():
+    """J1 (docs/AUTONOMIA_v0.md): Inteligencia sube a BAJA para el ciclo 0; Calidad y
+    RRHH siguen en CERO (dudosos cubo/servicio: se deciden mas adelante)."""
+    import json
+    ms = cubos_base.manifiestos_instalados()
+    nivel = {c: json.loads(ms[c].read_text(encoding="utf-8"))["nivel_autonomia_defecto"]
+             for c in ("inteligencia", "qa", "rrhh")}
+    assert nivel == {"inteligencia": "BAJA", "qa": "CERO", "rrhh": "CERO"}

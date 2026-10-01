@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Fase 4 — herramientas REALES del director de RRHH (panel_mando/herramientas/
-rrhh.py). RRHH esta pospuesto (manifest): SOLO LECTURA, ninguna escritura de
+rrhh.py). RRHH es de autonomia CERO (manifest): SOLO LECTURA, ninguna escritura de
 negocio. Cada ToolSpec se prueba construyendo el objeto real (RRHHDepartment)
 e invocando fn/validar de verdad — nada de fakes. R-TENANT: tenant sintetico
 'laboratorio', jamas un tenant real."""
@@ -62,8 +62,8 @@ def test_registro_interno_bien_formado():
         assert callable(spec.fn)
 
 
-def test_todo_es_lectura_rrhh_pospuesto():
-    """RRHH esta pospuesto: solo lectura/consulta, ninguna escritura de negocio,
+def test_todo_es_lectura_rrhh():
+    """RRHH es autonomia CERO: solo lectura/consulta, ninguna escritura de negocio,
     ni siquiera REVERSIBLE."""
     for spec in M.HERRAMIENTAS.values():
         assert spec.clase == "LECTURA"

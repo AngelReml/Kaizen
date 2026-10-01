@@ -51,6 +51,7 @@ from fastapi.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                StreamingResponse)
 
 import claude_client
+from core import autonomia as AUT
 from core.aprobaciones import CLASES_ACCION
 from panel_mando import herramientas as H
 from sustrato import bus
@@ -272,8 +273,13 @@ def _llm(messages: list, *, system: str, model: str, max_tokens: int, empresa: s
 _NIVEL_EXPLICA = {
     "CERO": "solo lees, cuentas y analizas; NO propones tarjetas de accion",
     "BAJA": "puedes escribir borradores internos reversibles y PROPONER tarjetas",
-    "MEDIA": "puedes proponer tarjetas; nada sale sin aprobacion",
-    "ALTA": "puedes proponer tarjetas; nada sale sin aprobacion",
+    # MEDIA y ALTA estan RESERVADOS (docs/AUTONOMIA_v0.md): hoy no anaden ninguna
+    # capacidad en la Colmena. Se dice tal cual para no prometer al agente nada que el
+    # codigo no hace; ALTA ademas esta bloqueado esta temporada (core.aprobaciones).
+    "MEDIA": "nivel reservado: hoy actuas como en BAJA (borradores internos y PROPONER "
+             "tarjetas); nada sale sin aprobacion",
+    "ALTA": "nivel reservado y bloqueado esta temporada: hoy actuas como en BAJA; "
+            "nada sale sin aprobacion",
 }
 
 
@@ -536,7 +542,8 @@ def registrar(app, *, auth, auth_pagina, identidad, cola, bit, libro,
         out = {}
         for x in cola(empresa).listar():
             out[x["id"]] = {"estado": x["estado"], "accion": x["accion"],
-                            "clase": x["clase"], "cubo": x["cubo"]}
+                            "clase": x["clase"], "cubo": x["cubo"],
+                            **({"motivo": str(x["motivo"])[:400]} if x.get("motivo") else {})}
         mechas = {m["aprobacion"]: m["dispara"] for m in st.mechas.encendidas()}
         for ap_id, d in out.items():
             if ap_id in mechas and d["estado"] == "APROBADA":
@@ -588,7 +595,7 @@ def registrar(app, *, auth, auth_pagina, identidad, cola, bit, libro,
         conn = _conn()
         try:
             agente = _agente(conn, empresa, cubo)
-            man = manifests().get(cubo, {})
+            man = AUT.manifest_efectivo(st.k, empresa, cubo, manifests().get(cubo, {}))
             en_sala = ses["tipo"] == "sala"
             salud = _salud_cubo(conn, cubo, empresa=empresa, knowledge=st.k)
             pendientes = len(cola(empresa).listar("PENDIENTE"))
@@ -816,7 +823,7 @@ def registrar(app, *, auth, auth_pagina, identidad, cola, bit, libro,
             agentes = []
             for cubo in CUBOS_ORDEN:
                 a = _agente(conn, empresa, cubo)
-                man = manifests().get(cubo, {})
+                man = AUT.manifest_efectivo(st.k, empresa, cubo, manifests().get(cubo, {}))
                 sid, _ = sesiones[("individual", cubo)]
                 ult = ultimos.get(sid)
                 agentes.append({
