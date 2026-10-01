@@ -161,8 +161,8 @@ def test_los_lentes_rotan_y_un_ciclo_nunca_repite_los_del_anterior():
         if previos is not None:
             assert not set(claves) & set(previos), f"ciclo {n} repite lentes del {n - 1}"
         previos = claves
-    todos = {c for n in range(4) for c, _ in E.lentes_del_ciclo(n)}
-    assert todos == {c for c, _ in E.LENTES}                    # en 4 ciclos se han visto los 10
+    todos = {c for n in range(5) for c, _ in E.lentes_del_ciclo(n)}
+    assert todos == {c for c, _ in E.LENTES}                    # en 5 ciclos se han visto todos
 
 
 # ── un ciclo feliz ──────────────────────────────────────────────────────────

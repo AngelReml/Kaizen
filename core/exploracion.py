@@ -48,6 +48,12 @@ LENTES = (
     ("lo_que_kaizen_sabe", "Vender a otros lo que Kaizen ya sabe hacer: redactar, analizar, ordenar, vigilar plazos."),
     ("quejas_recurrentes", "Quejas recurrentes sobre productos o servicios existentes que nadie resuelve bien."),
     ("errores_caros", "Errores caros y evitables para quien no sabe: listas de comprobacion, auditorias rapidas."),
+    # Lentes de la idea «construye la prueba antes de pedir la venta» (aportada por el operador; NO es ley, es una pista):
+    # buscar donde hay dinero o audiencia + un problema digital VISIBLE + un decisor alcanzable, y donde se pueda preparar
+    # algo ensenable (maqueta, demo, clips de ejemplo) sin contactar a nadie. Preparar no es enviar: lo externo lo hace el operador.
+    ("negocio_con_fuga_digital", "Negocios locales con buena reputacion publica (muchas resenas, ticket alto) y una fuga digital visible: sin reserva online, sin WhatsApp, web que no convierte. Debe poder prepararse una maqueta o demo sin contactar a nadie."),
+    ("contenido_largo_sin_reciclar", "Creadores o empresas con contenido largo valioso (podcasts, webinars, entrevistas) y poca distribucion en formato corto. Debe poder prepararse una muestra de clips o un calendario sin contactar a nadie."),
+    ("proceso_manual_tapable_con_agente", "Negocios con consultas repetitivas, citas o leads sin cualificar que un agente de chat o voz podria atender. Debe poder prepararse una demo a partir de su informacion publica sin contactar a nadie."),
 )
 LENTES_POR_CICLO = 3
 CICLOS_SOLO_EXPLORAR = 3        # los primeros ciclos no explotan (docs §6.6)

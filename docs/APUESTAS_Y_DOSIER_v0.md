@@ -180,3 +180,8 @@ Para dejarlo encendido toda la noche: `python -X utf8 herramientas\apuestas.py t
 - Probado con un servidor simulado (+14 tests). **Con LM Studio real no probado**; la calidad del JSON del dosier depende del modelo cargado (si no sale, se cuenta como rechazo). La busqueda web sigue siendo `ddgs`.
 - Solo cubre la exploracion de nichos. Que los **directores del chat** usen cerebro local es un cambio aparte (usan `claude_client`).
 - Prueba de proxy: no demuestra que la peticion GET de descubrir modelo ignore el proxy del entorno (en loopback el proxy se salta solo).
+
+### Lentes nuevas desde la idea «construye la prueba antes de pedir la venta» (aportada por el operador, 2026-10-01)
+- Añadidas 3 lentes a las 10 existentes (ahora 13; se ven todas en 5 ciclos): negocio local con reputación y fuga digital visible, contenido largo sin reciclar, y proceso manual que un agente puede atender. Cada una exige que se pueda **preparar algo enseñable sin contactar a nadie**.
+- **Lo que NO se adopta tal cual, y por qué:** (1) la fórmula de puntuación con pesos y el ranking: los pesos son arbitrarios y Kaizen decidió no ordenar apuestas para que decida el operador; (2) las cifras de ejemplo (tickets de 800–5.000 €): serían SUPUESTO sin fuente; (3) el outreach en frío, el scraping y los emails: lo externo lo ejecuta el operador (decisión C1) y tiene riesgo legal (RGPD, LSSI); la tanda solo prepara borradores; (4) usarlo como único marco: es un modelo de servicios por encargo que escala con el tiempo del operador y reduciría la diversidad que se buscaba.
+- Sin probar con un modelo real: no sabemos aún si estas lentes producen mejores ideas que las anteriores.
