@@ -117,3 +117,13 @@ def test_salud_sin_knowledge_no_cuenta_bitacora_y_no_rompe(tmp_path):
     s = cubo.salud()
     assert s["contadores"]["eventos_bitacora_24h"] == 0
     cubo.parar()
+
+
+def test_autonomia_por_defecto_inteligencia_baja_calidad_y_rrhh_cero():
+    """J1 (docs/AUTONOMIA_v0.md): Inteligencia sube a BAJA para el ciclo 0; Calidad y
+    RRHH siguen en CERO (dudosos cubo/servicio: se deciden mas adelante)."""
+    import json
+    ms = cubos_base.manifiestos_instalados()
+    nivel = {c: json.loads(ms[c].read_text(encoding="utf-8"))["nivel_autonomia_defecto"]
+             for c in ("inteligencia", "qa", "rrhh")}
+    assert nivel == {"inteligencia": "BAJA", "qa": "CERO", "rrhh": "CERO"}

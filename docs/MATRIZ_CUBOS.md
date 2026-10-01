@@ -1,4 +1,4 @@
-# MATRIZ DE CUBOS — generada 2026-09-30
+# MATRIZ DE CUBOS — generada 2026-10-01
 
 **Tipo:** estado (capa 4, se regenera; no editar a mano) · **Fuente:** `cubos/*/manifest.json`, `departments/catalogo.py`, árbol y tests · **Generador:** `python herramientas/matriz_cubos.py`
 
@@ -12,7 +12,7 @@
 | comercial | Departamento Comercial HORECA | D01 | BAJA | 5 | 0 | contacto_saliente_ia, envio_email_real, compromiso_ante_cliente | construido | 49 | 44 | 10 |
 | customer_success | Postventa: seguimiento de clientes e incidencias | D03 (NO EXISTE) | BAJA | 1 | 1 | — | construido | 4 | 3 | 6 |
 | finanzas | Finanzas: registra y reporta; JAMAS ejecuta pagos (solo humano) | D04 | BAJA | 1 | 1 | — | construido | 6 | 8 | 12 |
-| inteligencia | Inteligencia de mercado: informes; solo lee y publica analisis | D07 | CERO | 1 | 1 | — | construido (`inteligencia_mercado`) | 5 | 3 | 11 |
+| inteligencia | Inteligencia de mercado: informes, señales y alertas; escribe solo registros internos reversibles | D07 | BAJA | 1 | 1 | — | construido (`inteligencia_mercado`) | 5 | 3 | 11 |
 | legal | Legal y Cumplimiento: dictamina riesgos, gestiona el calendario de obligaciones y compila defensa documental; no ejecuta acciones externas | D08 (Cumplimiento, fusionado) | BAJA | 1 | 0 | — | construido | 5 | 2 | 15 |
 | marketing | Marketing: borradores de contenido; publicar de verdad exige gate | D06 | BAJA | 2 | 0 | publicacion_externa_real | construido | 5 | 3 | 9 |
 | ops | Operaciones: tareas y compromisos internos de entrega | D05 | BAJA | 1 | 1 | — | construido (`operaciones`) | 6 | 4 | 10 |

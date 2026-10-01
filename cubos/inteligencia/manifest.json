@@ -1,14 +1,14 @@
 {
   "cubo": "inteligencia",
   "version": "1.0.0",
-  "descripcion": "Inteligencia de mercado: informes; solo lee y publica analisis",
+  "descripcion": "Inteligencia de mercado: informes, señales y alertas; escribe solo registros internos reversibles",
   "produce": [
     "kaizen.inteligencia.informe_publicado.v1"
   ],
   "consume": [
     "kaizen.comercial.lead_actualizado.v1"
   ],
-  "nivel_autonomia_defecto": "CERO",
+  "nivel_autonomia_defecto": "BAJA",
   "acciones_irreversibles": [],
   "requiere": []
 }
