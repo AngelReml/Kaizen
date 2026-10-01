@@ -12,6 +12,7 @@ sustrato/bus.py es decision de v1.1, DR de arquitectura):
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import re
@@ -169,7 +170,10 @@ class Bitacora:
         return self._encadenar(sobre)
 
     def _encadenar(self, sobre: Sobre) -> Sobre:
-        with self._lock:
+        # el hilo (candado de la bitacora) y, si el almacen es un fichero compartido, tambien los OTROS PROCESOS: leer el ultimo
+        # hash y escribir el siguiente es una sola operacion; sin esto dos procesos encadenan sobre el mismo hash y se pierden eventos
+        tx = getattr(self.k, "transaccion", None)
+        with self._lock, (tx() if tx else contextlib.nullcontext()):
             evs = self._eventos_ordenados()
             sobre.hash_prev = evs[-1][1]["hash"] if evs else self._hash_genesis()
             sobre.hash = _sha(sobre.hash_prev + "||" + sobre.cuerpo_canonico())

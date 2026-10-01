@@ -94,3 +94,9 @@ Foto del backend: ~0,2 s con ~1800 eventos y datos masivos; creciendo con los ev
 eventos de forma CONCURRENTE (300 peticiones a la vez) el sello salio roto (el juego lo mostro como «Sello del historial roto» y sellados=0); en serie (hasta 600
 pasos, directorio limpio) el sello se mantiene integro. No se ha determinado si la concurrencia rompe la cadena en el producto o solo en la ruta de pruebas;
 queda como riesgo abierto hasta probar publicadores concurrentes reales contra la bitacora.
+
+Adenda 7c (CERRADO el riesgo de 7b, 2026-10-01): publicadores concurrentes contra la bitacora. Con 8 hilos (uno o varios almacenes) la cadena aguantaba (800/800 integra).
+Con 6 PROCESOS escribiendo el mismo fichero fallaba: 351 de 360 eventos guardados y cadena rota en el paso 1 (`Bitacora._encadenar` leia el ultimo hash y escribia en
+dos operaciones; otro proceso se colaba en medio). Es un fallo real del producto, no de la ruta de pruebas. Corregido con `JsonKnowledge.transaccion()` (re-entrante,
+candado de hilo + de proceso) usada por `_encadenar`; ahora 360/360 integra, con test de regresion. Limites: probado con el almacen JSON y en Linux (el candado
+de proceso en Windows usa msvcrt y no se ha ejercitado aqui); no se ha probado con Neo4j ni con el bus SQLite (ese ya usa BEGIN IMMEDIATE).
