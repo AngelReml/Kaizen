@@ -105,13 +105,18 @@ def _aprendizaje(args, out: Salida) -> dict:
 
 
 def _tanda(args, d: dict, out: Salida) -> int:
+    import math
+    if not (math.isfinite(args.horas) and 0 < args.horas <= 48):
+        raise A.ApuestaInvalida("--horas debe ser un numero entre 0 y 48")
+    if not (1 <= args.ciclos <= 20):
+        raise A.ApuestaInvalida("--ciclos debe estar entre 1 y 20")
     cliente = d.get("cliente") or cliente_desde_entorno(d["empresa"])
     ap = A.Apuestas(d["k"], d["empresa"], bitacora=d["bitacora"])
     ctx = E.Contexto(k=d["k"], empresa=d["empresa"], apuestas=ap, cliente=cliente, buscar=d["buscar"],
                      bitacora=d["bitacora"], reloj=d.get("reloj"))
     out.imprimir(f"Tanda de exploracion en «{d['empresa']}»: hasta {args.ciclos} ciclos, {args.horas} h como maximo. "
                  f"Modelo: {getattr(cliente, 'nombre', '?')}.")
-    out.imprimir("Puedes parar con PARAR TODO en el panel; se comprueba entre ciclos.")
+    out.imprimir("Puedes parar con PARAR TODO en el panel; se comprueba antes de cada pregunta al modelo.")
 
     def progreso(r: dict) -> None:
         out.imprimir(f"  ciclo {r['ciclo']}: {len(r['dosieres'])} dosieres, {len(r['rechazos'])} rechazados "

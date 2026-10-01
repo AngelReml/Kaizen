@@ -355,3 +355,31 @@ def test_retirar_un_modelo_no_desajusta_la_rotacion_de_los_demas():
         assert vistos == ["zai", "groq", "nemotron", "groq", "nemotron", "groq"]
     finally:
         s.cerrar()
+
+
+# ── regresiones de la revision independiente ────────────────────────────────
+
+def test_el_token_no_viaja_por_el_proxy_del_entorno(monkeypatch):
+    """Con HTTP_PROXY definido, httpx por defecto mandaria la peticion (y el Bearer) al proxy. WebLLM es local:
+    el cliente por defecto ignora los proxies del entorno."""
+    s = Servidor()
+    try:
+        for k in ("NO_PROXY", "no_proxy", "ALL_PROXY", "all_proxy"):
+            monkeypatch.delenv(k, raising=False)
+        for k in ("HTTP_PROXY", "http_proxy"):
+            monkeypatch.setenv(k, "http://127.0.0.1:9")                   # proxy muerto
+        c = M.ClienteWebllm(url=s.url, token=TOKEN, pausa=lambda *_: None, reintentos=0)   # SIN http inyectado
+        assert c.preguntar("s", "u") == "ok-texto"
+        assert s.peticiones[0]["auth"] == f"Bearer {TOKEN}"
+    finally:
+        s.cerrar()
+
+
+def test_el_modelo_que_contesto_queda_anotado(srv):
+    c = cliente(srv)
+    assert c.ultimo_modelo is None
+    c.preguntar("s", "u")
+    assert c.ultimo_modelo == "zai"
+    c.preguntar("s", "u", modelo="groq")
+    assert c.ultimo_modelo == "groq"
+    assert M.ClienteClaude("x", chat=lambda *a, **k: "ok").ultimo_modelo is None

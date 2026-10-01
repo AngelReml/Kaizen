@@ -204,3 +204,11 @@ def test_la_tanda_del_lanzador_respeta_el_nivel_de_autonomia(entorno):
     codigo, c = correr(["tanda"], nivel_autonomia=lambda: "CERO")
     assert codigo == 0 and "Terminada: autonomia_insuficiente" in c.texto and "Aviso: Inteligencia esta en nivel CERO" in c.texto
     assert A.Apuestas(k, EMP).listar() == []
+
+
+@pytest.mark.parametrize("flags", [["--horas", "nan"], ["--horas", "0"], ["--horas", "-3"], ["--horas", "1000"],
+                                   ["--horas", "inf"], ["--ciclos", "0"], ["--ciclos", "99"], ["--ciclos", "-1"]])
+def test_la_tanda_del_lanzador_rechaza_parametros_absurdos(entorno, flags):
+    k, b, correr, _ = entorno
+    codigo, c = correr(["tanda"] + flags)
+    assert codigo == 2 and "debe" in c.texto and A.Apuestas(k, EMP).listar() == []

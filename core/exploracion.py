@@ -106,7 +106,7 @@ def extraer_json(texto: str) -> dict | None:
                 if prof == 0:
                     try:
                         v = json.loads(t[ini:i + 1])
-                    except ValueError:
+                    except (ValueError, RecursionError):               # anidado absurdo, numeros imposibles...
                         break
                     return v if isinstance(v, dict) else None
     return None
@@ -119,7 +119,7 @@ def _entero(v):
         return v
     if isinstance(v, float) and v.is_integer():
         return int(v)
-    if isinstance(v, str) and re.fullmatch(r"\s*\d+\s*", v):
+    if isinstance(v, str) and re.fullmatch(r"\s*\d{1,9}\s*", v):       # mas de 9 cifras no es un plazo ni un indice
         return int(v)
     return v
 
@@ -238,7 +238,8 @@ def resumen_memoria(existentes: list[dict], maximo: int) -> str:
     lineas = []
     for x in existentes[-maximo:]:
         b, c = x.get("borrador") or {}, x.get("coordenadas") or {}
-        ap = x.get("aprendizaje") or {}
+        previas = x.get("rondas_previas") or []
+        ap = x.get("aprendizaje") or (previas[-1].get("aprendizaje") if previas else None) or {}
         aprendido = f" | aprendido: {ap.get('paso', '')[:140]}" if ap else ""
         lineas.append(f"- {b.get('titulo', '?')[:100]} | {c.get('modelo_ingreso')}/{c.get('cliente')}/{c.get('canal')}"
                       f" | sector: {c.get('sector', '')[:40]} | {x.get('estado')}{aprendido}")
@@ -279,6 +280,18 @@ def prompt_redactar(*, candidato: dict, fuentes: list[dict], errores: list[str])
 
 # ── el ciclo ────────────────────────────────────────────────────────────────
 
+class _Detener(Exception):
+    """Un freno (PARAR TODO, horas, autonomia) pide parar A MITAD de un ciclo."""
+
+    def __init__(self, razon: str) -> None:
+        super().__init__(razon)
+        self.razon = razon
+
+
+MENSAJE_AUTONOMIA = ("Inteligencia esta en nivel CERO (solo lee): no puede escribir apuestas. "
+                     "Sube su nivel en /cmd/ajustes/autonomia.")
+
+
 @dataclass
 class Contexto:
     k: object
@@ -289,6 +302,7 @@ class Contexto:
     bitacora: object = None
     config: Config = field(default_factory=Config)
     reloj: object = None
+    freno: object = None                # callable() -> razon de parada | None; lo pone la tanda
 
     def ahora(self) -> datetime:
         return (self.reloj or (lambda: datetime.now(timezone.utc)))()
@@ -303,6 +317,16 @@ def _sellar(ctx: Contexto, tipo: str, payload: dict) -> None:
         ctx.bitacora.publicar(Sobre(tenant_id=ctx.empresa, tipo=tipo, payload=payload, origen="inteligencia.exploracion"))
 
 
+def _frenar(ctx: Contexto, res: dict) -> None:
+    """Comprueba los frenos ANTES de cada pregunta al modelo o dosier: un ciclo puede durar horas y no
+    debe seguir escribiendo con PARAR TODO activo, pasado el tope de horas o con la autonomia en CERO."""
+    if ctx.freno is not None:
+        razon = ctx.freno()
+        if razon:
+            res["parar_por"] = razon
+            raise _Detener(razon)
+
+
 def _modelo(ctx: Contexto):
     return getattr(ctx.cliente, "ultimo_modelo", None)
 
@@ -310,6 +334,7 @@ def _modelo(ctx: Contexto):
 def _preguntar(ctx: Contexto, res: dict, sistema: str, usuario: str, max_tokens: int) -> str | None:
     """Pregunta al modelo. Los fallos que obligan a parar (tope, token) se anotan y suben; el resto
     se cuenta y devuelve None para que el ciclo siga con lo que pueda."""
+    _frenar(ctx, res)
     try:
         return ctx.cliente.preguntar(sistema, usuario, max_tokens=max_tokens)
     except (CapAgotado, ApagadaOSinToken) as e:
@@ -364,8 +389,10 @@ def ejecutar_ciclo(ctx: Contexto, *, ciclo_n: int, tanda_id: str = "") -> dict:
            "rebajas_de_evidencia": 0, "errores": [], "parar_por": None}
     try:
         _ciclo(ctx, res, ciclo_n, tanda_id)
-    except (CapAgotado, ApagadaOSinToken):
+    except (CapAgotado, ApagadaOSinToken, _Detener):
         pass                                                       # `parar_por` ya esta anotado
+    except Exception as e:                                         # noqa: BLE001 — un fallo interno no tumba la tanda
+        res["errores"].append(f"interno: {type(e).__name__}")
     res["preguntas_modelo"] = getattr(ctx.cliente, "preguntas", 0) - p0
     res["segundos"] = round((ctx.ahora() - t0).total_seconds(), 1)
     res["rechazados_por_repeticion"] = sum(1 for r in res["rechazos"] if r["categoria"] == "repeticion")
@@ -405,7 +432,10 @@ def _ciclo(ctx: Contexto, res: dict, ciclo_n: int, tanda_id: str) -> None:
             continue
         res["candidatos_propuestos"] += len(crudos[:cfg.n_candidatos * 2])
         for crudo in crudos[:cfg.n_candidatos * 2]:
-            cand, rechazo = _candidato_valido(crudo, existentes, pool, variables)
+            try:
+                cand, rechazo = _candidato_valido(crudo, existentes, pool, variables)
+            except Exception as e:                                 # noqa: BLE001 — basura imprevista del modelo
+                cand, rechazo = None, {"titulo": "?", "motivo": f"invalido: error interno ({type(e).__name__})", "categoria": "invalido"}
             if cand:
                 pool.append(cand)
             else:
@@ -418,6 +448,7 @@ def _ciclo(ctx: Contexto, res: dict, ciclo_n: int, tanda_id: str) -> None:
 
     # 4-5. por cada elegido: borrador, fuentes reales, dosier validado
     for cand in elegidos:
+        _frenar(ctx, res)
         try:
             r = ap.crear_borrador(cand["borrador"], cand["coordenadas"], variacion_de=cand["variacion_de"],
                                   ciclo={"tanda_id": tanda_id, "ciclo": ciclo_n, "lentes": [c for c, _ in lentes],
@@ -431,7 +462,14 @@ def _ciclo(ctx: Contexto, res: dict, ciclo_n: int, tanda_id: str) -> None:
                                     "categoria": _categoria(str(e))})
             continue
         res["seleccionados"].append(r["id"])
-        _dosier(ctx, res, r, cand)
+        try:
+            _dosier(ctx, res, r, cand)
+        except (CapAgotado, ApagadaOSinToken, _Detener):
+            raise
+        except Exception as e:                                     # noqa: BLE001 — un dosier roto no aborta el ciclo
+            res["errores"].append(f"interno: dosier {type(e).__name__}")
+            res["borradores_sin_dosier"].append({"id": r["id"], "titulo": r["borrador"]["titulo"],
+                                                 "errores": [f"error interno ({type(e).__name__})"]})
 
 
 def _dosier(ctx: Contexto, res: dict, r: dict, cand: dict) -> None:
@@ -481,24 +519,33 @@ def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, pa
     sellado). `parar()` -> True si hay PARAR TODO; `sello_integro()` -> False si la cadena esta rota;
     `nivel_autonomia()` -> nivel vigente de Inteligencia: en CERO (solo lee) no escribe dosieres;
     `al_terminar_ciclo(resultado)` solo informa del progreso (no decide nada)."""
+    if not (isinstance(horas_max, (int, float)) and not isinstance(horas_max, bool) and 0 < horas_max < 1000):
+        raise ValueError("horas_max debe ser un numero entre 0 y 1000")
+    if not isinstance(ciclos, int) or isinstance(ciclos, bool) or not (0 <= ciclos <= 50):
+        raise ValueError("ciclos debe ser un entero entre 0 y 50")
     tanda_id = "t" + uuid.uuid4().hex[:10]          # empieza por letra: jamas parece un telefono (R-07)
     t0 = ctx.ahora()
     est = _estado(ctx)
     n0 = est.get("ciclos_hechos", 0)
     hechos, vacios, motivo, error = [], 0, "completada", ""
-    for i in range(max(0, int(ciclos))):
+
+    def freno() -> str | None:
         if parar is not None and parar():
-            motivo = "parar_todo"
-            break
-        if sello_integro is not None and not sello_integro():
+            return "parar_todo"
+        if nivel_autonomia is not None and nivel_autonomia() == "CERO":
+            return "autonomia_insuficiente"
+        if (ctx.ahora() - t0).total_seconds() >= horas_max * 3600:
+            return "tope_horas"
+        return None
+    freno_previo, ctx.freno = ctx.freno, freno           # tambien se mira DENTRO de cada ciclo
+    for i in range(max(0, int(ciclos))):
+        if sello_integro is not None and not sello_integro():      # costoso (recorre toda la cadena): solo entre ciclos
             motivo = "sello_roto"
             break
-        if nivel_autonomia is not None and nivel_autonomia() == "CERO":
-            motivo = "autonomia_insuficiente"
-            error = "Inteligencia esta en nivel CERO (solo lee): no puede escribir apuestas. Sube su nivel en /cmd/ajustes/autonomia."
-            break
-        if (ctx.ahora() - t0).total_seconds() >= horas_max * 3600:
-            motivo = "tope_horas"
+        razon = freno()
+        if razon:
+            motivo = razon
+            error = MENSAJE_AUTONOMIA if razon == "autonomia_insuficiente" else ""
             break
         res = ejecutar_ciclo(ctx, ciclo_n=n0 + i, tanda_id=tanda_id)
         hechos.append(res)
@@ -508,12 +555,14 @@ def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, pa
             except Exception:                               # noqa: BLE001
                 pass
         if res["parar_por"]:
-            motivo, error = res["parar_por"], res.get("error_fatal", "")
+            motivo = res["parar_por"]
+            error = res.get("error_fatal", "") or (MENSAJE_AUTONOMIA if motivo == "autonomia_insuficiente" else "")
             break
         vacios = vacios + 1 if len(res["dosieres"]) < ctx.config.min_dosieres_por_ciclo else 0
         if vacios >= ctx.config.ciclos_vacios_para_parar:
             motivo = "atasco"
             break
+    ctx.freno = freno_previo
     resumen = {"tanda_id": tanda_id, "empresa": ctx.empresa, "inicio": t0.isoformat(), "fin": ctx.ahora().isoformat(),
                "motivo": motivo, "error": error, "ciclos_pedidos": ciclos, "ciclos_hechos": len(hechos),
                "ciclo_inicial": n0, "dosieres": sum(len(c["dosieres"]) for c in hechos),
@@ -535,7 +584,11 @@ def ejecutar_tanda(ctx: Contexto, *, ciclos: int = 3, horas_max: float = 8.0, pa
 # ── el informe de la noche ──────────────────────────────────────────────────
 
 def _celda(v, maximo: int = 200) -> str:
-    return re.sub(r"\s+", " ", str(v if v is not None else "")).replace("|", "/").strip()[:maximo]
+    """Texto de una celda/linea del informe: sin saltos, sin barras que rompan la tabla y SIN html ni
+    enlaces markdown (el texto del modelo no es de fiar: se muestra, no se interpreta)."""
+    t = re.sub(r"\s+", " ", str(v if v is not None else "")).replace("|", "/").replace("`", "'")
+    t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("[", "(").replace("]", ")")
+    return t.strip()[:maximo]
 
 
 def ficha_markdown(x: dict) -> list[str]:
@@ -553,7 +606,8 @@ def ficha_markdown(x: dict) -> list[str]:
               f"- Evidencia: VERIFICADA {cuenta['VERIFICADA']} · RECORDADA {cuenta['RECORDADA']} · SUPUESTO {cuenta['SUPUESTO']}"]
         for i in ev:
             if i["etiqueta"] == "VERIFICADA":
-                L.append(f"  - ✔ {_celda(i['afirmacion'], 250)} — fuente: {_celda(i['fuente']['url'], 300)} ({i['fuente']['fecha']})")
+                L.append(f"  - ✔ {_celda(i['afirmacion'], 250)} — fuente consultada el {i['fuente']['fecha']}: {_celda(i['fuente']['url'], 300)}")
+                L.append(f"    extracto: «{_celda(i['fuente']['extracto'], 220)}» (que sostenga la afirmacion lo juzgo el modelo: compruebalo)")
             elif i.get("nota"):
                 L.append(f"  - ⚠ {_celda(i['afirmacion'], 250)} ({_celda(i['nota'])})")
         L += [f"- Senal de personas reales: {_celda(d['senal_real']['que_personas'])} — {_celda(d['senal_real']['como_se_obtiene'], 300)}",
@@ -595,7 +649,9 @@ def generar_informe(ctx: Contexto, tanda: dict) -> str:
          "- Coste: " + ("0 € (modelos gratuitos de WebLLM; el tope es el diario de WebLLM)" if tanda["cliente"] == "webllm"
                        else "no medido en este informe (consulta el contador de coste)"), "",
          "> Esto son **hipotesis**, no hechos. Las afirmaciones RECORDADA y SUPUESTO no estan comprobadas: "
-         "el primer paso de cada dosier es una verificacion gratuita que haces tu. No hay ranking: una puntuacion "
+         "el primer paso de cada dosier es una verificacion gratuita que haces tu. VERIFICADA significa solo que el modelo "
+         "cita una fuente real recuperada por la busqueda (URL, fecha de consulta y extracto los copia el codigo); que el extracto "
+         "sostenga la afirmacion lo juzga el modelo, asi que lee el extracto. No hay ranking: una puntuacion "
          "hecha por el propio modelo seria opinion.", "", "## Ciclos", "",
          "| Ciclo | Lentes | Candidatos | Rechazados | Dosieres | Cuotas sin cumplir | Preguntas | Parada |", "|---|---|---|---|---|---|---|---|"]
     for c in tanda["ciclos"]:

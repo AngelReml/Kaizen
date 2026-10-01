@@ -554,3 +554,150 @@ def test_freno_de_autonomia_inteligencia_en_cero_no_escribe_apuestas(mundo):
     niveles = iter(["BAJA", "CERO"])
     t = E.ejecutar_tanda(ctx(modelo_de_ciclos()), ciclos=4, nivel_autonomia=lambda: next(niveles))
     assert t["motivo"] == "autonomia_insuficiente" and t["ciclos_hechos"] == 1
+
+
+# ── regresiones de la revision independiente ────────────────────────────────
+
+def test_una_respuesta_hostil_del_modelo_no_aborta_la_tanda(mundo):
+    """Numeros imposibles, anidado absurdo y errores inesperados: se registran y la tanda sigue."""
+    ctx, k, b, ap, _ = mundo
+    huge = "9" * 5000
+    hostiles = [
+        '{"coste": {"importe_eur": %s}}' % ("9" * 500),                       # entero gigante
+        '{"senal": {"plazo_dias": "%s", "umbral": "%s"}}' % (huge, huge),    # cadenas de miles de cifras
+        '{"a":' + "[" * 20000 + "]" * 20000 + "}",                            # anidado que revienta json.loads
+        '{"nicho": [[[]]], "evidencia": {"x": 1}, "senal": 5}',
+    ]
+    n = {"c": 0}
+    def redactar(m, u):
+        n["c"] += 1
+        return hostiles[n["c"] % len(hostiles)] if n["c"] <= 8 else dosier_json()
+    m = modelo_de_ciclos(); m.redactar = redactar
+    t = E.ejecutar_tanda(ctx(m), ciclos=2)
+    assert t["ciclos_hechos"] >= 1 and t["motivo"] in ("completada", "atasco")
+    assert k.get(EMP, E.COLECCION_TANDA, t["tanda_id"]) is not None            # hay resumen guardado
+    assert "# Informe" in E.generar_informe(ctx(m), t)
+
+
+def test_un_error_inesperado_en_el_modelo_o_la_busqueda_se_registra_y_se_sigue(mundo):
+    ctx, k, b, ap, _ = mundo
+    n = {"c": 0}
+    def proponer(m, u):
+        n["c"] += 1
+        if n["c"] == 1:
+            raise KeyError("bug inesperado del cliente")
+        return json.dumps({"candidatos": [candidato(1000 * n["c"] + i) for i in range(8)]})
+    t = E.ejecutar_tanda(ctx(ModeloFalso(proponer=proponer)), ciclos=2)
+    assert t["ciclos_hechos"] == 2 and any("interno: KeyError" in e for c in t["ciclos"] for e in c["errores"])
+    assert t["dosieres"] == 5
+
+    def buscar_roto(q):
+        raise TypeError("bug de la busqueda")
+    r = E.ejecutar_ciclo(ctx(modelo_de_ciclos(), buscar=buscar_roto, rondas_propuesta=1), ciclo_n=0)
+    assert r["dosieres"] == [] and len(r["borradores_sin_dosier"]) == 5 and r["parar_por"] is None
+    assert any("interno: dosier TypeError" in e for e in r["errores"])
+
+
+def test_candidato_con_campos_absurdos_se_rechaza_sin_romper(mundo):
+    ctx, *_ = mundo
+    malo = candidato(1); malo["consultas_busqueda"] = [10 ** 500, {"x": 1}, None]; malo["coordenadas"]["sector"] = ["lista"]
+    raro = {"titulo": {"a": 1}, "coordenadas": 7, "consultas_busqueda": "x", "variacion_de": {"id": 1}}
+    r = E.ejecutar_ciclo(ctx(ModeloFalso(proponer=lambda m, u: json.dumps({"candidatos": [malo, raro, candidato(2)]})), rondas_propuesta=1), ciclo_n=0)
+    assert len(r["seleccionados"]) >= 1 and r["parar_por"] is None
+
+
+def test_parar_todo_corta_a_mitad_de_un_ciclo_y_no_sigue_escribiendo(mundo):
+    ctx, k, b, ap, _ = mundo
+    llamadas = {"n": 0}
+    def parar():
+        llamadas["n"] += 1
+        return llamadas["n"] > 4                       # deja pasar la propuesta y 2-3 dosieres
+    t = E.ejecutar_tanda(ctx(modelo_de_ciclos()), ciclos=3, parar=parar)
+    assert t["motivo"] == "parar_todo" and t["ciclos_hechos"] == 1
+    assert 0 < t["dosieres"] < 5                       # parcial: se detuvo DENTRO del ciclo
+    n_borradores = len(ap.listar())
+    assert n_borradores < 5 + 1                        # y no creo los que faltaban
+    assert t["ciclos"][0]["parar_por"] == "parar_todo"
+
+
+def test_el_tope_de_horas_se_respeta_dentro_del_ciclo(mundo):
+    ctx, k, b, ap, reloj = mundo
+    m = modelo_de_ciclos()
+    base = m.redactar
+    def redactar(m_, u):
+        reloj.avanza(minutes=50)                       # cada dosier "tarda" 50 min
+        return base(m_, u)
+    m.redactar = redactar
+    t = E.ejecutar_tanda(ctx(m), ciclos=5, horas_max=2.0)
+    assert t["motivo"] == "tope_horas" and t["ciclos_hechos"] == 1 and t["dosieres"] <= 3
+
+
+def test_la_autonomia_en_cero_corta_dentro_del_ciclo(mundo):
+    ctx, *_ = mundo
+    n = {"c": 0}
+    def nivel():
+        n["c"] += 1
+        return "CERO" if n["c"] > 3 else "BAJA"
+    t = E.ejecutar_tanda(ctx(modelo_de_ciclos()), ciclos=3, nivel_autonomia=nivel)
+    assert t["motivo"] == "autonomia_insuficiente" and "nivel CERO" in t["error"] and t["dosieres"] < 5
+
+
+def test_los_frenos_se_quitan_al_terminar_la_tanda(mundo):
+    ctx, *_ = mundo
+    c = ctx(modelo_de_ciclos())
+    E.ejecutar_tanda(c, ciclos=1, parar=lambda: False)
+    assert c.freno is None
+    assert len(E.ejecutar_ciclo(c, ciclo_n=9)["dosieres"]) == 5       # un ciclo suelto no hereda el freno
+
+
+@pytest.mark.parametrize("horas", [float("nan"), 0, -1, float("inf"), 5000, "8", True])
+def test_la_tanda_rechaza_parametros_absurdos(mundo, horas):
+    ctx, *_ = mundo
+    with pytest.raises(ValueError, match="horas_max"):
+        E.ejecutar_tanda(ctx(), ciclos=1, horas_max=horas)
+
+
+@pytest.mark.parametrize("ciclos", [-1, 51, "3", 2.5, None, True])
+def test_la_tanda_rechaza_ciclos_absurdos(mundo, ciclos):
+    ctx, *_ = mundo
+    with pytest.raises(ValueError, match="ciclos"):
+        E.ejecutar_tanda(ctx(), ciclos=ciclos)
+
+
+def test_el_informe_no_interpreta_el_texto_del_modelo(mundo):
+    ctx, k, b, ap, _ = mundo
+    c = ctx(ModeloFalso(proponer=lambda m, u: json.dumps({"candidatos": [candidato(1, titulo="<script>alert(1)</script> [clic aqui](http://evil.example/x) `cmd`" + " zz" * 5)]})))
+    md = E.generar_informe(c, E.ejecutar_tanda(c, ciclos=1))
+    assert "<script>" not in md and "](http://evil" not in md and "`cmd`" not in md
+    assert "&lt;script&gt;" in md
+
+
+def test_el_informe_muestra_el_extracto_y_dice_que_lo_juzgo_el_modelo(mundo):
+    ctx, *_ = mundo
+    c = ctx(modelo_de_ciclos())
+    md = E.generar_informe(c, E.ejecutar_tanda(c, ciclos=1))
+    assert "fuente consultada el 2026-10-01" in md and "extracto: «Texto de la primera fuente»" in md
+    assert "lo juzgo el modelo" in md and "VERIFICADA significa solo que el modelo cita una fuente real" in md
+
+
+def test_el_modelo_que_propuso_queda_registrado_en_la_apuesta(mundo):
+    ctx, k, b, ap, _ = mundo
+    m = modelo_de_ciclos(); m.ultimo_modelo = "groq"
+    r = E.ejecutar_ciclo(ctx(m), ciclo_n=0)
+    assert ap.obtener(r["seleccionados"][0])["ciclo"]["modelo_propuesta"] == "groq"
+
+
+def test_la_memoria_recuerda_el_aprendizaje_de_la_ronda_anterior(mundo):
+    ctx, k, b, ap, _ = mundo
+    r0 = E.ejecutar_ciclo(ctx(modelo_de_ciclos()), ciclo_n=0)
+    i = r0["dosieres"][0]
+    ap.elegir(i, por="op"); ap.iniciar_prueba(i, por="op"); ap.registrar_medicion(i, por="op", valor=50, referencia="panel")
+    ap.cerrar(i, "CRECE", por="op", aprendizaje={"esperaba": "poco", "paso": "FUNCIONO MUCHISIMO", "haria_distinto": "nada"})
+    ap.iniciar_prueba(i, por="op", criterio={"umbral": 100})                       # ronda 2: su aprendizaje actual es None
+    assert "FUNCIONO MUCHISIMO" in E.resumen_memoria(ap.listar(), 40)
+
+
+def test_las_funciones_de_lectura_no_lanzan_con_entradas_imposibles():
+    assert E._entero("9" * 5000) == "9" * 5000 and E._entero("12") == 12 and E._entero(True) is None
+    assert E.extraer_json('{"a":' + "[" * 20000 + "]" * 20000 + "}") is None
+    assert E._numero("9" * 5000) == float("inf") or isinstance(E._numero("9" * 5000), (float, str))

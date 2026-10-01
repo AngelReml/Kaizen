@@ -596,3 +596,60 @@ def test_un_criterio_que_no_es_objeto_se_rechaza_en_vez_de_ignorarse(ap, malo):
         a.iniciar_prueba(r["id"], por="op", criterio=malo)
     assert a.obtener(r["id"])["estado"] == "ELEGIDA"
     assert a.iniciar_prueba(r["id"], por="op", criterio=None)["estado"] == "EN_PRUEBA"        # vacio = hereda
+
+
+# ── regresiones de la revision independiente ────────────────────────────────
+
+@pytest.mark.parametrize("v", [pytest.param(10 ** 400, id="e400"), pytest.param(-10 ** 400, id="-e400"),
+                               pytest.param(float("1e999"), id="inf"), pytest.param(10 ** 5000, id="e5000")])
+def test_un_numero_gigante_no_lanza_es_simplemente_invalido(v):
+    assert A._num(v) is None
+    d = dosier(); d["coste"]["importe_eur"] = v
+    assert any("importe_eur" in e for e in A.validar_dosier(A.limpiar_dosier(d)))
+
+
+def test_la_novedad_funciona_con_cualquier_alfabeto():
+    cirilico = {"titulo": "Привет большой мир", "problema": "Проблема очень большая для всех людей", "publico": "Люди которые живут рядом"}
+    base = {"modelo_ingreso": "otro", "cliente": "pyme", "canal": "alianzas", "mercado": "es_ES", "coste_inicial": "0",
+            "tiempo_senal": "<=7d", "sector": "xx"}
+    previo = [{"id": "a", "borrador": cirilico, "coordenadas": dict(base, modelo_ingreso="afiliacion", cliente="particular", canal="boca_a_boca", sector="yy")}]
+    ok, razon, _ = A.comprobar_novedad(cirilico, base, previo)
+    assert ok is False and "demasiado_parecida" in razon
+    assert A.palabras("Привет МИР") == frozenset({"привет", "мир"})
+
+
+def test_sectores_cortos_como_ia_tambien_cuentan_para_las_mismas_coordenadas():
+    c = coords(sector="IA")
+    assert A._misma_zona(c, dict(c, sector="ia")) is True
+    assert A._misma_zona(c, dict(c, sector="TI")) is False
+
+
+@pytest.mark.parametrize("texto", ["comprar rese​nas fal​sas", "en⁠viar sp­am", "Es‏tafa piramidal: esquema pi​ramidal"])
+def test_los_vetos_no_se_esquivan_con_caracteres_invisibles(texto):
+    assert A.comprobar_vetos(texto), texto
+
+
+def test_un_extracto_legitimo_sobre_estafas_no_veta_el_dosier(ap):
+    a, _, _ = ap
+    r = a.crear_borrador(borrador(), coords())
+    d = dosier()
+    d["evidencia"][1]["fuente"]["extracto"] = "Guia para evitar una estafa piramidal y no caer en un phishing bancario"
+    assert a.completar_dosier(r["id"], d)["estado"] == "DOSIER"           # el extracto es texto ajeno: no se juzga
+    r2 = a.crear_borrador(borrador(titulo="Otra idea sin relacion alguna", problema="Un problema completamente distinto del anterior.", publico="Otro publico muy diferente"), coords(sector="zz distinto", canal="alianzas"))
+    d2 = dosier(); d2["primer_paso_gratuito"] = "Montar una estafa piramidal entre amigos"
+    with pytest.raises(A.ApuestaInvalida, match="veto"):
+        a.completar_dosier(r2["id"], d2)                                   # lo que ESCRIBE el modelo si se juzga
+
+
+def test_el_aprendizaje_de_una_ronda_no_se_pierde_al_abrir_la_siguiente(ap):
+    a, _, _ = ap
+    r = _a_dosier(a)
+    _llevar_a(a, r["id"], "CRECE")
+    primera = a.obtener(r["id"])["aprendizaje"]
+    assert primera == A.limpiar_aprendizaje(APR)
+    r = a.iniciar_prueba(r["id"], por="op", criterio={"umbral": 20})
+    assert r["aprendizaje"] is None and r["rondas_previas"][0]["aprendizaje"] == primera
+    a.registrar_medicion(r["id"], por="op", valor=1, referencia="panel")
+    nuevo = {"esperaba": "veinte otra vez", "paso": "solo uno", "haria_distinto": "cambiar el mensaje"}
+    r = a.cerrar(r["id"], "PODADA", por="op", aprendizaje=nuevo)
+    assert r["aprendizaje"]["paso"] == "solo uno" and r["rondas_previas"][0]["aprendizaje"] == primera   # no se pisa

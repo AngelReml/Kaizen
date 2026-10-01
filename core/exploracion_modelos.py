@@ -61,6 +61,16 @@ def _es_local(url: str) -> bool:
     return host in _LOCALES
 
 
+class _HttpDirecto:
+    """HTTP SIN proxies del entorno (trust_env=False). WebLLM es local: con HTTP_PROXY definido (o el proxy
+    del sistema en Windows) httpx mandaria la peticion —y la cabecera Authorization— al proxy."""
+
+    def post(self, url, *, headers, json, timeout):
+        import httpx
+        with httpx.Client(trust_env=False, timeout=timeout) as c:
+            return c.post(url, headers=headers, json=json)
+
+
 class ClienteWebllm:
     nombre = "webllm"
 
@@ -97,6 +107,7 @@ class ClienteWebllm:
         self.preguntas = 0
         self.por_modelo: dict[str, int] = {}
         self.errores = 0
+        self.ultimo_modelo: str | None = None          # el que contesto la ultima pregunta con exito
 
     def __repr__(self) -> str:                                  # el token nunca se imprime
         return f"ClienteWebllm(url={self._url!r}, modelos={self._modelos!r}, preguntas={self.preguntas})"
@@ -122,10 +133,7 @@ class ClienteWebllm:
                 self._modelos.remove(modelo)
 
     def _cliente_http(self):
-        if self._http is not None:
-            return self._http
-        import httpx
-        return httpx
+        return self._http if self._http is not None else _HttpDirecto()
 
     def preguntar(self, sistema: str, usuario: str, *, modelo: str | None = None,
                   max_tokens: int | None = None) -> str:
@@ -167,7 +175,9 @@ class ClienteWebllm:
                 continue
             st = r.status_code
             if st == 200:
-                return self._texto(r)
+                texto = self._texto(r)
+                self.ultimo_modelo = modelo
+                return texto
             self.errores += 1
             if st == 401:
                 raise ApagadaOSinToken("WebLLM rechazo el token (401). Rotalo con "
@@ -218,6 +228,7 @@ class ClienteClaude:
         self._chat = chat
         self.preguntas = 0
         self.errores = 0
+        self.ultimo_modelo: str | None = None
 
     def preguntar(self, sistema: str, usuario: str, *, modelo: str | None = None,
                   max_tokens: int | None = None) -> str:
@@ -238,6 +249,7 @@ class ClienteClaude:
             raise CapAgotado(f"limite de coste de Claude: {str(e)[:150]}") from None
         if not isinstance(t, str) or not t.strip():
             raise RespuestaInvalida("Claude devolvio una respuesta vacia")
+        self.ultimo_modelo = modelo or self._modelo
         return t[:MAX_RESPUESTA]
 
 

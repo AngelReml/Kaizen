@@ -101,7 +101,10 @@ def _lista(v, maximo: int = MAX_LISTA, largo: int = MAX_ITEM) -> list[str]:
 
 
 def _sin_acentos(s: str) -> str:
-    return "".join(c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c))
+    """Minusculas, sin acentos ni caracteres de formato invisibles (Cf: ancho cero, etc.) que servirian
+    para partir una palabra vetada y esquivar la comprobacion."""
+    return "".join(c for c in unicodedata.normalize("NFKD", s.lower())
+                   if not unicodedata.combining(c) and unicodedata.category(c) != "Cf")
 
 
 _PALABRAS_VACIAS = frozenset(
@@ -112,9 +115,10 @@ _PALABRAS_VACIAS = frozenset(
     "tiene tienen tener ser ver sea sean the and for with that this from".split())
 
 
-def palabras(texto: str) -> frozenset[str]:
-    """Conjunto de palabras significativas (sin acentos, sin vacias, >=3 letras)."""
-    return frozenset(t for t in re.findall(r"[a-z0-9]{3,}", _sin_acentos(texto or ""))
+def palabras(texto: str, minimo: int = 3) -> frozenset[str]:
+    """Conjunto de palabras significativas (sin acentos, sin vacias, `minimo` o mas letras/cifras de CUALQUIER
+    alfabeto: el cirilico o el griego tambien cuentan, no solo el latino)."""
+    return frozenset(t for t in re.findall(r"[^\W_]{%d,}" % minimo, _sin_acentos(texto or ""))
                      if t not in _PALABRAS_VACIAS)
 
 
@@ -146,6 +150,15 @@ def _textos(obj) -> list[str]:
     if isinstance(obj, (list, tuple)):
         return [t for v in obj for t in _textos(v)]
     return []
+
+
+def sin_fuentes(dosier: dict) -> dict:
+    """El dosier sin los extractos de fuentes externas: los vetos juzgan lo que ESCRIBE el modelo, no un
+    articulo legitimo sobre, p. ej., como evitar una estafa (que el modelo no podria "arreglar")."""
+    d = dict(dosier)
+    d["evidencia"] = [{k: v for k, v in it.items() if k != "fuente"} if isinstance(it, dict) else it
+                      for it in dosier.get("evidencia", [])]
+    return d
 
 
 def comprobar_vetos(obj) -> list[str]:
@@ -199,10 +212,13 @@ def validar_coordenadas(c: dict) -> list[str]:
 
 
 def _num(v):
-    """Numero finito (no bool) o None."""
+    """Numero finito (no bool) o None. Un entero gigante o un valor raro NO lanza: es simplemente invalido."""
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return None
-    return float(v) if math.isfinite(v) else None
+    try:
+        return float(v) if math.isfinite(v) else None
+    except (OverflowError, ValueError):
+        return None
 
 
 def _fecha_iso(v) -> str:
@@ -318,7 +334,7 @@ def huella(obj) -> str:
 def _misma_zona(c1: dict, c2: dict) -> bool:
     if (c1["modelo_ingreso"], c1["cliente"], c1["canal"]) != (c2["modelo_ingreso"], c2["cliente"], c2["canal"]):
         return False
-    a, b = palabras(c1["sector"]), palabras(c2["sector"])
+    a, b = palabras(c1["sector"], 2), palabras(c2["sector"], 2)         # "IA", "TI"... tambien son sectores
     return bool(a and b) and len(a & b) / len(a | b) >= UMBRAL_SECTOR
 
 
@@ -337,7 +353,7 @@ def comprobar_novedad(borrador: dict, coordenadas: dict, existentes: list[dict],
             continue
         if variacion_de and ex["id"] == variacion_de:
             if all(coordenadas[k] == ec[k] for k in ("modelo_ingreso", "cliente", "canal", "mercado")) \
-                    and palabras(coordenadas["sector"]) == palabras(ec["sector"]):
+                    and palabras(coordenadas["sector"], 2) == palabras(ec["sector"], 2):
                 return False, "variacion_sin_cambio: no cambia ninguna coordenada de su apuesta madre", ex["id"]
             continue
         s = similitud(_texto_comparable(borrador), _texto_comparable(eb))
@@ -547,7 +563,7 @@ class Apuestas:
 
     def completar_dosier(self, ap_id: str, dosier) -> dict:
         d = limpiar_dosier(dosier)
-        errores = validar_dosier(d) + comprobar_vetos(d)
+        errores = validar_dosier(d) + comprobar_vetos(sin_fuentes(d))
         if errores:
             raise ApuestaInvalida("; ".join(errores))
         h = huella(d)
@@ -578,9 +594,10 @@ class Apuestas:
             c["fecha_limite"] = (self._reloj().date() + timedelta(days=c["plazo_dias"])).isoformat()
             if r["estado"] == "CRECE":                      # nueva ronda: la anterior queda archivada
                 r["rondas_previas"].append({"ronda": r["ronda"], "criterio": r["criterio"],
-                                            "medicion": r["medicion"], "propuesta_regla": r["propuesta_regla"]})
+                                            "medicion": r["medicion"], "propuesta_regla": r["propuesta_regla"],
+                                            "aprendizaje": r["aprendizaje"]})
                 r["ronda"] += 1
-                r["medicion"], r["propuesta_regla"] = None, None
+                r["medicion"], r["propuesta_regla"], r["aprendizaje"] = None, None, None
             r["criterio"] = c
         r, p = self._transitar(ap_id, "EN_PRUEBA", actor="operador", por=por, mutar=mutar)
         self._sellar("inteligencia.apuesta.en_prueba", p)
