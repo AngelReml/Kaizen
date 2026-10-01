@@ -115,9 +115,14 @@ Suite completa, e2e del Mundo (20/20), `docs/LINEA_BASE.md`, `docs/CONTRATO_MUND
 - Un test existente (`test_p0_panel_esqueleto`) falló al integrar F4 y **yo lo pasé por alto**: encadené el commit a un `| tail` que ocultaba el código de salida. Causa real: ese test construye su bitácora con otra `fecha_alta` que la del panel, así que el panel veía la cadena rota y el gatillo disparó como debía. Corregido en su commit (`41d495b`) y desde entonces compruebo `exit=$?`.
 - Mi afirmación de que MEDIA y ALTA "eran idénticos a BAJA" solo valía para la Colmena (§2).
 
+- **Revisión independiente (un segundo revisor, solo lectura) halló un interbloqueo real que yo no había visto.** `endurecer`/`fijar` sellaban el evento dentro del candado de datos y `Bitacora._encadenar` toma sus candados en orden contrario (ABBA): dos hilos se bloqueaban para siempre. Lo **reproduje yo mismo** antes de arreglarlo (dos hilos, 15 s de plazo: «BLOQUEADO»). Mi prueba de concurrencia anterior no incluía la bitácora y por eso lo daba por bueno: **mi afirmación de «concurrencia probada» era incompleta.** Arreglo (`f24e82c`): se decide y guarda bajo el candado y se sella fuera (`sellar_cambio_nivel`); prueba de regresión que falla con el código anterior (30 s) y pasa con el nuevo.
+- Del mismo informe, corregido: (a) el motivo libre del operador iba a la bitácora y al feed del mundo (y un email lanzaba un error genérico); ahora solo va su sha256 y el texto queda en el historial del cubo; (b) «subir exige motivo» solo se comprobaba en el endpoint, fuera del candado; ahora vive en `fijar`.
+- El e2e dio 13/20 la primera vez que se corrió con G1 activo: el escenario 8 rompe el sello a propósito, el producto reaccionó (correcto) y sus eventos seguían cayendo como gotas cuando el escenario 9 exigía calma. Se arregló el arnés (esperar calma antes de cortar) y el escenario 8 ahora comprueba G1 de extremo a extremo.
+
 ### Lo que sigue abierto
 1. `sustrato/gates` sigue permitiendo ALTA al operador (legado de Comercial, sellado, solo operador).
 2. Sello roto ⇒ baja todos los cubos de la empresa. El sello depende de `fecha_alta` del registro de empresas: **si alguien edita esa fecha, el panel verá la cadena rota y G1 endurecerá todo.** Es la misma señal roja que ya enseña el mundo, pero el efecto es mayor; se restaura con `/cmd/ajustes/autonomia`.
 3. Todo probado en Linux; **no en Windows**.
 4. F6 sin endpoint/pantalla; H1 y MEDIA no implementados (bloqueados por capas 2 y 3).
 5. `ENSAYO_SECO` no cuenta como decisión "firme" en el rendimiento (comportamiento previo; no tocado).
+6. `centro_mando.py` (aplicación aparte sobre instancias) muestra el nivel del camino legado `gates`/manifest, no el vigente de `core/autonomia`. No se tocó: es el mismo límite «dos sitios» del punto 1.

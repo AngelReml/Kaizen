@@ -73,5 +73,7 @@ Los vetos del Suelo valen siempre: nada de mentiras, spam, reseñas falsas ni di
   No se unifican ahora.
 - El nivel que usaba la Colmena era solo el defecto del manifest; ahora es el vigente por empresa y cubo (`core/autonomia.py`). El override **reemplaza** al defecto.
 - Sello roto endurece todos los cubos de la empresa; el sello depende de `fecha_alta` del registro de empresas.
-- `sustrato/gates` (legado de Comercial) sigue permitiendo ALTA al operador.
+- `sustrato/gates` (legado de Comercial) sigue permitiendo ALTA al operador, y `centro_mando.py` muestra el nivel de ese camino, no el vigente.
+- Cada cambio de nivel se sella en la bitácora; el **texto** del motivo del operador solo queda en el historial del cubo (en la bitácora va su sha256).
 - Todo lo nuevo está probado en Linux; no verificado en Windows.
+- Si `publicar` falla o el proceso muere justo entre guardar el nivel y sellar el evento, el nivel queda cambiado sin evento (el historial del cubo conserva el registro). Dos cambios simultaneos pueden sellarse en la cadena en orden distinto al del estado; el `de`/`a` de cada evento es correcto.
