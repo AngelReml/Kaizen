@@ -449,6 +449,20 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             raise HTTPException(404, "el mundo no esta instalado: falta mundo/index.html")
         return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
+    def _ficha_cubo(empresa: str, cubo: str) -> dict:
+        """Rendimiento real del cubo (el mismo que ve el juego) para decidir con datos delante,
+        p. ej. al subir su nivel de autonomia. `None` = sin medir; nunca un grado inventado."""
+        conn = _conn_lectura()
+        try:
+            agentes, _ = _agentes_y_ultimos(conn, empresa)
+            a = agentes.get(cubo)
+            cubos = [{"cubo": cubo, "alta": a is not None, "ts_alta": a["ts_alta"] if a else None}]
+            return {"rendimiento": _rendimiento(empresa, conn, cubos).get(cubo)}
+        finally:
+            conn.close()
+
+    st.ficha_cubo = _ficha_cubo
+
     @app.get("/api/mundo/estado")
     def mundo_estado(request: Request, empresa: str = ""):
         auth(request)

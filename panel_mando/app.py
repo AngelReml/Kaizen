@@ -690,6 +690,30 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         return {"empresa": d["empresa"], "tope_eur": nuevo,
                 "volver_recomendado": 5.0}
 
+    @app.post("/cmd/ajustes/autonomia")
+    async def cmd_autonomia(request: Request):
+        """Fija el nivel de autonomia de un cubo. SOLO el operador (G1, docs/AUTONOMIA_v0.md):
+        subir exige motivo; ALTA esta bloqueada esta temporada; todo cambio se sella. Devuelve la
+        ficha de rendimiento del cubo para decidir con datos delante."""
+        auth(request)
+        d = await request.json()
+        quien = identidad(d, request)
+        empresa, cubo, nivel = d.get("empresa", ""), d.get("cubo", ""), d.get("nivel", "")
+        motivo = (d.get("motivo") or "").strip()
+        if empresa not in _empresas(st.k):
+            raise ValueError("empresa desconocida")
+        manifiestos = CLM._manifiestos()
+        if cubo not in manifiestos:
+            raise ValueError("cubo desconocido")
+        defecto = manifiestos[cubo].get("nivel_autonomia_defecto", "CERO")
+        aut = AUT.AutonomiaCubos(st.k, empresa, bitacora=bit(empresa))
+        if nivel in AUT.NIVELES and nivel not in AUT.NIVELES_BLOQUEADOS \
+                and AUT.NIVELES.index(nivel) > AUT.NIVELES.index(aut.nivel(cubo, defecto)) \
+                and not motivo:
+            raise ValueError("subir el nivel de autonomia exige un motivo")
+        resultado = aut.fijar(cubo, defecto, nivel, por=quien, motivo=motivo)
+        return {"resultado": resultado, "ficha": st.ficha_cubo(empresa, cubo)}
+
     # ═══ P2/P3/P5 · paginas ═══
     def _pagina(titulo: str, cuerpo: str, tema: str) -> str:
         # R-20: `tema` es un query param de usuario; sin whitelist, un valor como
