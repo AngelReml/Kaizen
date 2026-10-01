@@ -1300,7 +1300,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
         line(g, R.ink, x - 2, y - 5, x - 1, y - 4); line(g, R.ink, x + 2, y - 5, x + 1, y - 4);
       });
       // fuente-medidor: el anillo de gemas se enciende según el gasto de hoy frente al tope diario (datos reales); el agua vira a ámbar y rojo al acercarse al tope o en modo ahorro
-      const fc = [10.0, 2.75], fb = P(fc[0], fc[1]);
+      const fc = [9.35, 3.25], fb = P(fc[0], fc[1]);
       add(fc[0] + fc[1] + .3, (g, T) => {
         const d = BK.dinero, k = d && d.tope_eur > 0 ? Math.min(1.2, d.gasto_eur / d.tope_eur) : 0, hot = !!(d && d.modo_ahorro) || k >= 1, warm = k >= .7;
         const ring = (rx, col, dy) => poly(g, col, ellipsePts(fc[0], fc[1], rx, rx, 40).map(q => [q[0], q[1] + (dy || 0)]));
@@ -1792,7 +1792,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
   let cobrosVistos = 0, abacusT = 0, nekoT = 0, gemFlash = 0;
   function celebrate() {
     if (reduce) return;
-    { const c = P(10.0, 2.75); spawn(c[0], c[1] - 4, 40, { cols: ['#ffd45a', '#fff2a0', '#ffb830'], dir: -1.57, spread: .9, v: 52, g: 70, l: 1.6, w: 12, sz: 2 }); }
+    { const c = P(9.35, 3.25); spawn(c[0], c[1] - 4, 40, { cols: ['#ffd45a', '#fff2a0', '#ffb830'], dir: -1.57, spread: .9, v: 52, g: 70, l: 1.6, w: 12, sz: 2 }); }
     if (darkness(hourOf()) > .8) { fwLeft = 16; fwCd = .3; } else hanabiPending = true;
   }
 
@@ -2397,9 +2397,14 @@ void main(){
     // rótulos a resolución de pantalla
     const dpr = window.devicePixelRatio || 1, dk = darkness(hourOf());
     const ink = dk > .45 ? '#f7eedd' : '#2a211a', halo = dk > .45 ? 'rgba(10,12,30,.8)' : 'rgba(251,245,230,.88)';
+    // los rótulos no se pisan: cada uno se desplaza (arriba, abajo, de nuevo arriba…) hasta encontrar hueco libre; si no lo hay, no se pinta ese rótulo
+    const placed = [];
     const text = (s, wx, wy, size, weight, family, color, bar) => {
-      const x = ox + wx * k, y = oy + wy * k; if (x < -200 || x > cv.width + 200 || y < -40 || y > cv.height + 40) return;
+      let x = ox + wx * k, y = oy + wy * k; if (x < -200 || x > cv.width + 200 || y < -40 || y > cv.height + 40) return;
       dc.font = weight + ' ' + Math.round(size * dpr) + 'px ' + family; dc.textAlign = 'center'; dc.textBaseline = 'middle';
+      { const w = dc.measureText(s).width + 8 * dpr, h = size * dpr * 1.25, step = h * .9; let ok = false, ty = y;
+        for (let t = 0; t < 7 && !ok; t++) { ty = y + (t === 0 ? 0 : (t % 2 ? -1 : 1) * Math.ceil(t / 2) * step); if (!placed.some(r => Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - ty) < (r.h + h) / 2)) ok = true; }
+        if (!ok) return; y = ty; placed.push({ x, y, w, h }); }
       dc.lineJoin = 'round'; dc.lineWidth = 3.5 * dpr; dc.strokeStyle = halo; dc.strokeText(s, x, y); dc.fillStyle = color || ink; dc.fillText(s, x, y);
       if (bar) { const w = dc.measureText(s).width; dc.fillStyle = bar; dc.fillRect(x - w / 2 - 7 * dpr, y - size * .6 * dpr, 2 * dpr, size * 1.2 * dpr); }
     };
@@ -2411,14 +2416,14 @@ void main(){
     if ('letterSpacing' in dc) dc.letterSpacing = '0px';
     const small = Math.max(10, Math.min(14, k / dpr * 4.4));
     { const rr = unlocked('rrhh'), m = (BK.rrhh || {}).mapa; if (rr && m && k / dpr >= 2.6) { const q = P(rr.x0 + .5 + 1.7, rr.y0 + .8); text('cobertura ' + Math.round(m.cobertura * 100) + ' %', q[0], q[1] - 50, small, '600', '"JetBrains Mono", monospace'); } }
-    { const lr = room('legal'); if (lr && !lr.locked && k / dpr >= 2.6) lgPlazos().forEach((p_, i) => { const q = P(...stickAt(lr, i)); if (p_.estado !== 'INCUMPLIDA') text(String(p_.dias), q[0], q[1] - stickH(p_) - 18, small, '600', '"JetBrains Mono", monospace'); }); }
+    { const lr = room('legal'); if (lr && !lr.locked && k / dpr >= 2.6) lgPlazos().forEach((p_, i) => { const q = P(...stickAt(lr, i)); if (p_.estado !== 'INCUMPLIDA') text(String(p_.dias), q[0], q[1] - stickH(p_) - 9, small, '600', '"JetBrains Mono", monospace'); }); }
     { const br = room('brand'); if (br && !br.locked && k / dpr >= 2.6) VERD.forEach((v, i) => { const n = vN(v[0]), q = P(...lampAt(br, i)); if (n) text(String(n), q[0], q[1] - 42, small, '600', '"JetBrains Mono", monospace'); }); }
     { const mr = room('marketing'); if (mr && !mr.locked && k / dpr >= 2.6) mkKites().forEach((kk, i) => { const kt = kiteAt(mr, i, T); text(Math.round(kk.pct * 100) + ' %', kt.x, kt.paused ? kt.y - 12 : kt.y - 14, small, '600', '"JetBrains Mono", monospace'); }); }
     { const cr = room('comercial'); if (cr && !cr.locked && k / dpr >= 2.6) { comSt(cr).forEach(st => { const n = comN(st.k), p = P(st.x, st.y); if (n) text(String(n), p[0], p[1] - 36, small, '600', '"JetBrains Mono", monospace'); });
       const rd = (CUBES.comercial || {}).rendimiento, q = P(cr.x0 + .8, cr.y0 + 3.7); text(rd && rd.roi != null ? 'ROI ' + rd.roi + '×' : 'ROI sin medir', q[0] - 4, q[1] - 26, small, '500', '"JetBrains Mono", monospace'); } }
     { const fr = room('finanzas'); if (fr && !fr.locked) {
       const c = P(10.02, .72); text('sin atribuir ' + (BK.dinero ? eur(BK.dinero.sin_atribuir_eur) : '—'), c[0], c[1] - 22, small, '500', '"JetBrains Mono", monospace');
-      const f = P(10.0, 2.75); text('hoy ' + (BK.dinero ? eur(BK.dinero.gasto_eur) : '—') + ' de ' + (BK.dinero && BK.dinero.tope_eur ? eur(BK.dinero.tope_eur) : '—'), f[0], f[1] + 16, small, '500', '"JetBrains Mono", monospace'); } }
+      const f = P(9.35, 3.25); text('hoy ' + (BK.dinero ? eur(BK.dinero.gasto_eur) : '—') + ' de ' + (BK.dinero && BK.dinero.tope_eur ? eur(BK.dinero.tope_eur) : '—'), f[0], f[1] + 16, small, '500', '"JetBrains Mono", monospace'); } }
     { const c = P(13.1, 2.4); text((BK.events == null ? '—' : BK.events) + ' sellados', c[0], c[1] - 24, small, '500', '"JetBrains Mono", monospace'); }
     const showNames = k / dpr >= 2.6;
     AG.forEach(a => {
@@ -3155,7 +3160,7 @@ void main(){
   function drawCarta(g, T) { const p = P(22.2, 7.5), x = Math.round(p[0]), y = Math.round(p[1]); rect(g, R.ink, x - 5, y - 6, 11, 7); rect(g, '#f6edd9', x - 4, y - 5, 9, 5); line(g, '#cdbf9a', x - 4, y - 5, x, y - 2, 1); line(g, '#cdbf9a', x + 4, y - 5, x, y - 2, 1); rect(g, R.red[2], x - 1, y - 3, 3, 3); if (!CARTA.leida && !reduce) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .35 + .25 * Math.sin(T * 3); g.drawImage(glowOf('#ffe28a'), x - 12, y - 16, 24, 20); g.restore(); if (Math.sin(T * 2.4) > .8) rect(g, '#ffffff', x + 5, y - 9, 1, 1); } }
   function finHot(wx, wy) {
     const fr = room('finanzas'); if (!fr || fr.locked) return null;
-    const n = P(9.25, 1.55), d = P(6.55, 1.55), f = P(10.0, 2.75), c = P(10.02, .72), din = BK.dinero;
+    const n = P(9.25, 1.55), d = P(6.55, 1.55), f = P(9.35, 3.25), c = P(10.02, .72), din = BK.dinero;
     if (Math.abs(wx - n[0]) < 8 && wy > n[1] - 26 && wy < n[1] - 5) return { x: n[0], y: n[1] - 16, r: 10, act: () => { nekoT = 1; chime(7, .05); spawn(n[0], n[1] - 16, 14, { cols: ['#ffd45a', '#fff2a0'], v: 26, g: 30, l: 1.2 }); discover('neko'); inscribe('El maneki-neko te saluda con la pata. Adorno de la tesorería.'); } };
     if (Math.abs(wx - d[0]) < 8 && wy > d[1] - 26 && wy < d[1] - 5) return { x: d[0], y: d[1] - 15, r: 10, act: () => { ring(d[0], d[1] - 10, '#ff8a6a', 18); chime(3, .05); discover('daruma'); inscribe(cobrosVistos > 0 ? 'El daruma tiene los dos ojos pintados: ha entrado un cobro mientras mirabas.' : 'El daruma espera con un ojo: el otro se pinta cuando entre un cobro.'); } };
     if (Math.hypot((wx - f[0]) / 1.9, (wy - f[1]) * 1.3) < 15) return { x: f[0], y: f[1], r: 24, act: () => { gemFlash = 1; const k = din && din.tope_eur > 0 ? din.gasto_eur / din.tope_eur : 0; spawn(f[0], f[1] - 4, 18, { cols: ['#bfe6ff', '#ffffff', '#7af0b0'], dir: -1.57, spread: 1.2, v: 30, g: 50, l: 1.2, w: 10 }); ring(f[0], f[1], '#bfe6ff', 26); chime(5, .045); discover('fuente'); inscribe(din ? 'Hoy llevas ' + eur(din.gasto_eur) + ' de ' + eur(din.tope_eur) + ' (' + Math.round(k * 100) + ' %)' + (din.modo_ahorro ? ' · modo ahorro' : '') + '. Cada gema es un doceavo del tope.' : 'Sin datos de gasto todavía.'); } };

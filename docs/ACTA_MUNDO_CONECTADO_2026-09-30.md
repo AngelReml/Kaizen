@@ -70,6 +70,6 @@ Decisiones tomadas sin el operador (cambiables): umbrales de experto (ROI 2, aci
 
 NO hecho / limites: visto bueno visual en el PC del operador; Calidad, Exito de cliente, Inteligencia y RRHH no tienen productores de
 eventos en el repositorio, asi que su pulso sale a cero hasta que existan; el coste por cubo no distingue empresas; los veredictos de
-Marca cuentan todas las verificaciones de la plataforma; la fuente de Finanzas queda parcialmente tapada desde el angulo por defecto;
+Marca cuentan todas las verificaciones de la plataforma; (corregido despues: la fuente de Finanzas se movio fuera del alcance de la pared este y los rotulos ya no se pisan);
 webllm (handoff del 2026-10-01) no se ha integrado: falta definir que han de hacer los agentes con el ordenador.
 
