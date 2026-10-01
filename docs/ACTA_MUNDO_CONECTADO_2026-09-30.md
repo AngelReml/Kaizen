@@ -56,3 +56,20 @@
 - El sonido y el aspecto con la paleta de las otras estaciones (invierno, primavera) no se han revisado uno a uno; se vio otoño (la estación real de la fecha), atardecer y noche.
 - Las flores, farolillos y destellos son adorno puro: no se guardan y no dicen nada de la empresa. Solo persisten los rincones descubiertos y la preferencia de sonido (`localStorage`).
 
+## 6. Adenda — ronda de salas (2026-10-01, sesión sin supervisión)
+
+Hecho: uniformes con grado; rendimiento y grados por cubo (`panel_mando/rendimiento.py`); las diez salas con datos reales y solo
+como numeros (Finanzas, Comercial, Marketing, Marca, Legal, Calidad, Operaciones, Exito de cliente, Inteligencia, RRHH);
+«Mientras no estabas» (resumen real desde la ultima visita); una carta escondida junto al torii. Tabla de cada objeto y su origen:
+`docs/CONTRATO_MUNDO.md`.
+
+Comprobado: `1393 passed, 8 skipped`; extremo a extremo `19 de 19 escenarios en verde` (suite completa, tras el ultimo cambio).
+
+Decisiones tomadas sin el operador (cambiables): umbrales de experto (ROI 2, acierto 90 %, 5 decisiones, 30 dias de alta), un solo
+«mejor del mes», valor de Marketing por la cadena de campanas (subconjunto del de Comercial).
+
+NO hecho / limites: visto bueno visual en el PC del operador; Calidad, Exito de cliente, Inteligencia y RRHH no tienen productores de
+eventos en el repositorio, asi que su pulso sale a cero hasta que existan; el coste por cubo no distingue empresas; los veredictos de
+Marca cuentan todas las verificaciones de la plataforma; la fuente de Finanzas queda parcialmente tapada desde el angulo por defecto;
+webllm (handoff del 2026-10-01) no se ha integrado: falta definir que han de hacer los agentes con el ordenador.
+

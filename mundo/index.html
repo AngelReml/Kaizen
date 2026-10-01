@@ -192,6 +192,17 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
 .dot { box-shadow: 0 0 8px currentColor; }
 .stats select { border-radius: 99px; border: 1px solid var(--border); padding: 1px 8px; }
 ::-webkit-scrollbar { width: 9px; } ::-webkit-scrollbar-thumb { background: rgba(139,44,32,.3); border-radius: 99px; } ::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== «Mientras no estabas» (resumen real de lo que pasó desde tu última visita) y la carta escondida ===== */
+.alba { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); z-index: 6; width: min(440px, calc(100% - 32px)); padding: 18px 22px 16px; border-radius: 28px; background: var(--glass); backdrop-filter: blur(12px) saturate(1.3); -webkit-backdrop-filter: blur(12px) saturate(1.3); box-shadow: 0 20px 60px rgba(30,20,50,.4), inset 0 0 0 2px rgba(255,255,255,.6); animation: albaIn .7s cubic-bezier(.2,.8,.2,1); }
+@keyframes albaIn { from { opacity: 0; transform: translate(-50%, 16px) scale(.96); } }
+.alba h3 { font: 700 20px/1.2 var(--f-title); margin: 0 0 2px; } .alba .sub { margin-bottom: 8px; }
+.alba ul { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; } .alba li { padding: 6px 12px; border-radius: 14px; background: rgba(255,255,255,.4); font-size: 13.5px; } .alba li b { font-family: var(--f-data); }
+.alba .acts { border: 0; padding: 0; } .alba .x { position: absolute; right: 14px; top: 12px; }
+.carta { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(20,14,36,.55); backdrop-filter: blur(4px); animation: albaIn .5s ease-out; padding: 16px; }
+.carta .hoja { max-width: 560px; max-height: 86%; overflow-y: auto; padding: 28px 32px; border-radius: 20px; background: #f6edd9; color: #3a2a1c; box-shadow: 0 24px 70px rgba(0,0,0,.5), inset 0 0 0 1px #d9c9a4; font: 500 15px/1.7 var(--f-title); position: relative; }
+.carta .hoja h3 { font: 700 22px var(--f-title); margin: 0 0 10px; } .carta .hoja p { margin: 0 0 10px; } .carta .hoja .firma { text-align: right; font-style: italic; margin-top: 14px; }
+.carta .hoja .hanko { display: inline-block; width: 26px; height: 26px; border-radius: 6px; background: #b8341f; color: #fff6ee; font: 700 14px/26px var(--f-title); text-align: center; vertical-align: middle; margin-left: 8px; }
 </style>
 
 </head>
@@ -244,7 +255,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       <button class="link stop" id="b-stop" type="button" title="Mantén pulsado 2 segundos">PARAR TODO</button><span class="sep">·</span>
       <button class="link" id="b-q" type="button">Nitidez</button><span class="sep">·</span>
       <button class="link" id="b-snd" type="button">Sonido</button><span class="sep">·</span>
-      <span class="link" id="b-rin" style="cursor:default">✦ 0/55</span><span class="sep">·</span>
+      <span class="link" id="b-rin" style="cursor:default">✦ 0/56</span><span class="sep">·</span>
       <button class="link" id="b-mode" type="button">Yoru</button><span class="sep">·</span>
       <button class="link" id="b-zout" type="button" aria-label="Alejar">−</button>
       <button class="link" id="b-home" type="button" aria-label="Volver a la vista general">⌂</button>
@@ -1611,6 +1622,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     blitView(sg, stat);
     drawPond(sg, T, dk);
     drawBlooms(sg);
+    drawCarta(sg, T);
     drawKodamas(sg);
     // objetos y personajes por profundidad
     const items = OBJ.map(o => ({ d: o.depth, f: o.draw }));
@@ -2480,6 +2492,7 @@ void main(){
     if (BK.loaded && e.dinero && !!e.dinero.modo_ahorro !== prevAhorro) inscribe(e.dinero.modo_ahorro ? 'Modo ahorro: se llegó al tope de gasto del día.' : 'Fin del modo ahorro.');
     BK.events = e.sello && e.sello.integra ? e.sello.pasos : null;
     BK.rrhh = e.rrhh || null;
+    if (first) albaCheck(e);
     if (first && e.cursores) { BK.cur.rue = e.cursores.rue; BK.cur.bus = e.cursores.bus; BK.cur.chat = e.cursores.chat == null ? -1 : e.cursores.chat; }
     setParado(!!e.parado);
     if (BK.sello && !BK.sello.integra && !BK.sealWarned) { BK.sealWarned = true; inscribe('ATENCIÓN: el sello del historial se ha roto.'); } else if (BK.sello && BK.sello.integra) BK.sealWarned = false;
@@ -2671,7 +2684,7 @@ void main(){
   const chime = (i, vol, when) => { tone(noteF(i), 1.5, vol || .05, 'sine', when); tone(noteF(i) * 2.005, .7, (vol || .05) * .35, 'sine', when); };
   const arpeggio = (n, base, vol) => { for (let k = 0; k < n; k++) chime(base + k * 2, vol || .04, k * .09); };
   const thock = () => { tone(95, .2, .11, 'triangle'); tone(190, .1, .05, 'square'); };
-  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', embudo: 'una estación del embudo', cesta: 'la cesta de los dormidos', papelera: 'la papelera', sellado: 'el sello de no contactar', campanilla: 'la campanilla', tablero_qa: 'el tablero de Calidad', grafico_intel: 'el gráfico de Inteligencia', mapa_intel: 'el mapa de Inteligencia', campanillas: 'una campanilla de Postventa', sobres_rrhh: 'los sobres de RRHH', tablon_rrhh: 'el tablón de puestos', cajas_ops: 'las cajas de Operaciones', marcas_ops: 'las marcas de capacidad', fragua: 'la fragua', incienso: 'una varilla de plazo', balanza_legal: 'la balanza de Legal', archivo: 'el archivador', mazo: 'el mazo', linterna_marca: 'una linterna de veredicto', enso: 'el ensō', libro_estilo: 'el libro de estilo', cometa: 'una cometa de campaña', carrete: 'un carrete', bandeja: 'la mesa de tinta', sello_marca: 'el sello de Marca', gong: 'el gong', caja: 'la caja de pedidos', pilas: 'las pilas de ROI', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
+  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', embudo: 'una estación del embudo', cesta: 'la cesta de los dormidos', papelera: 'la papelera', sellado: 'el sello de no contactar', campanilla: 'la campanilla', tablero_qa: 'el tablero de Calidad', grafico_intel: 'el gráfico de Inteligencia', mapa_intel: 'el mapa de Inteligencia', campanillas: 'una campanilla de Postventa', sobres_rrhh: 'los sobres de RRHH', tablon_rrhh: 'el tablón de puestos', cajas_ops: 'las cajas de Operaciones', marcas_ops: 'las marcas de capacidad', fragua: 'la fragua', incienso: 'una varilla de plazo', balanza_legal: 'la balanza de Legal', archivo: 'el archivador', mazo: 'el mazo', linterna_marca: 'una linterna de veredicto', enso: 'el ensō', libro_estilo: 'el libro de estilo', carta: 'la carta escondida', cometa: 'una cometa de campaña', carrete: 'un carrete', bandeja: 'la mesa de tinta', sello_marca: 'el sello de Marca', gong: 'el gong', caja: 'la caja de pedidos', pilas: 'las pilas de ROI', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
   const FOUND = new Set(); try { JSON.parse(localStorage.getItem('kaizen-rincones') || '[]').forEach(k => { if (RINCONES[k]) FOUND.add(k); }); } catch (e) {}
   function paintBadges() { const b = document.getElementById('b-rin'); if (b) { b.textContent = '✦ ' + FOUND.size + '/' + Object.keys(RINCONES).length; b.title = 'Rincones del jardín que has descubierto (solo adorno: no cuenta nada de tu empresa)'; } const s = document.getElementById('b-snd'); if (s) s.textContent = SND.on ? 'Sonido' : 'Sin sonido'; }
   function discover(k) { if (FOUND.has(k) || !RINCONES[k]) return; FOUND.add(k); try { localStorage.setItem('kaizen-rincones', JSON.stringify([...FOUND])); } catch (e) {} paintBadges(); inscribe('✦ Rincón descubierto: ' + RINCONES[k] + ' · ' + FOUND.size + '/' + Object.keys(RINCONES).length); arpeggio(3, 4, .05); }
@@ -3108,6 +3121,38 @@ void main(){
     }
     return null;
   }
+  // ============================================================ «Mientras no estabas» y la carta
+  // El resumen sale solo de lo que el backend ya cuenta: cuánto avanzaron la bitácora, el bus y la Colmena desde la última visita (los cursores) y qué espera tu SÍ ahora.
+  const VIS_KEY = 'kaizen-visita';
+  const hace = ms => { const m = Math.round(ms / 6e4); return m < 90 ? m + ' min' : m < 2880 ? Math.round(m / 60) + ' h' : Math.round(m / 1440) + ' días'; };
+  function saveVisit() { try { if (BK.loaded && BK.cur) localStorage.setItem(VIS_KEY, JSON.stringify({ ts: Date.now(), empresa: BK.empresa, rue: BK.cur.rue, bus: BK.cur.bus, chat: BK.cur.chat })); } catch (x) {} }
+  function albaCheck(e) {
+    let prev = null; try { prev = JSON.parse(localStorage.getItem(VIS_KEY) || 'null'); } catch (x) {}
+    const cur = e.cursores || {};
+    if (prev && prev.empresa === e.empresa && Date.now() - prev.ts >= 3 * 36e5) {
+      const dr = Math.max(0, (cur.rue == null ? -1 : cur.rue) - (prev.rue == null ? -1 : prev.rue)), db = Math.max(0, (cur.bus || 0) - (prev.bus || 0)), dc = Math.max(0, (cur.chat || 0) - (prev.chat || 0)), pend = (e.tarjetas || {}).pendientes || 0;
+      if (dr || db || dc || pend) {
+        const el = document.createElement('div'); el.className = 'alba'; el.id = 'alba'; const d = e.dinero || {};
+        el.innerHTML = '<button class="x" type="button" aria-label="Cerrar">×</button><h3>Mientras no estabas</h3><div class="sub">Desde tu última visita, hace ' + hace(Date.now() - prev.ts) + '. Solo lo que el backend ha contado.</div><ul>' +
+          (dr ? '<li><b>' + dr + '</b> ' + (dr === 1 ? 'hecho sellado' : 'hechos sellados') + ' en la bitácora</li>' : '') + (db ? '<li><b>' + db + '</b> ' + (db === 1 ? 'evento' : 'eventos') + ' en el bus de los cubos</li>' : '') + (dc ? '<li><b>' + dc + '</b> ' + (dc === 1 ? 'mensaje' : 'mensajes') + ' en la Colmena</li>' : '') +
+          (d.gasto_eur != null ? '<li>Gasto de hoy: <b>' + esc(eur(d.gasto_eur)) + '</b>' + (d.tope_eur ? ' de ' + esc(eur(d.tope_eur)) : '') + (d.modo_ahorro ? ' · modo ahorro' : '') + '</li>' : '') +
+          (pend ? '<li><b>' + pend + '</b> ' + (pend === 1 ? 'aprobación espera' : 'aprobaciones esperan') + ' tu SÍ</li>' : '') + '</ul><div class="acts">' + (pend ? '<button class="link" id="alba-win" type="button">Abrir la ventanilla</button>' : '') + '<button class="link" id="alba-ok" type="button">Entendido</button></div>';
+        document.getElementById('stage').appendChild(el);
+        const off = () => { if (el.parentNode) el.remove(); }; el.querySelector('.x').addEventListener('click', off); el.querySelector('#alba-ok').addEventListener('click', off);
+        const w = el.querySelector('#alba-win'); if (w) w.addEventListener('click', () => { off(); openWin(); }); setTimeout(off, 60000);
+      }
+    }
+    try { localStorage.setItem(VIS_KEY, JSON.stringify({ ts: Date.now(), empresa: e.empresa, rue: cur.rue, bus: cur.bus, chat: cur.chat })); } catch (x) {}
+  }
+  setInterval(saveVisit, 20000); document.addEventListener('visibilitychange', () => { if (document.hidden) saveVisit(); }); addEventListener('pagehide', saveVisit);
+  const CARTA = { leida: (() => { try { return localStorage.getItem('kaizen-carta') === '1'; } catch (x) { return false; } })(), html: "<h3>Buenos días</h3><p>Mientras dormías he terminado la ronda de salas: Finanzas, Comercial, Marketing, Marca, Legal, Calidad, Operaciones, Éxito de cliente, Inteligencia y RRHH. En todas, lo que se ve sale de datos reales del backend y solo como números; y cada objeto o dice algo verdadero o es un adorno declarado (la tabla está en <i>docs/CONTRATO_MUNDO.md</i>).</p><p><b>Decisiones que tomé por ti</b> y que puedes cambiar: los umbrales de «experto» (ROI de 2 en Comercial y Marketing, 90 % de acierto en el resto, mínimo 5 decisiones y 30 días de alta) y que «mejor del mes» sea uno solo, sin empates. Están como constantes en <i>panel_mando/rendimiento.py</i>.</p><p><b>Lo que no sé y no he inventado:</b> Calidad, Éxito de cliente, Inteligencia y RRHH muestran su actividad de 14 días, pero en este repositorio nadie publica todavía los eventos de esos cubos, así que verás casillas grises hasta que alguien lo haga. Y no he conectado nada de webllm: antes necesito saber qué quieres que hagan los agentes con el ordenador.</p><p><b>Pendiente que merece tu ojo:</b> la fuente de Finanzas queda medio tapada desde el ángulo por defecto; el coste por cubo no distingue empresas; y hay dos contadores de coste que no se hablan.</p><p>Y esto, la carta escondida junto al torii, es el detalle sorpresa. El otro es el cartel «Mientras no estabas», que te cuenta lo que ha pasado de verdad desde tu última visita. Que tengas un buen día; el jardín está despierto.</p>" };
+  function abrirCarta() {
+    if (document.getElementById('carta')) return;
+    const el = document.createElement('div'); el.className = 'carta'; el.id = 'carta'; el.innerHTML = '<div class="hoja">' + CARTA.html + '<p class="firma">Claude<span class="hanko">改</span></p><div class="acts" style="border:0;padding:0"><button class="link" id="carta-ok" type="button">Guardar la carta</button></div></div>';
+    document.getElementById('stage').appendChild(el); el.addEventListener('click', ev => { if (ev.target === el || ev.target.id === 'carta-ok') { el.remove(); CARTA.leida = true; try { localStorage.setItem('kaizen-carta', '1'); } catch (x) {} } });
+  }
+  function cartaHot(wx, wy) { const p = P(22.2, 7.5); if (Math.abs(wx - p[0]) < 8 && wy > p[1] - 14 && wy < p[1] + 3) return { x: p[0], y: p[1] - 6, r: 9, act: () => { chime(9, .05); spawn(p[0], p[1] - 6, 18, { cols: ['#ffe28a', '#ffb8d0', '#ffffff'], v: 24, g: 8, l: 1.3 }); discover('carta'); abrirCarta(); } }; return null; }
+  function drawCarta(g, T) { const p = P(22.2, 7.5), x = Math.round(p[0]), y = Math.round(p[1]); rect(g, R.ink, x - 5, y - 6, 11, 7); rect(g, '#f6edd9', x - 4, y - 5, 9, 5); line(g, '#cdbf9a', x - 4, y - 5, x, y - 2, 1); line(g, '#cdbf9a', x + 4, y - 5, x, y - 2, 1); rect(g, R.red[2], x - 1, y - 3, 3, 3); if (!CARTA.leida && !reduce) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .35 + .25 * Math.sin(T * 3); g.drawImage(glowOf('#ffe28a'), x - 12, y - 16, 24, 20); g.restore(); if (Math.sin(T * 2.4) > .8) rect(g, '#ffffff', x + 5, y - 9, 1, 1); } }
   function finHot(wx, wy) {
     const fr = room('finanzas'); if (!fr || fr.locked) return null;
     const n = P(9.25, 1.55), d = P(6.55, 1.55), f = P(10.0, 2.75), c = P(10.02, .72), din = BK.dinero;
@@ -3118,7 +3163,7 @@ void main(){
     return null;
   }
   function hotAt(wx, wy) {
-    { const fh = finHot(wx, wy) || comHot(wx, wy) || mkHot(wx, wy) || brHot(wx, wy) || lgHot(wx, wy) || auxHot(wx, wy); if (fh) return fh; }
+    { const fh = cartaHot(wx, wy) || finHot(wx, wy) || comHot(wx, wy) || mkHot(wx, wy) || brHot(wx, wy) || lgHot(wx, wy) || auxHot(wx, wy); if (fh) return fh; }
     { const ko = kodamaAt(wx, wy); if (ko) return ko; }
     if (CRANE.on && Math.abs(wx - CRANE.x) < 14 && Math.abs(wy - (CRANE.y + EX)) < 10) return { x: CRANE.x, y: CRANE.y + EX, r: 14, act: onCrane };
     for (const f of FURIN) if (Math.abs(wx - f.x) < 7 && wy > f.y - 3 && wy < f.y + 22) return { x: f.x, y: f.y + 8, r: 12, act: () => onFurin(f) };

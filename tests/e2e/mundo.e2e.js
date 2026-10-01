@@ -249,6 +249,21 @@ const info = page => page.evaluate(() => KAIZEN.info());
     return hechos.join(' · ') + ' · estado intacto';
   });
 
+  await escenario('10f «mientras no estabas»: tras una ausencia larga cuenta lo que avanzó el backend, y solo eso', async () => {
+    const cur0 = (await info(page)).cur;
+    // al recargar, el propio juego guarda «visita ahora» (pagehide): la siembra tiene que ocurrir al arrancar la página nueva
+    await page.addInitScript(() => { try { if (!sessionStorage.getItem('sembrada-10f')) { sessionStorage.setItem('sembrada-10f', '1'); localStorage.setItem('kaizen-visita', JSON.stringify({ ts: Date.now() - 5 * 36e5, empresa: 'laboratorio', rue: -1, bus: 0, chat: 0 })); } } catch (e) {} });
+    await page.reload(); await until(page, () => window.KAIZEN && KAIZEN.info().online === true, null, 30000, 'no volvió a conectar');
+    await page.waitForSelector('#alba', { timeout: 15000 });
+    const txt = await page.locator('#alba').innerText();
+    ok(/hace 5 h/.test(txt), 'no dice cuánto llevaba fuera: ' + txt);
+    const m = txt.match(/(\d+)\s+hechos? sellados?/); ok(m && +m[1] === cur0.rue + 1, 'la cuenta de hechos sellados no sale del cursor del backend: ' + txt);
+    await page.click('#alba-ok'); ok(await page.locator('#alba').count() === 0, 'no se cierra');
+    await page.reload(); await until(page, () => window.KAIZEN && KAIZEN.info().online === true, null, 30000);
+    await sleep(1500); ok(await page.locator('#alba').count() === 0, 'sin ausencia larga no debe salir');
+    return 'resumen real tras 5 h fuera; no sale sin ausencia';
+  });
+
   // ── segundo servidor, con clave: sesión, cookie y CSRF de verdad ──
   await escenario('10d modo con clave: sin sesión redirige, con sesión funciona el CSRF y al caducar vuelve al acceso', async () => {
     await parar(); const P2 = PORT + 1, B2 = 'http://127.0.0.1:' + P2, CLAVE = 'clave-de-ensayo-123';
