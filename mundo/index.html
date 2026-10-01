@@ -2415,11 +2415,11 @@ void main(){
     LOTS.forEach(l => { const st = LS[l.id]; if (st.state === 'built') return; const c = P((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2 + 1.2); const nm = st.cubo && CUBES[st.cubo] ? CUBES[st.cubo].nombre : ''; text(st.state === 'obra' ? 'EN OBRA · ' + Math.round(st.p * 100) + ' %' : nm ? 'PABELLÓN · ' + nm.toUpperCase() + ' · SIN DAR DE ALTA' : 'SOLAR LIBRE', c[0], c[1], lab, '600', 'Inter, sans-serif', dk > .45 ? '#bfe3ff' : '#3f6f9c'); });
     if ('letterSpacing' in dc) dc.letterSpacing = '0px';
     const small = Math.max(10, Math.min(14, k / dpr * 4.4));
-    { const rr = unlocked('rrhh'), m = (BK.rrhh || {}).mapa; if (rr && m && k / dpr >= 2.6) { const q = P(rr.x0 + .5 + 1.7, rr.y0 + .8); text('cobertura ' + Math.round(m.cobertura * 100) + ' %', q[0], q[1] - 50, small, '600', '"JetBrains Mono", monospace'); } }
+    { const rr = unlocked('rrhh'), m = (BK.rrhh || {}).mapa; if (rr && m && k / dpr >= 2.6) { const q = P(rr.x0 + .5 + 1.7, rr.y0 + .8); text('cobertura ' + Math.round(m.cobertura * 100) + ' %', q[0], q[1] - 40, small, '600', '"JetBrains Mono", monospace'); } }
     { const lr = room('legal'); if (lr && !lr.locked && k / dpr >= 2.6) lgPlazos().forEach((p_, i) => { const q = P(...stickAt(lr, i)); if (p_.estado !== 'INCUMPLIDA') text(String(p_.dias), q[0], q[1] - stickH(p_) - 9, small, '600', '"JetBrains Mono", monospace'); }); }
-    { const br = room('brand'); if (br && !br.locked && k / dpr >= 2.6) VERD.forEach((v, i) => { const n = vN(v[0]), q = P(...lampAt(br, i)); if (n) text(String(n), q[0], q[1] - 42, small, '600', '"JetBrains Mono", monospace'); }); }
+    { const br = room('brand'); if (br && !br.locked && k / dpr >= 2.6) VERD.forEach((v, i) => { const n = vN(v[0]), q = P(...lampAt(br, i)); if (n) text(String(n), q[0], q[1] - 34, small, '600', '"JetBrains Mono", monospace'); }); }
     { const mr = room('marketing'); if (mr && !mr.locked && k / dpr >= 2.6) mkKites().forEach((kk, i) => { const kt = kiteAt(mr, i, T); text(Math.round(kk.pct * 100) + ' %', kt.x, kt.paused ? kt.y - 12 : kt.y - 14, small, '600', '"JetBrains Mono", monospace'); }); }
-    { const cr = room('comercial'); if (cr && !cr.locked && k / dpr >= 2.6) { comSt(cr).forEach(st => { const n = comN(st.k), p = P(st.x, st.y); if (n) text(String(n), p[0], p[1] - 36, small, '600', '"JetBrains Mono", monospace'); });
+    { const cr = room('comercial'); if (cr && !cr.locked && k / dpr >= 2.6) { comSt(cr).forEach(st => { const n = comN(st.k), p = P(st.x, st.y); if (n) text(String(n), p[0], p[1] - 27, small, '600', '"JetBrains Mono", monospace'); });
       const rd = (CUBES.comercial || {}).rendimiento, q = P(cr.x0 + .8, cr.y0 + 3.7); text(rd && rd.roi != null ? 'ROI ' + rd.roi + '×' : 'ROI sin medir', q[0] - 4, q[1] - 26, small, '500', '"JetBrains Mono", monospace'); } }
     { const fr = room('finanzas'); if (fr && !fr.locked) {
       const c = P(10.02, .72); text('sin atribuir ' + (BK.dinero ? eur(BK.dinero.sin_atribuir_eur) : '—'), c[0], c[1] - 22, small, '500', '"JetBrains Mono", monospace');
@@ -2885,7 +2885,7 @@ void main(){
   const mkN = (grp, k) => { const d = mkData(); return d && d[grp] ? (d[grp][k] || 0) : 0; };
   const mkKites = () => { const d = mkData(); return d && d.gasto ? d.gasto.slice(0, 6) : []; };
   const spoolAt = (r, i) => [r.x0 + .7 + i * .6, r.y0 + 5.45];
-  const kiteAt = (r, i, T) => { const b = P(...spoolAt(r, i)), k = mkKites()[i], paused = k && k.estado === 'PAUSADA'; if (paused) return { x: b[0] + 8, y: b[1] + 1, paused: true, b }; const pct = k ? Math.min(1, k.pct) : 0, sw = reduce ? 0 : Math.sin(T * 1.3 + i * 1.7) * 4; return { x: b[0] - 6 + (i % 2) * 14 + sw, y: b[1] - 52 - (i % 3) * 10 + (reduce ? 0 : Math.sin(T * .9 + i) * 2) + pct * 8, paused: false, b, pct }; };
+  const kiteAt = (r, i, T) => { const b = P(...spoolAt(r, i)), k = mkKites()[i], paused = k && k.estado === 'PAUSADA'; if (paused) return { x: b[0] + 8, y: b[1] + 1, paused: true, b }; const pct = k ? Math.min(1, k.pct) : 0, sw = reduce ? 0 : Math.sin(T * 1.3 + i * 1.7) * 4; return { x: b[0] + 6 + (i % 2) * 12 + sw * .6, y: b[1] - 34 - (i % 3) * 7 + (reduce ? 0 : Math.sin(T * .9 + i) * 1.5) + pct * 6, paused: false, b, pct }; };
   const trayAt = (r, i) => [r.x0 + 3.4, r.y0 + 2.35 + i * .65];
   function marketingDecor(r) {
     const tb = P(r.x0 + 3.4, r.y0 + 3.3);

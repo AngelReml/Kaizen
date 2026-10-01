@@ -84,6 +84,7 @@ const info = page => page.evaluate(() => KAIZEN.info());
     await post('/_e2e/evento', { tipo: 'comercial.lead.descubierto', payload: { lead_ref: 'l1' } });
     await until(page, () => document.querySelector('#feedList li') && document.querySelector('#feedList li').textContent.includes('negocio candidato'), null, 8000, 'no llegó al feed');
     await until(page, () => KAIZEN.info().agents.find(a => a.id === 'comercial').say, null, 3000, 'el director no habla');
+    await until(page, n => KAIZEN.info().events === n, antes + 1, 20000, 'sellados no pasó de ' + antes + ' a ' + (antes + 1));   // el contador llega con la foto del backend, unos segundos después del evento
     const i = await info(page); ok(i.events === antes + 1, 'sellados ' + antes + ' → ' + i.events);
     return 'sellados ' + antes + ' → ' + i.events;
   });
@@ -227,7 +228,7 @@ const info = page => page.evaluate(() => KAIZEN.info());
     await sleep(2500);
     const fx = () => page.evaluate(() => KAIZEN.fx());
     const estado = async () => { const i = await info(page); return JSON.stringify({ ev: i.events, cur: i.cur, drops: i.drops, gasto: i.gasto, tarj: i.tarjetas, parado: i.parado }); };
-    await until(page, () => KAIZEN.info().drops === 0, null, 30000, 'las gotas de tinta no terminaron de llegar al Registro');   // lo que ya venía en camino no es de este clic
+    { const t0 = Date.now(); await until(page, () => KAIZEN.info().drops === 0, null, 150000, 'las gotas de tinta no terminaron de llegar al Registro'); console.log('      (gotas vaciadas en ' + ((Date.now() - t0) / 1000).toFixed(0) + ' s)'); }   // lo que ya venía en camino no es de este clic
     const antes = await estado(), f0 = await fx(), i0 = await info(page), a = i0.agents[0];
     const blancos = [
       ['torii', Pw(21.5, 6).map((v, i) => i ? v - 26 : v)], ['flor', Pw(14, 21)], ['arbol', Pw(2.2, 18.6).map((v, i) => i ? v - 44 : v)],
