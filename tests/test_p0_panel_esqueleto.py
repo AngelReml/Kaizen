@@ -21,6 +21,10 @@ def _app_con_datos():
         b.publicar(Sobre(tenant_id="laboratorio", tipo="plataforma.diario.entrada",
                          payload={"n": i}, origen="plataforma.panel"))
     app = crear_app(k, mecha_s=0)
+    # La bitacora del test y la que el panel construiria sola tienen genesis distinto (fecha_alta
+    # del test vs la del registro): sin registrarla, el panel ve la cadena rota desde el evento 0
+    # y core.autonomia.vigilar (G1) reaccionaria endureciendo los cubos, como debe.
+    app.state.bitacoras["laboratorio"] = b
     return app, k, b
 
 
