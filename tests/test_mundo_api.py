@@ -582,3 +582,22 @@ def test_legal_trae_plazos_y_archivo_solo_como_numeros(entorno):
     assert lg["obligaciones"]["ASIGNADA"] == 1 and lg["obligaciones"]["CUMPLIDA"] == 1 and lg["evidencias"] == 1
     assert [p["dias"] for p in lg["plazos"]] == [-99, 5, 40]                      # la incumplida primero, luego por cercania; la cumplida no es un plazo
     assert "SECRETO" not in json.dumps(j)
+
+
+def test_pulso_ops_e_inteligencia_solo_numeros(entorno):
+    app, c, b = _montaje()
+    k = b.k
+    _bus("kaizen.qa.validacion_emitida.v1")
+    _rue(b, "operacion.pedido.confirmado", {})
+    k.add(EMPRESA, "pedido_ops", "p1", {"id": "p1", "estado": "CONFIRMADO", "cliente": "SECRETO-CLIENTE"})
+    k.add(EMPRESA, "capacidad", "2026-10-02", {"fecha": "2026-10-02"})
+    k.add(EMPRESA, "alerta", "a1", {"alerta_id": "a1", "estado": "EMITIDA", "metrica": "SECRETO-METRICA", "valor": 123456})
+    k.add(EMPRESA, "umbral", "m", {"version": 1})
+    j = c.get(f"/api/mundo/estado?empresa={EMPRESA}").json()
+    por = {x["cubo"]: x for x in j["cubos"]}
+    assert por["ops"]["ops"] == {"pedidos": {"PENDIENTE_CONFIRMACION": 0, "CONFIRMADO": 1, "EN_PRODUCCION": 0, "RETENIDO": 0, "COMPLETADO": 0, "ENTREGADO_A_LOGISTICA": 0, "RECHAZADO": 0}, "dias_con_capacidad": 1}
+    assert por["inteligencia"]["inteligencia"] == {"alertas": {"EMITIDA": 1}, "umbrales": 1}
+    assert por["qa"]["pulso"]["total"] == 1 and por["qa"]["pulso"]["dias"][-1] == 1 and len(por["qa"]["pulso"]["dias"]) == 14
+    assert por["ops"]["pulso"]["total"] == 1
+    assert por["rrhh"]["pulso"] == {"dias": [0] * 14, "total": 0}
+    assert "SECRETO" not in json.dumps(j) and "123456" not in json.dumps(j["cubos"])

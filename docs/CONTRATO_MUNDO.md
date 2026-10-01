@@ -38,7 +38,7 @@ existen, todos los cubos salen `alta:false`. Campos:
   `alta`, `uid`/`role_id`/`ts_alta` (null si no hay alta), `salud`
   `{estado, detalle, eventos_24h}` (misma funcion que Colmena; si no se puede
   medir, `SIN DATOS`), `ultimo` `{texto, ts}` del chat individual o null.
-  `rendimiento` (ver «Rendimiento y grados»). Solo el cubo `comercial` trae ademas `pipeline`: `{leads:{COLD, CONTACTADO, CONVERSACION, COMPROMETIDO, PEDIDO, CUSTOMER, DORMIDO, DESCARTADO, EXCLUIDO}, pedidos:{atribuidos, pendientes_validacion}}`. Solo numeros: ningun dato de personas. Solo el cubo `marketing` trae `marketing`: `{campanas:{BORRADOR..CANCELADA}, contenidos:{GENERADO, VALIDADO_POR_BRAND, RECHAZADO, APROBADO, LANZADO, ARCHIVADO}, gasto:[{estado, pct}] (activas y pausadas, hasta 8; pct = gasto reportado / presupuesto), kill_switch_pct}`: sin nombres de campana ni textos. Solo el cubo `brand` trae `marca`: `{veredictos:{APTO, AMBIGUO, NO_APTO} (eventos plataforma.verificacion.emitida de 30 dias), directrices:{estado: n}, ventana_dias}`: ni reglas ni textos. El evento `plataforma.verificacion.emitida` lleva ademas `veredicto` (solo la etiqueta). Solo el cubo `legal` trae `legal`: `{obligaciones:{estado: n}, plazos:[{dias, estado, tipo}] (abiertas por cercania e incumplidas, hasta 8; dias = dias hasta la fecha limite, -99 si esta incumplida), evidencias: n}`: ni nombres, ni areas, ni fuentes, ni ficheros.
+  `rendimiento` (ver «Rendimiento y grados»). Solo el cubo `comercial` trae ademas `pipeline`: `{leads:{COLD, CONTACTADO, CONVERSACION, COMPROMETIDO, PEDIDO, CUSTOMER, DORMIDO, DESCARTADO, EXCLUIDO}, pedidos:{atribuidos, pendientes_validacion}}`. Solo numeros: ningun dato de personas. Solo el cubo `marketing` trae `marketing`: `{campanas:{BORRADOR..CANCELADA}, contenidos:{GENERADO, VALIDADO_POR_BRAND, RECHAZADO, APROBADO, LANZADO, ARCHIVADO}, gasto:[{estado, pct}] (activas y pausadas, hasta 8; pct = gasto reportado / presupuesto), kill_switch_pct}`: sin nombres de campana ni textos. Solo el cubo `brand` trae `marca`: `{veredictos:{APTO, AMBIGUO, NO_APTO} (eventos plataforma.verificacion.emitida de 30 dias), directrices:{estado: n}, ventana_dias}`: ni reglas ni textos. El evento `plataforma.verificacion.emitida` lleva ademas `veredicto` (solo la etiqueta). Solo el cubo `legal` trae `legal`: `{obligaciones:{estado: n}, plazos:[{dias, estado, tipo}] (abiertas por cercania e incumplidas, hasta 8; dias = dias hasta la fecha limite, -99 si esta incumplida), evidencias: n}`: ni nombres, ni areas, ni fuentes, ni ficheros. Todos los cubos traen `pulso`: `{dias:[14 enteros, el mas antiguo primero], total}` = eventos del bus (`kaizen.<cubo>.*`) mas eventos de la bitacora atribuidos al cubo, por dia UTC. `ops` trae `ops:{pedidos:{estado:n}, dias_con_capacidad}` e `inteligencia` trae `inteligencia:{alertas:{estado:n}, umbrales}`: solo numeros, ni clientes, ni metricas ni valores.
 - `dinero`: misma funcion que `/api/dinero/{empresa}` (`frase`, `gasto_eur`,
   `tope_eur`, `sin_atribuir_eur`, `modo_ahorro`).
 - `tarjetas`: `pendientes` (numero; cola en PENDIENTE) y `mechas[]`: las
@@ -239,4 +239,23 @@ Los veredictos cuentan solo evaluaciones reales: el servicio emite el evento al 
 | Balanza | se inclina hacia lo cumplido (jade: cumplidas, auditadas, cerradas) o hacia lo incumplido (rojo: incumplidas y en acción correctiva) | `legal.obligaciones` |
 | Archivador | un sello rojo por evidencia archivada (hasta 12 cajones) | `legal.evidencias` |
 | Mazo | cae con cada evento real de Legal; las alertas de plazo y las incumplidas hacen parpadear las varillas urgentes | eventos `cumplimiento.*` |
+
+## Calidad, Operaciones, Éxito de cliente, Inteligencia y RRHH
+
+Los tableros que antes eran dibujos fijos (el de Calidad, el gráfico de Inteligencia) se tapan con datos reales.
+
+| Sala | Objeto | Qué muestra | Origen |
+|---|---|---|---|
+| Calidad | Tablero de 14 casillas | una casilla por día (la última, hoy): verde si hubo actividad del cubo, gris si no; un sello redondo verde, ámbar o rojo con la tasa de acierto si hay muestra | `pulso`, `rendimiento.tasa_acierto` |
+| Inteligencia | Gráfico de pared | una barra por día de actividad (hoy, dorada) | `pulso` |
+| Inteligencia | Mapa | una bandera roja por alerta emitida y un alfiler verde por umbral | `inteligencia` |
+| Éxito de cliente | Riel de 14 campanillas | una por día; dorada con brillo si hubo actividad; la de hoy vibra con cada evento | `pulso` |
+| RRHH | Tablón de puestos (ya existía) y sobres | una clavija llena por director dado de alta; un sobre por propuesta pendiente; con zoom, la cobertura | `rrhh.mapa`, `rrhh.propuestas` |
+| Operaciones | Siete cajas | una por estado de pedido interno, con hasta 4 cajas apiladas | `ops.pedidos` |
+| Operaciones | Fragua | arde más con cada pedido en producción | `ops.pedidos.EN_PRODUCCION` |
+| Operaciones | Poste de marcas | una marca dorada por día con capacidad declarada (hasta 10) | `ops.dias_con_capacidad` |
+
+**Límite honesto:** el `pulso` cuenta actividad, no calidad ni resultado. Hoy el repositorio no contiene productores de los
+eventos `kaizen.qa.*`, `kaizen.customer_success.*`, `kaizen.inteligencia.*` ni `kaizen.rrhh.*` (solo los declaran sus manifiestos):
+hasta que alguien los publique, esas salas mostrarán casillas grises, y eso es la verdad.
 

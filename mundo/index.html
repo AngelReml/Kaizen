@@ -244,7 +244,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
       <button class="link stop" id="b-stop" type="button" title="Mantén pulsado 2 segundos">PARAR TODO</button><span class="sep">·</span>
       <button class="link" id="b-q" type="button">Nitidez</button><span class="sep">·</span>
       <button class="link" id="b-snd" type="button">Sonido</button><span class="sep">·</span>
-      <span class="link" id="b-rin" style="cursor:default">✦ 0/46</span><span class="sep">·</span>
+      <span class="link" id="b-rin" style="cursor:default">✦ 0/55</span><span class="sep">·</span>
       <button class="link" id="b-mode" type="button">Yoru</button><span class="sep">·</span>
       <button class="link" id="b-zout" type="button" aria-label="Alejar">−</button>
       <button class="link" id="b-home" type="button" aria-label="Volver a la vista general">⌂</button>
@@ -1454,7 +1454,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     const from = a ? { pos: a.pos.slice(), cur: a.cur } : { pos: [18.4, 6.0], cur: 'pasillo' };
     if (reduce || DROPS.length >= 40) sealed(); else DROPS.push({ pos: from.pos, path: route({ cur: from.cur }, REG_TARGET, 'registro'), trail: [] });   // en una ráfaga no se dibujan mil gotas: se sellan igual
     if (ev.cubo === 'finanzas') abacusT = 1;
-    comercialEv(ev); marketingEv(ev); brandEv(ev); legalEv(ev);
+    comercialEv(ev); marketingEv(ev); brandEv(ev); legalEv(ev); cubeFx(ev);
     if (/^(finanzas\.cobro\.registrado|comercial\.pedido\.atribuido)/.test(ev.tipo)) { if (/^finanzas\./.test(ev.tipo)) cobrosVistos++; celebrate(); }
   }
 
@@ -1866,6 +1866,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
     roomDecor(r);
     if (r.tpl === 'comercial') comercialDecor(r);
     if (r.tpl === 'marketing') marketingDecor(r);
+    if (['qa', 'inteligencia', 'customer_success', 'rrhh', 'ops'].includes(r.cubo || r.tpl)) auxDecor(Object.assign({}, r, { cubo: r.cubo || r.tpl }));
     if (r.tpl === 'legal') legalDecor(r);
     if (r.tpl === 'brand') { r.w_ = r.x1 - r.x0; brandDecor(r); }
     const x0 = r.x0, y0 = r.y0, x1 = r.x1, w = x1 - x0, d = r.y1 - r.y0, tpl = ({ ops: 'taller', comercial: 'tienda', customer_success: 'archivo' })[r.tpl] || r.tpl;
@@ -2397,6 +2398,7 @@ void main(){
     LOTS.forEach(l => { const st = LS[l.id]; if (st.state === 'built') return; const c = P((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2 + 1.2); const nm = st.cubo && CUBES[st.cubo] ? CUBES[st.cubo].nombre : ''; text(st.state === 'obra' ? 'EN OBRA · ' + Math.round(st.p * 100) + ' %' : nm ? 'PABELLÓN · ' + nm.toUpperCase() + ' · SIN DAR DE ALTA' : 'SOLAR LIBRE', c[0], c[1], lab, '600', 'Inter, sans-serif', dk > .45 ? '#bfe3ff' : '#3f6f9c'); });
     if ('letterSpacing' in dc) dc.letterSpacing = '0px';
     const small = Math.max(10, Math.min(14, k / dpr * 4.4));
+    { const rr = unlocked('rrhh'), m = (BK.rrhh || {}).mapa; if (rr && m && k / dpr >= 2.6) { const q = P(rr.x0 + .5 + 1.7, rr.y0 + .8); text('cobertura ' + Math.round(m.cobertura * 100) + ' %', q[0], q[1] - 50, small, '600', '"JetBrains Mono", monospace'); } }
     { const lr = room('legal'); if (lr && !lr.locked && k / dpr >= 2.6) lgPlazos().forEach((p_, i) => { const q = P(...stickAt(lr, i)); if (p_.estado !== 'INCUMPLIDA') text(String(p_.dias), q[0], q[1] - stickH(p_) - 18, small, '600', '"JetBrains Mono", monospace'); }); }
     { const br = room('brand'); if (br && !br.locked && k / dpr >= 2.6) VERD.forEach((v, i) => { const n = vN(v[0]), q = P(...lampAt(br, i)); if (n) text(String(n), q[0], q[1] - 42, small, '600', '"JetBrains Mono", monospace'); }); }
     { const mr = room('marketing'); if (mr && !mr.locked && k / dpr >= 2.6) mkKites().forEach((kk, i) => { const kt = kiteAt(mr, i, T); text(Math.round(kk.pct * 100) + ' %', kt.x, kt.paused ? kt.y - 12 : kt.y - 14, small, '600', '"JetBrains Mono", monospace'); }); }
@@ -2669,7 +2671,7 @@ void main(){
   const chime = (i, vol, when) => { tone(noteF(i), 1.5, vol || .05, 'sine', when); tone(noteF(i) * 2.005, .7, (vol || .05) * .35, 'sine', when); };
   const arpeggio = (n, base, vol) => { for (let k = 0; k < n; k++) chime(base + k * 2, vol || .04, k * .09); };
   const thock = () => { tone(95, .2, .11, 'triangle'); tone(190, .1, .05, 'square'); };
-  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', embudo: 'una estación del embudo', cesta: 'la cesta de los dormidos', papelera: 'la papelera', sellado: 'el sello de no contactar', campanilla: 'la campanilla', incienso: 'una varilla de plazo', balanza_legal: 'la balanza de Legal', archivo: 'el archivador', mazo: 'el mazo', linterna_marca: 'una linterna de veredicto', enso: 'el ensō', libro_estilo: 'el libro de estilo', cometa: 'una cometa de campaña', carrete: 'un carrete', bandeja: 'la mesa de tinta', sello_marca: 'el sello de Marca', gong: 'el gong', caja: 'la caja de pedidos', pilas: 'las pilas de ROI', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
+  const RINCONES = { arbol: 'un árbol', torii: 'el torii', puente: 'el puente', arroyo: 'el arroyo', grulla: 'la grulla', neko: 'el maneki-neko', embudo: 'una estación del embudo', cesta: 'la cesta de los dormidos', papelera: 'la papelera', sellado: 'el sello de no contactar', campanilla: 'la campanilla', tablero_qa: 'el tablero de Calidad', grafico_intel: 'el gráfico de Inteligencia', mapa_intel: 'el mapa de Inteligencia', campanillas: 'una campanilla de Postventa', sobres_rrhh: 'los sobres de RRHH', tablon_rrhh: 'el tablón de puestos', cajas_ops: 'las cajas de Operaciones', marcas_ops: 'las marcas de capacidad', fragua: 'la fragua', incienso: 'una varilla de plazo', balanza_legal: 'la balanza de Legal', archivo: 'el archivador', mazo: 'el mazo', linterna_marca: 'una linterna de veredicto', enso: 'el ensō', libro_estilo: 'el libro de estilo', cometa: 'una cometa de campaña', carrete: 'un carrete', bandeja: 'la mesa de tinta', sello_marca: 'el sello de Marca', gong: 'el gong', caja: 'la caja de pedidos', pilas: 'las pilas de ROI', daruma: 'el daruma', fuente: 'la fuente de gemas', cofre: 'el cofre', kodama: 'un kodama', isla: 'una isla flotante', sol: 'el sol', monte: 'el monte', nube: 'una nube', bambu: 'el bambú', furin: 'un furin', farol: 'un farol', flor: 'una flor nueva', estanque: 'el estanque', gato: 'Tama', campana: 'la campana', tanuki: 'el tanuki', luna: 'la luna', director: 'un director', sala: 'una sala' };
   const FOUND = new Set(); try { JSON.parse(localStorage.getItem('kaizen-rincones') || '[]').forEach(k => { if (RINCONES[k]) FOUND.add(k); }); } catch (e) {}
   function paintBadges() { const b = document.getElementById('b-rin'); if (b) { b.textContent = '✦ ' + FOUND.size + '/' + Object.keys(RINCONES).length; b.title = 'Rincones del jardín que has descubierto (solo adorno: no cuenta nada de tu empresa)'; } const s = document.getElementById('b-snd'); if (s) s.textContent = SND.on ? 'Sonido' : 'Sin sonido'; }
   function discover(k) { if (FOUND.has(k) || !RINCONES[k]) return; FOUND.add(k); try { localStorage.setItem('kaizen-rincones', JSON.stringify([...FOUND])); } catch (e) {} paintBadges(); inscribe('✦ Rincón descubierto: ' + RINCONES[k] + ' · ' + FOUND.size + '/' + Object.keys(RINCONES).length); arpeggio(3, 4, .05); }
@@ -2694,6 +2696,7 @@ void main(){
     AG.forEach(a => { if (a.hop > 0) a.hop = Math.max(0, a.hop - dt * 2.2); });
     if (monteGlow > 0) monteGlow = Math.max(0, monteGlow - dt * .4);
     Object.keys(brFlash).forEach(k => { if (brFlash[k] > 0) brFlash[k] = Math.max(0, brFlash[k] - dt * 1.1); });
+    Object.keys(FLASH).forEach(k => { if (FLASH[k] > 0) FLASH[k] = Math.max(0, FLASH[k] - dt * 1.2); });
     if (gavelT > 0) gavelT = Math.max(0, gavelT - dt * 1.6); if (plazoFlash > 0) plazoFlash = Math.max(0, plazoFlash - dt * .5);
     if (gongT > 0) gongT = Math.max(0, gongT - dt * .6); if (hankoT > 0) hankoT = Math.max(0, hankoT - dt * 1.8);
     if (bellC > 0) bellC = Math.max(0, bellC - dt * .7); if (cajaT > 0) cajaT = Math.max(0, cajaT - dt * 1.6);
@@ -3021,6 +3024,90 @@ void main(){
     { const p = P(lr.x0 + 4.9, lr.y0 + 1.6); if (Math.abs(wx - p[0]) < 9 && wy > p[1] - 22 && wy < p[1] - 4) return { x: p[0], y: p[1] - 12, r: 10, act: () => { gavelT = 1; thock(); discover('mazo'); inscribe('El mazo cae con cada hecho real de Legal.'); } }; }
     return null;
   }
+  // ============================================================ Calidad, Operaciones, Éxito de cliente, Inteligencia y RRHH
+  // Datos reales y solo números: el pulso de 14 días de cada cubo (`cubos[].pulso`: eventos del bus y de la bitácora por día), los pedidos internos de Operaciones,
+  // las alertas de Inteligencia y el mapa de puestos de RRHH. Los tableros que antes eran dibujos fijos ahora se tapan con los datos de verdad.
+  const FLASH = {};
+  const pulsoD = c => { const p = (CUBES[c] || {}).pulso; return p && p.dias ? p.dias : new Array(14).fill(0); };
+  const racha = c => { const d = pulsoD(c); let n = 0; for (let i = d.length - 1; i >= 0 && d[i] > 0; i--) n++; return n; };
+  const diasAct = c => pulsoD(c).filter(v => v > 0).length;
+  const unlocked = id => { const r = room(id); return r && !r.locked ? r : null; };
+  const ddia = i => i === 13 ? 'hoy' : i === 12 ? 'ayer' : 'hace ' + (13 - i) + ' días';
+  function cubeFx(ev) {
+    if (!ev.cubo || !['qa', 'ops', 'customer_success', 'inteligencia', 'rrhh'].includes(ev.cubo)) return; const r = unlocked(ev.cubo); if (!r) return;
+    FLASH[ev.cubo] = 1; chime(Math.floor(rnd() * 7), .035); const c = P((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2); spawn(c[0], c[1] - 18, 10, { cols: ['#ffe28a', '#ffffff'], v: 18, g: 8, l: 1 });
+  }
+  function auxDecor(r) {
+    const id = r.cubo, w = r.x1 - r.x0, d = r.y1 - r.y0, x0 = r.x0, y0 = r.y0, col = ACC[id] || '#ffffff';
+    if (id === 'qa') {
+      const bx = x0 + w - 1.4, p = P(bx, y0 + .5), cen = P(x0 + w * .5, y0 + d * .5);
+      add(x0 + y0 + 1.1 + bx, (g, T) => {
+        rect(g, R.paper, p[0] - 11, p[1] - 37, 22, 24); const dd = pulsoD('qa');
+        for (let i = 0; i < 14; i++) { const cx = p[0] - 10 + (i % 7) * 3, cy = p[1] - 35 + Math.floor(i / 7) * 6 + (i % 7) * .5, on = dd[i] > 0; rect(g, on ? R.moss[4] : R.stone[3], cx, cy, 2, 4); if (i === 13 && !reduce && Math.sin(T * 5) > 0) rect(g, R.gold[3], cx, cy - 1, 2, 1); if (on) rect(g, '#d6ffd8', cx, cy, 1, 1); }
+        const ac = (CUBES.qa || {}).rendimiento, t = ac && ac.tasa_acierto, sc = t == null ? R.stone[3] : t >= .9 ? '#5fe08a' : t >= .7 ? '#ffc94a' : '#ff6a5a';
+        blob(g, p[0], p[1] - 8, 4, 3, [mix(sc, '#000', .3), sc, sc, mix(sc, '#fff', .4)]);
+        if (FLASH.qa > 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = FLASH.qa * .6; g.drawImage(glowOf('#9af0a8'), p[0] - 18, p[1] - 44, 36, 36); g.restore(); }
+      });
+    } else if (id === 'inteligencia') {
+      const p = P(x0 + 2.4, y0 + .4), mp = P(x0 + w * .5 - .8 + .9, y0 + 2.9);
+      add(x0 + 2.4 + y0 + .8, (g, T) => {
+        rect(g, R.shoji[3], p[0] - 23, p[1] - 43, 46, 28); const dd = pulsoD('inteligencia'), mx = Math.max(1, ...dd);
+        for (let i = 0; i < 14; i++) { const h = dd[i] ? 2 + Math.round(dd[i] / mx * 20) : 1; rect(g, dd[i] ? (i === 13 ? R.gold[2] : R.indigo[3]) : R.stone[3], p[0] - 21 + i * 3, p[1] - 17 - h, 2, h); }
+        line(g, R.stone[2], p[0] - 22, p[1] - 16, p[0] + 21, p[1] - 16, 1);
+        const d_ = (CUBES.inteligencia || {}).inteligencia || {}, na = (d_.alertas && d_.alertas.EMITIDA) || 0, nu = d_.umbrales || 0;
+        for (let k = 0; k < Math.min(6, na); k++) { line(g, R.wood[1], mp[0] - 10 + k * 4, mp[1] - 4, mp[0] - 10 + k * 4, mp[1] - 14, 1); rect(g, R.red[3], mp[0] - 10 + k * 4, mp[1] - 14, 3, 2); }
+        for (let k = 0; k < Math.min(6, nu); k++) rect(g, R.moss[4], mp[0] - 10 + k * 4, mp[1] - 3, 2, 2);
+        if (FLASH.inteligencia > 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = FLASH.inteligencia * .55; g.drawImage(glowOf('#9ad0ff'), p[0] - 28, p[1] - 48, 56, 40); g.restore(); }
+      });
+    } else if (id === 'customer_success') {
+      const a = P(x0 + 1.2, y0 + 3.6), b = P(x0 + 5.0, y0 + 3.6);
+      add(x0 + 5 + y0 + 3.7, (g, T) => {
+        for (const q of [a, b]) { rect(g, R.wood[1], q[0] - 1, q[1] - 34, 2, 34); }
+        line(g, R.lacq[2], a[0], a[1] - 34, b[0], b[1] - 34, 2); const dd = pulsoD('customer_success');
+        for (let i = 0; i < 14; i++) { const t = i / 13, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t - 34, on = dd[i] > 0, sw = reduce ? 0 : Math.sin(T * 1.5 + i) * (on ? 1.2 : .4) + (i === 13 ? FLASH.customer_success * Math.sin(T * 20) * 2 : 0);
+          line(g, R.stone[4], x, y, x + sw, y + 4, 1); rect(g, on ? R.gold[2] : R.stone[2], x + sw - 1, y + 4, 3, 3); rect(g, on ? R.gold[3] : R.stone[3], x + sw - 1, y + 4, 1, 2);
+          if (on) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .3; g.drawImage(glowOf('#ffd45a'), x + sw - 5, y, 10, 10); g.restore(); } }
+      });
+    } else if (id === 'rrhh') {
+      const p = P(x0 + w - 1.4, y0 + 1.5);
+      add(x0 + w - 1.4 + y0 + 1.6, (g, T) => {
+        const n = Math.min(6, ((BK.rrhh || {}).propuestas || []).length); for (let k = 0; k < n; k++) { rect(g, R.cream, p[0] - 9 + k * 2, p[1] - 12 - k, 7, 4); rect(g, R.red[2], p[0] - 6 + k * 2, p[1] - 11 - k, 1, 1); }
+        if (FLASH.rrhh > 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = FLASH.rrhh * .5; g.drawImage(glowOf('#ffb8d0'), p[0] - 18, p[1] - 28, 36, 30); g.restore(); }
+      });
+    } else if (id === 'ops') {
+      const est = ['PENDIENTE_CONFIRMACION', 'CONFIRMADO', 'EN_PRODUCCION', 'RETENIDO', 'COMPLETADO', 'ENTREGADO_A_LOGISTICA', 'RECHAZADO'], cc = ['#9ab8ff', '#7ad2c8', '#ffb040', '#ff6a5a', '#9af07a', '#ffe28a', '#a0a0b0'];
+      const fpos = P(x0 + w - 1.9 + .7, y0 + 1.35), tp = P(x0 + w - .45, y0 + 3.6);
+      add(x0 + w + y0 + d - .5, (g, T) => {
+        const d_ = (CUBES.ops || {}).ops || {}, ped = d_.pedidos || {};
+        est.forEach((e, i) => { const q = P(x0 + .7 + i * .62, y0 + d - .7), n = ped[e] || 0, x = Math.round(q[0]), y = Math.round(q[1]);
+          rect(g, R.wood[2], x - 4, y - 4, 8, 4); rect(g, R.wood[4], x - 4, y - 4, 8, 1); for (let k = 0; k < Math.min(4, n); k++) { rect(g, cc[i], x - 3, y - 7 - k * 3, 6, 3); rect(g, mix(cc[i], '#fff', .4), x - 3, y - 7 - k * 3, 6, 1); } if (!n) rect(g, R.wood[0], x - 3, y - 3, 6, 1); });
+        const ep = ped.EN_PRODUCCION || 0, f = 1 + Math.min(4, ep) * .4 + (FLASH.ops || 0) * 1.5;
+        g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .35 + .1 * f; g.drawImage(glowOf('#ff7a2a'), fpos[0] - 10 * f, fpos[1] - 18 - 6 * f, 20 * f, 16 * f); g.restore();
+        for (let k = 0; k < 2 + Math.min(4, ep); k++) rect(g, k % 2 ? '#ffd45a' : '#ff8a2a', fpos[0] - 3 + k, fpos[1] - 10 - (reduce ? 0 : Math.abs(Math.sin(T * 6 + k * 1.3)) * (2 + ep)), 2, 2);
+        rect(g, R.wood[1], tp[0] - 1, tp[1] - 26, 3, 26); for (let k = 0; k < Math.min(10, d_.dias_con_capacidad || 0); k++) rect(g, R.gold[2], tp[0] - 3, tp[1] - 24 + k * 2, 7, 1);
+      });
+    }
+  }
+  function auxHot(wx, wy) {
+    for (const id of ['qa', 'inteligencia', 'customer_success', 'rrhh', 'ops']) {
+      const r = unlocked(id); if (!r) continue; const w = r.x1 - r.x0, d = r.y1 - r.y0, x0 = r.x0, y0 = r.y0;
+      const hit = (p, rx, ry0, ry1) => Math.abs(wx - p[0]) < rx && wy > p[1] - ry0 && wy < p[1] + ry1;
+      if (id === 'qa') { const p = P(x0 + w - 1.4, y0 + .5); if (hit(p, 13, 40, -8)) return { x: p[0], y: p[1] - 24, r: 14, act: () => { chime(6, .04); spawn(p[0], p[1] - 24, 10, { cols: ['#9af0a8', '#ffffff'], v: 16, g: 8, l: 1 }); discover('tablero_qa'); const rd = (CUBES.qa || {}).rendimiento, t = rd && rd.tasa_acierto; inscribe('Tablero de Calidad: actividad en ' + diasAct('qa') + ' de los últimos 14 días, ' + racha('qa') + ' seguidos hasta hoy' + (t != null ? ' · acierto ' + Math.round(t * 100) + ' %.' : ' · acierto sin medir (pocas decisiones).')); } }; }
+      if (id === 'inteligencia') { const p = P(x0 + 2.4, y0 + .4), q = P(x0 + w * .5 - .8 + .9, y0 + 2.9), di = (CUBES.inteligencia || {}).inteligencia || {};
+        if (hit(p, 26, 46, -12)) return { x: p[0], y: p[1] - 30, r: 16, act: () => { chime(5, .04); discover('grafico_intel'); const dd = pulsoD('inteligencia'); inscribe('Cada barra es un día de Inteligencia (hoy, la dorada): ' + dd.reduce((a, b) => a + b, 0) + ' eventos en 14 días.'); } };
+        if (hit(q, 14, 20, 4)) return { x: q[0], y: q[1] - 10, r: 12, act: () => { chime(2, .04); discover('mapa_intel'); inscribe('Mapa: ' + ((di.alertas && di.alertas.EMITIDA) || 0) + ' alertas emitidas (banderas rojas) y ' + (di.umbrales || 0) + ' umbrales definidos (alfileres verdes).'); } }; }
+      if (id === 'customer_success') { const a = P(x0 + 1.2, y0 + 3.6), b = P(x0 + 5.0, y0 + 3.6), dd = pulsoD('customer_success');
+        for (let i = 0; i < 14; i++) { const t = i / 13, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t - 30; if (Math.abs(wx - x) < 3.5 && wy > y - 6 && wy < y + 10) return { x, y: y + 4, r: 6, act: () => { FLASH.customer_success = 1; chime(i % 8, .045); discover('campanillas'); inscribe('Campanilla de ' + ddia(i) + ': ' + dd[i] + (dd[i] === 1 ? ' hecho' : ' hechos') + ' de Postventa. Cada campanilla es un día; dorada = hubo actividad.'); } }; } }
+      if (id === 'rrhh') { const p = P(x0 + w - 1.4, y0 + 1.5), m = (BK.rrhh || {}).mapa, prop = (BK.rrhh || {}).propuestas || [];
+        if (hit(p, 10, 24, -4)) return { x: p[0], y: p[1] - 12, r: 10, act: () => { chime(3, .04); discover('sobres_rrhh'); inscribe(prop.length ? prop.length + (prop.length === 1 ? ' propuesta' : ' propuestas') + ' de RRHH esperan tu decisión (un sobre cada una).' : 'Sin propuestas de RRHH por ahora: ningún sobre.'); } };
+        const bp = P(x0 + .5 + 1.7, y0 + .3 + .5); if (hit(bp, 26, 44, -10)) return { x: bp[0], y: bp[1] - 26, r: 16, act: () => { chime(6, .04); discover('tablon_rrhh'); inscribe(m ? 'Puestos cubiertos: ' + m.presentes.length + ' de ' + m.catalogo.length + ' (' + Math.round(m.cobertura * 100) + ' %)' + (m.faltantes.length ? ' · faltan: ' + m.faltantes.map(c => (CUBES[c] && CUBES[c].nombre) || c).join(', ') : ' · no falta ninguno') + '.' : 'Sin datos de puestos todavía.'); } }; }
+      if (id === 'ops') { const ped = (((CUBES.ops || {}).ops || {}).pedidos) || {}, est = [['PENDIENTE_CONFIRMACION', 'pendientes de confirmar'], ['CONFIRMADO', 'confirmados'], ['EN_PRODUCCION', 'en producción'], ['RETENIDO', 'retenidos'], ['COMPLETADO', 'completados'], ['ENTREGADO_A_LOGISTICA', 'entregados a logística'], ['RECHAZADO', 'rechazados']];
+        for (let i = 0; i < est.length; i++) { const q = P(x0 + .7 + i * .62, y0 + d - .7); if (Math.abs(wx - q[0]) < 5 && wy > q[1] - 18 && wy < q[1] + 1) return { x: q[0], y: q[1] - 8, r: 7, act: () => { FLASH.ops = .6; chime(i, .04); discover('cajas_ops'); inscribe('Pedidos internos ' + est[i][1] + ': ' + (ped[est[i][0]] || 0) + '.'); } }; }
+        const tp = P(x0 + w - .45, y0 + 3.6); if (Math.abs(wx - tp[0]) < 5 && wy > tp[1] - 28 && wy < tp[1]) return { x: tp[0], y: tp[1] - 14, r: 7, act: () => { chime(8, .04); discover('marcas_ops'); inscribe('Días con capacidad declarada: ' + ((((CUBES.ops || {}).ops) || {}).dias_con_capacidad || 0) + '. Sin capacidad declarada, los pedidos esperan con alerta.'); } };
+        const fp_ = P(x0 + w - 1.9 + .7, y0 + 1.35); if (Math.abs(wx - fp_[0]) < 9 && wy > fp_[1] - 24 && wy < fp_[1] + 2) return { x: fp_[0], y: fp_[1] - 10, r: 10, act: () => { FLASH.ops = 1; thock(); discover('fragua'); inscribe('La fragua arde más con cada pedido en producción: ' + (ped.EN_PRODUCCION || 0) + ' ahora.'); } }; }
+    }
+    return null;
+  }
   function finHot(wx, wy) {
     const fr = room('finanzas'); if (!fr || fr.locked) return null;
     const n = P(9.25, 1.55), d = P(6.55, 1.55), f = P(10.0, 2.75), c = P(10.02, .72), din = BK.dinero;
@@ -3031,7 +3118,7 @@ void main(){
     return null;
   }
   function hotAt(wx, wy) {
-    { const fh = finHot(wx, wy) || comHot(wx, wy) || mkHot(wx, wy) || brHot(wx, wy) || lgHot(wx, wy); if (fh) return fh; }
+    { const fh = finHot(wx, wy) || comHot(wx, wy) || mkHot(wx, wy) || brHot(wx, wy) || lgHot(wx, wy) || auxHot(wx, wy); if (fh) return fh; }
     { const ko = kodamaAt(wx, wy); if (ko) return ko; }
     if (CRANE.on && Math.abs(wx - CRANE.x) < 14 && Math.abs(wy - (CRANE.y + EX)) < 10) return { x: CRANE.x, y: CRANE.y + EX, r: 14, act: onCrane };
     for (const f of FURIN) if (Math.abs(wx - f.x) < 7 && wy > f.y - 3 && wy < f.y + 22) return { x: f.x, y: f.y + 8, r: 12, act: () => onFurin(f) };

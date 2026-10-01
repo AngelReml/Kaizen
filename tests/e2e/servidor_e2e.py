@@ -106,6 +106,24 @@ def crear(datos: Path, mecha_s: int = 6, token: str | None = None):
             conn.close()
         return {"ok": True}
 
+    @app.post("/_e2e/bus_dias")
+    async def e2e_bus_dias(request: Request):
+        """Solo pruebas: eventos del bus con fecha retrasada (para ver el pulso de 14 dias). Rompe la cadena de hash del bus
+        de ENSAYO a proposito; la del sello de la bitacora (la que verifica el juego) no se toca."""
+        from datetime import datetime, timedelta, timezone
+        d = await request.json()
+        conn = bus.conexion()
+        try:
+            bus.instalar(conn)
+            for dias in d["dias_atras"]:
+                i = bus.publicar(conn, d["topic"], "e2e", {})
+                ts = (datetime.now(timezone.utc) - timedelta(days=int(dias))).strftime("%Y-%m-%dT%H:%M:%SZ")
+                conn.execute("UPDATE bus_eventos SET ts = ? WHERE id = ?", (ts, i))
+                conn.commit()
+        finally:
+            conn.close()
+        return {"ok": True}
+
     @app.post("/_e2e/aprobacion")
     async def e2e_aprobacion(request: Request):
         d = await request.json()

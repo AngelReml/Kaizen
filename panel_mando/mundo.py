@@ -48,6 +48,7 @@ LIMITE_POR_CICLO = 200          # tope de eventos por ciclo y canal (SSE)
 LIMITE_RECIENTES = 40
 
 # Prefijo del RUE -> cubo de colmena (los nombres de la Colmena, no los del RUE).
+DIAS_PULSO = 14
 CUBO_POR_PREFIJO_RUE = {
     "comercial": "comercial", "brand": "brand", "finanzas": "finanzas",
     "operacion": "ops", "marketing": "marketing",
@@ -298,6 +299,63 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
             pass
         return {"veredictos": ver, "directrices": directrices, "ventana_dias": REND.VENTANA_DIAS}
 
+    def _ops(empresa: str) -> dict:
+        """Pedidos internos de Operaciones por estado y cuantos dias tienen capacidad declarada. Solo numeros."""
+        est = ("PENDIENTE_CONFIRMACION", "CONFIRMADO", "EN_PRODUCCION", "RETENIDO", "COMPLETADO", "ENTREGADO_A_LOGISTICA", "RECHAZADO")
+        cuenta = {e: 0 for e in est}
+        dias_cap = 0
+        try:
+            for p in st.k.all(empresa, "pedido_ops").values():
+                if p.get("estado") in cuenta:
+                    cuenta[p["estado"]] += 1
+            dias_cap = len(st.k.all(empresa, "capacidad"))
+        except Exception:                                    # noqa: BLE001
+            pass
+        return {"pedidos": cuenta, "dias_con_capacidad": dias_cap}
+
+    def _inteligencia(empresa: str) -> dict:
+        """Alertas por estado y umbrales definidos. Solo numeros: ni metricas ni valores."""
+        alertas: dict[str, int] = {}
+        umbrales = 0
+        try:
+            for a in st.k.all(empresa, "alerta").values():
+                e = str(a.get("estado", "EMITIDA"))
+                alertas[e] = alertas.get(e, 0) + 1
+            umbrales = len(st.k.all(empresa, "umbral"))
+        except Exception:                                    # noqa: BLE001
+            pass
+        return {"alertas": alertas, "umbrales": umbrales}
+
+    def _pulso(empresa: str, conn) -> dict:
+        """Actividad de cada cubo en los ultimos DIAS_PULSO dias (el mas antiguo primero): eventos del bus
+        `kaizen.<cubo>.*` mas eventos de la bitacora atribuidos al cubo. Solo conteos por dia."""
+        hoy = datetime.now(timezone.utc).date()
+        out: dict[str, dict] = {}
+
+        def sumar(cubo, ts):
+            try:
+                d = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+                if d.tzinfo is None:
+                    d = d.replace(tzinfo=timezone.utc)
+                i = DIAS_PULSO - 1 - (hoy - d.astimezone(timezone.utc).date()).days
+            except (ValueError, TypeError):
+                return
+            if cubo and 0 <= i < DIAS_PULSO:
+                v = out.setdefault(cubo, {"dias": [0] * DIAS_PULSO, "total": 0})
+                v["dias"][i] += 1
+                v["total"] += 1
+        try:
+            if _tabla_existe(conn, "bus_eventos"):
+                for topic, ts in conn.execute("SELECT topic, ts FROM bus_eventos WHERE ts >= ?",
+                                              ((datetime.now(timezone.utc) - REND.timedelta(days=DIAS_PULSO)).strftime("%Y-%m-%dT00:00:00Z"),)):
+                    partes = str(topic).split(".")
+                    sumar(partes[1] if len(partes) > 2 else None, ts)
+            for e in st.k.all(empresa, "evento").values():
+                sumar(_cubo_de_rue(str(e.get("tipo", "")), e.get("payload") if isinstance(e.get("payload"), dict) else {}), e.get("ts"))
+        except Exception:                                    # noqa: BLE001
+            pass
+        return out
+
     def _legal(empresa: str) -> dict:
         """Calendario de obligaciones del cubo Legal, solo numeros: cuenta por estado, los dias que quedan de las
         abiertas mas proximas (hasta 8; sin nombres, areas ni fuentes) y el total de evidencias archivadas."""
@@ -435,9 +493,16 @@ def registrar(app, *, auth, auth_pagina, cola, bit, empresas, empresa_valida,
                     c["marca"] = _marca(empresa)
                 elif c["cubo"] == "legal":
                     c["legal"] = _legal(empresa)
+            for c in cubos:
+                if c["cubo"] == "ops":
+                    c["ops"] = _ops(empresa)
+                elif c["cubo"] == "inteligencia":
+                    c["inteligencia"] = _inteligencia(empresa)
+            pul = _pulso(empresa, conn)
             rend = _rendimiento(empresa, conn, cubos)
             for c in cubos:
                 c["rendimiento"] = rend.get(c["cubo"])
+                c["pulso"] = pul.get(c["cubo"]) or {"dias": [0] * DIAS_PULSO, "total": 0}
             cursor_bus = _ultimo_id_bus(conn)
             cursor_chat = _ultimo_id_chat(conn)
             recientes = _recientes(empresa, conn)
