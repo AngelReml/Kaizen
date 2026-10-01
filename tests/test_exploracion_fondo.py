@@ -195,3 +195,84 @@ def test_dos_lanzamientos_simultaneos_solo_uno_arranca(tmp_path):
         assert sorted(res) == ["ok", "ya"], (ronda, res)
         assert F.esperar(EMP, 30)
         F._HILOS.clear()
+
+
+# ── revision independiente de la fase B ─────────────────────────────────────
+
+def _reserva_huerfana(k, *, pid, hace_min=1):
+    ahora = datetime.now(timezone.utc)
+    ini = (ahora - timedelta(minutes=hace_min)).isoformat()
+    k.add(EMP, E.COLECCION_ESTADO, F.CLAVE_EN_CURSO, {"activa": True, "desde": ini, "latido": ini, "ciclos": 3, "ciclos_hechos": 0,
+                                                       "hasta": (ahora + timedelta(hours=9)).isoformat(), "pid": pid})
+
+
+def test_una_reserva_huerfana_de_este_proceso_no_bloquea_el_boton(entorno):
+    k, b, fabrica_de, tmp = entorno
+    _reserva_huerfana(k, pid=__import__("os").getpid())            # el hilo murio sin liberar (no hay nada corriendo)
+    assert F.estado(k, EMP)["en_curso"] is None
+    F.lanzar(k, EMP, b, ciclos=1, fabrica=fabrica_de())             # y se puede lanzar
+    assert F.esperar(EMP, 20)
+    assert A.Apuestas(k, EMP).conteo_por_estado()["DOSIER"] == 5
+
+
+@pytest.mark.skipif(__import__("os").name != "posix", reason="comprobar un pid ajeno solo en posix")
+def test_una_reserva_de_otro_proceso_muerto_se_descarta_y_la_de_uno_vivo_no(entorno):
+    import subprocess
+    k, b, fabrica_de, tmp = entorno
+    p = subprocess.Popen([sys.executable, "-c", "pass"]); p.wait()
+    _reserva_huerfana(k, pid=p.pid)                                 # pid de un proceso que ya termino
+    assert F.estado(k, EMP)["en_curso"] is None
+    _reserva_huerfana(k, pid=__import__("os").getppid())            # el proceso padre sigue vivo y no es el nuestro
+    assert F.estado(k, EMP)["en_curso"] is not None
+    with pytest.raises(F.YaEnMarcha):
+        F.lanzar(k, EMP, b, ciclos=1, fabrica=fabrica_de())
+
+
+def test_una_reserva_sin_latido_reciente_caduca(entorno):
+    k, b, fabrica_de, tmp = entorno
+    _reserva_huerfana(k, pid=__import__("os").getppid(), hace_min=F.LATIDO_MAX_S // 60 + 5)
+    assert F.estado(k, EMP)["en_curso"] is None
+
+
+def test_liberar_no_pisa_la_reserva_de_otra_tanda(entorno):
+    k, b, fabrica_de, tmp = entorno
+    ahora = datetime.now(timezone.utc)
+    vieja = F._reservar(k, EMP, ciclos=1, horas=1, ahora=ahora - timedelta(hours=3))
+    F._ACTIVAS.add(EMP)
+    try:
+        nueva = F._reservar(k, EMP, ciclos=2, horas=1, ahora=ahora)           # la vieja caduco por hora; otra tanda reserva
+        assert nueva != vieja
+        F._liberar(k, EMP, vieja)                                              # la vieja termina tarde
+        F._latir(k, EMP, vieja)
+        r = k.get(EMP, E.COLECCION_ESTADO, F.CLAVE_EN_CURSO)
+        assert r["activa"] is True and r["desde"] == nueva and r["ciclos_hechos"] == 0
+    finally:
+        F._ACTIVAS.discard(EMP)
+
+
+def test_la_reserva_es_atomica_con_muchos_hilos(entorno):
+    k, b, fabrica_de, tmp = entorno
+    barrera, ok, rechazos = threading.Barrier(12), [], []
+    F._ACTIVAS.add(EMP)
+
+    def intento():
+        barrera.wait()
+        try:
+            F._reservar(k, EMP, ciclos=1, horas=1, ahora=datetime.now(timezone.utc)); ok.append(1)
+        except F.YaEnMarcha:
+            rechazos.append(1)
+    try:
+        hs = [threading.Thread(target=intento) for _ in range(12)]
+        [h.start() for h in hs]; [h.join(10) for h in hs]
+    finally:
+        F._ACTIVAS.discard(EMP)
+    assert len(ok) == 1 and len(rechazos) == 11
+
+
+def test_lanzar_se_niega_con_inteligencia_en_cero_o_parar_todo_activo_sea_cual_sea_la_ruta(entorno):
+    k, b, fabrica_de, tmp = entorno
+    with pytest.raises(A.ApuestaInvalida, match="CERO"):
+        F.lanzar(k, EMP, b, ciclos=1, fabrica=fabrica_de(nivel_autonomia=lambda: "CERO"))
+    with pytest.raises(A.ApuestaInvalida, match="PARADO"):
+        F.lanzar(k, EMP, b, ciclos=1, fabrica=fabrica_de(parar=lambda: True))
+    assert A.Apuestas(k, EMP).listar() == [] and F.estado(k, EMP)["en_curso"] is None

@@ -50,7 +50,7 @@ existen, todos los cubos salen `alta:false`. Campos:
 - `apuestas`: `{conteo: {BORRADOR, DOSIER, ELEGIDA, EN_PRUEBA, MEDIDA, CRECE, PODADA, DESCARTADA: n}, pide_medicion: n}`
   (`pide_medicion` = apuestas EN_PRUEBA con el plazo vencido: solo un aviso, no cambia el estado). **Solo numeros**: ni
   titulos ni textos de dosier. El detalle se lee en `GET /api/apuestas/{empresa}` (autenticado) y las decisiones del
-  operador entran por `POST /cmd/apuestas/transicion`. Los eventos `inteligencia.apuesta.*` salen en el feed con su frase.
+  operador entran por `POST /cmd/apuestas/transicion`. `GET /api/apuestas/{empresa}` devuelve ademas `en_curso` (busqueda en marcha: `desde`, `ciclos`, `ciclos_hechos`, o `null`) y `ultima` (resumen de la ultima busqueda con su informe); `POST /cmd/apuestas/buscar` {ciclos?} lanza una busqueda acotada en segundo plano (409 con `mensaje` si falta configuracion, ya hay una en marcha, PARAR TODO esta activo o Inteligencia esta en CERO). Los eventos `inteligencia.apuesta.*` salen en el feed con su frase.
 - `sello`: `{integra, pasos, mensaje}` de la verificacion de la bitacora. La verificacion es completa
   en cada foto: un sello roto se ve al momento.
 - `rrhh`: `{mapa, propuestas[]}`. Sale de las funciones puras del cubo RRHH

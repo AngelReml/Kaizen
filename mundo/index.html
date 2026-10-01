@@ -212,6 +212,21 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
 .side.left.mini .min { position: static; width: auto; height: auto; padding: 8px 16px; border-radius: 999px; background: none; font: 600 13px var(--f-body); color: var(--text); }
 .side.left.mini .min:hover { transform: none; background: rgba(243,182,200,.45); }
 @media (max-width: 1099px) { .side.left .min { top: 8px; } }
+
+.ni-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0 10px; }
+.ni-go { font: 600 13px var(--f-body); color: var(--text); background: rgba(243,182,200,.55); border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+.ni-go:disabled { opacity: .5; cursor: default; }
+.ni-st { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+.ni-g { margin: 12px 0 4px; font: 600 12px var(--f-body); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.ni-it { padding: 8px 12px; margin: 0 0 6px; border-radius: 16px; background: rgba(255,255,255,.35); list-style: none; }
+.ni-it > button.ni-t { all: unset; cursor: pointer; display: block; width: 100%; font-size: 13.5px; font-weight: 600; }
+.ni-it .ni-m { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.ni-d { margin-top: 8px; font-size: 12.5px; line-height: 1.45; }
+.ni-d h4 { margin: 8px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ni-d blockquote { margin: 2px 0 4px 6px; padding-left: 8px; border-left: 2px solid var(--border); color: var(--muted); font-size: 12px; }
+.ni-d input, .ni-d textarea { width: 100%; box-sizing: border-box; font: 13px var(--f-body); margin: 3px 0; padding: 5px 8px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,.6); color: var(--text); }
+.ni-acts { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.ni-err { color: var(--accent); font-size: 12.5px; margin-top: 6px; }
 </style>
 
 </head>
@@ -247,6 +262,7 @@ body { background: radial-gradient(1200px 500px at 50% -10%, rgba(243,182,200,.3
         <button class="tab" role="tab" aria-selected="false" data-tab="cubos" type="button">Cubos</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="caja" type="button">Tesorería</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="reg" type="button">Registro</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="nichos" type="button">Nichos</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="obras" type="button">Edificio</button>
       </div>
       <div class="panel-body" id="tabbody"></div>
@@ -2563,6 +2579,113 @@ void main(){
   const rrhhBlock = () => { const r = BK.rrhh; if (!r) return ''; const m = r.mapa; return '<div class="box" style="margin-bottom:14px"><h3><span>RRHH</span><span class="mono">' + Math.round(m.cobertura * 100) + ' %</span></h3><div style="font-size:13px">' + esc((r.propuestas || [])[0] || '') + '</div>' + (m.faltantes.length ? '<div><button class="link" type="button" id="alta-btn">Dar de alta a los directores</button></div>' : '') + '</div>'; };
   function wireAlta(root) { const b = (root || document).querySelector('#alta-btn'); if (b) b.addEventListener('click', darDeAlta); }
   function siteCentre(cubo) { const r = room(cubo); if (r) return [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2]; const l = lotForCubo(cubo); return l ? [l.px + 3.5, l.py + 2.5] : null; }
+
+  // ---- Nichos: el huerto de apuestas. Todo viene de /api/apuestas (lo que dice el backend); decide SIEMPRE el operador.
+  const NI = { cargado: 0, rapido: 0, data: null, abierta: null, form: null, err: '', lanzando: false, timer: null };
+  const NI_ESTADO = { BORRADOR: 'Semilla', DOSIER: 'Brote · espera tu decisión', ELEGIDA: 'Elegida', EN_PRUEBA: 'En prueba', MEDIDA: 'Medida · espera tu cierre', CRECE: 'Crece', PODADA: 'Podada', DESCARTADA: 'Descartada' };
+  const NI_ORDEN = ['DOSIER', 'MEDIDA', 'EN_PRUEBA', 'ELEGIDA', 'CRECE', 'BORRADOR'];
+  const msgErr = e => String((e && e.body && (e.body.mensaje || e.body.detalle_tecnico || e.body.por_que)) || (e && e.message) || 'No se pudo.').replace(/^[A-Za-z]+(Invalida|Error): /, '');
+  async function niCargar() {
+    NI.cargado = Date.now();
+    try { NI.data = await getJSON('/api/apuestas/' + encodeURIComponent(BK.empresa)); NI.fallo = false; } catch (e) { NI.fallo = true; }
+    if (tab === 'nichos' && !NI.form) niPintar();            // con un formulario abierto no se repinta: se borraría lo que escribes
+    clearTimeout(NI.timer);
+    if (tab === 'nichos') NI.timer = setTimeout(() => { const f = document.activeElement; if (!(f && f.closest && f.closest('.ni-d'))) niCargar(); else NI.timer = setTimeout(niCargar, 6000); }, (NI.data && NI.data.en_curso) || Date.now() < NI.rapido ? 3000 : 15000);
+  }
+  function niDosier(d) {
+    if (!d) return '<div class="ni-m">Todavía sin dosier.</div>';
+    const n = d.nicho || {}, ev = d.evidencia || [], c = d.coste || {}, sg = d.senal || {}, cp = d.capacidades || {}, sr = d.senal_real || {}, rl = d.riesgo_legal || {};
+    const L = xs => (xs && xs.length) ? '<ul>' + xs.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<div class="ni-m">ninguna</div>';
+    return '<h4>El problema</h4>' + esc(n.problema) + '<h4>Para quién</h4>' + esc(n.publico) + '<h4>Por qué ahora</h4>' + esc(n.por_que_ahora) +
+      '<h4>Evidencia</h4><ul>' + ev.map(x => '<li><b>' + esc(x.etiqueta) + '</b> · ' + esc(x.afirmacion) + (x.fuente && x.fuente.extracto ? '<blockquote>«' + esc(x.fuente.extracto) + '» — ' + esc(x.fuente.url || '') + ' (' + esc(x.fuente.fecha || '') + ')</blockquote>' : '') + '</li>').join('') + '</ul>' +
+      '<div class="ni-m">VERIFICADA = la fuente existe y dice ese extracto; si el extracto prueba la afirmación lo juzgas tú. RECORDADA y SUPUESTO no están comprobadas.</div>' +
+      '<h4>Coste</h4>' + esc(eur(c.importe_eur)) + ' · ' + esc(c.concepto) + (c.alternativa_gratuita ? ' · gratis: ' + esc(c.alternativa_gratuita) : '') +
+      '<h4>Señal que se mediría</h4>' + esc(sg.que_se_mide) + ' ' + esc(sg.comparador) + ' ' + esc(sg.umbral) + ' en ' + esc(sg.plazo_dias) + ' días · dato de: ' + esc(sg.fuente_dato) +
+      '<h4>Capacidades que faltan</h4>' + L(cp.faltan) + '<h4>Lo que necesitaría de ti</h4>' + L(d.necesita_del_operador) +
+      '<h4>Señal real</h4>' + esc(sr.que_personas) + ' — ' + esc(sr.como_se_obtiene) + '<h4>Primer paso gratuito</h4>' + esc(d.primer_paso_gratuito) + '<h4>Riesgo legal</h4>' + esc(rl.nivel) + ' · ' + esc(rl.por_que);
+  }
+  function niCampos(f) {
+    const I = (k, ph, v) => '<input data-k="' + k + '" placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '" maxlength="500" value="' + esc(v || '') + '">';
+    const apr = I('esperaba', '¿Qué esperabas?') + I('paso', '¿Qué pasó?') + I('haria_distinto', '¿Qué harías distinto?');
+    if (f.accion === 'descartar') return I('razon', 'Por qué la descartas') + apr;
+    if (f.accion === 'registrar_medicion') return I('valor', 'Número medido (ej. 7)') + I('referencia', 'De dónde sale ese número');
+    if (f.accion === 'iniciar_prueba') return I('plazo_dias', 'Plazo en días (vacío = el del dosier)');
+    return apr;                                   // cerrar
+  }
+  function niAcciones(x) {
+    const B = (a, t, dec) => '<button class="link" type="button" data-ni="' + a + '"' + (dec ? ' data-dec="' + dec + '"' : '') + '>' + t + '</button>';
+    if (x.estado === 'DOSIER') return B('elegir', 'Elegir esta apuesta') + B('descartar', 'Descartar');
+    if (x.estado === 'ELEGIDA') return B('iniciar_prueba', 'Empezar prueba (gratis)') + B('descartar', 'Descartar');
+    if (x.estado === 'EN_PRUEBA') return B('registrar_medicion', 'Registrar la medición');
+    if (x.estado === 'MEDIDA') return B('cerrar', 'Hacerla crecer', 'CRECE') + B('cerrar', 'Podarla', 'PODADA');
+    if (x.estado === 'CRECE') return B('iniciar_prueba', 'Nueva ronda de prueba');
+    return '';
+  }
+  function niPintar() {
+    if (tab !== 'nichos') return;
+    const d = NI.data;
+    let h = '<h3 class="h">Nichos</h3><div class="sub">El huerto de apuestas: lo que Kaizen ha encontrado para ganar dinero. Decides tú.</div>';
+    if (!d) { body.innerHTML = h + '<div class="ni-st">' + (NI.fallo ? 'No se pudo leer el huerto. Revisa la conexión.' : 'Cargando…') + '</div>'; return; }
+    const ec = d.en_curso, ul = d.ultima, tot = Object.values(d.conteo || {}).reduce((a, b) => a + b, 0);
+    h += '<div class="ni-bar"><button class="ni-go" id="ni-go" type="button"' + (ec || NI.lanzando || BK.parado ? ' disabled' : '') + '>' + (ec ? 'Buscando…' : 'Buscar nichos') + '</button></div>';
+    h += '<p class="ni-st" id="ni-st">' + (ec ? 'Buscando desde las ' + esc(hhmm(ec.desde)) + ' · vuelta ' + esc(ec.ciclos_hechos) + ' de ' + esc(ec.ciclos) + '. PARAR TODO la detiene.' :
+      ul ? 'Última búsqueda: ' + esc(ul.dosieres) + ' dosieres en ' + esc(ul.ciclos_hechos) + ' vueltas · terminó por «' + esc(ul.motivo) + '»' + (ul.error ? ' (' + esc(ul.error) + ')' : '') + '. Informe: ' + esc(ul.informe || '—') : 'Todavía no se ha buscado nada.') + '</p>';
+    if (NI.err) h += '<div class="ni-err" role="alert">' + esc(NI.err) + '</div>';
+    if (!tot) h += '<p class="ni-st">No hay nichos todavía. Pulsa «Buscar nichos» o pídeselo al director de Inteligencia.</p>';
+    const lista = d.apuestas || [], pide = new Set(d.pide_medicion || []);
+    NI_ORDEN.forEach(est => {
+      const xs = lista.filter(x => x.estado === est).reverse();
+      if (!xs.length) return;
+      h += '<div class="ni-g">' + esc(NI_ESTADO[est]) + ' · ' + xs.length + '</div><ul style="padding:0;margin:0">' + xs.map(x => {
+        const b = x.borrador || {}, co = x.coordenadas || {}, ab = NI.abierta === x.id;
+        let it = '<li class="ni-it"><button class="ni-t" type="button" data-open="' + esc(x.id) + '" aria-expanded="' + ab + '">' + esc(b.titulo) + '</button><div class="ni-m">' + esc(co.modelo_ingreso) + ' · ' + esc(co.cliente) + ' · ' + esc(co.canal) + (pide.has(x.id) ? ' · <b>pide medición</b>' : '') + '</div>';
+        if (ab) {
+          it += '<div class="ni-d">' + niDosier(x.dosier);
+          if (x.propuesta_regla) it += '<h4>La regla propone</h4>' + esc(x.propuesta_regla.decision) + ' · medido ' + esc(x.propuesta_regla.valor) + ' frente a ' + esc(x.propuesta_regla.comparador) + ' ' + esc(x.propuesta_regla.umbral) + ' (solo propone: cierras tú)';
+          if (x.aprendizaje) it += '<h4>Aprendizaje</h4>' + esc(x.aprendizaje.esperaba) + ' → ' + esc(x.aprendizaje.paso) + ' → ' + esc(x.aprendizaje.haria_distinto);
+          if (NI.form && NI.form.id === x.id) it += niCampos(NI.form) + '<div class="ni-acts"><button class="link" type="button" data-envia="1">Confirmar</button><button class="link" type="button" data-cancela="1">Cancelar</button></div>';
+          else it += '<div class="ni-acts" data-acts="' + esc(x.id) + '">' + niAcciones(x) + '</div>';
+          it += '</div>';
+        }
+        return it + '</li>';
+      }).join('') + '</ul>';
+    });
+    const cerradas = (d.conteo.PODADA || 0) + (d.conteo.DESCARTADA || 0);
+    if (cerradas) h += '<p class="ni-st">' + (d.conteo.PODADA || 0) + ' podadas y ' + (d.conteo.DESCARTADA || 0) + ' descartadas (su aprendizaje se guarda y se usa en la próxima búsqueda).</p>';
+    body.innerHTML = h;
+    const go = document.getElementById('ni-go'); if (go) go.addEventListener('click', niBuscar);
+    body.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => { NI.abierta = NI.abierta === b.dataset.open ? null : b.dataset.open; NI.form = null; NI.err = ''; niPintar(); }));
+    body.querySelectorAll('[data-ni]').forEach(b => b.addEventListener('click', () => {
+      const id = b.closest('[data-acts]').dataset.acts, a = b.dataset.ni;
+      if (a === 'elegir') return niEnviar({ id, accion: a });
+      NI.form = { id, accion: a, decision: b.dataset.dec || null }; NI.err = ''; niPintar();
+    }));
+    const env = body.querySelector('[data-envia]'); if (env) env.addEventListener('click', niConfirmar);
+    const can = body.querySelector('[data-cancela]'); if (can) can.addEventListener('click', () => { NI.form = null; NI.err = ''; niPintar(); });
+  }
+  async function niBuscar() {
+    NI.lanzando = true; NI.err = ''; niPintar();
+    try { const j = await postJSON('/cmd/apuestas/buscar', { ciclos: 3 }); NI.rapido = Date.now() + 60000; inscribe(j.mensaje || 'Buscando nichos.'); }
+    catch (e) { NI.err = msgErr(e); }
+    NI.lanzando = false; niCargar();
+  }
+  async function niEnviar(cuerpo) {
+    if (NI.enviando) return; NI.enviando = true;                  // un doble clic no manda dos veces
+    try { await postJSON('/cmd/apuestas/transicion', cuerpo); NI.form = null; NI.err = ''; inscribe('Hecho. Queda sellado en el Registro.'); }
+    catch (e) { NI.err = msgErr(e); niPintar(); }
+    finally { NI.enviando = false; }
+    niCargar();
+  }
+  function niConfirmar() {
+    const f = NI.form, v = {}; body.querySelectorAll('.ni-d input[data-k]').forEach(i => { v[i.dataset.k] = i.value.trim(); });
+    const apr = { esperaba: v.esperaba || '', paso: v.paso || '', haria_distinto: v.haria_distinto || '' };
+    const c = { id: f.id, accion: f.accion };
+    if (f.accion === 'descartar') Object.assign(c, { razon: v.razon || '', aprendizaje: apr });
+    else if (f.accion === 'cerrar') Object.assign(c, { decision: f.decision, aprendizaje: apr });
+    else if (f.accion === 'registrar_medicion') Object.assign(c, { valor: v.valor === '' ? null : Number(String(v.valor).replace(',', '.')), referencia: v.referencia || '' });
+    else if (f.accion === 'iniciar_prueba' && v.plazo_dias) c.criterio = { plazo_dias: Number(v.plazo_dias) };
+    niEnviar(c);
+  }
   function renderTab() {
     if (tab === 'sala') {
       body.innerHTML = '<ol class="feed" id="feedList"></ol><div class="team" aria-label="Directores">' + AG.map(a => '<button class="link" type="button" data-agent="' + esc(a.id) + '">' + esc(a.name) + '</button>').join('') + '</div>';
@@ -2572,6 +2695,9 @@ void main(){
       const L = cubeList(), alta = L.filter(c => c.alta).length;
       body.innerHTML = '<h3 class="h">Cubos</h3><div class="sub">' + alta + ' de ' + L.length + ' con director dado de alta</div>' + rrhhBlock() + '<ul class="feed">' + (L.map(c => '<li><span class="who"><span class="dot ' + (c.alta ? saludDot(c.salud && c.salud.estado) : '') + '"></span>' + esc(c.nombre) + '</span> ' + (c.alta ? esc((c.salud && c.salud.estado) || 'SIN DATOS') + ' · ' + esc(c.salud && c.salud.detalle || '') : 'sin director dado de alta') + '<div class="meta">autonomía ' + esc(c.autonomia) + '<button class="link" type="button" style="margin-left:10px" data-look="' + esc(c.cubo) + '">Verlo</button></div></li>').join('') || '<li class="empty">Sin datos todavía.</li>') + '</ul>';
       body.querySelectorAll('[data-look]').forEach(b => b.addEventListener('click', () => { const p = siteCentre(b.dataset.look); if (p) camGoto(P(p[0], p[1]), 2.6); })); wireAlta(body);
+    } else if (tab === 'nichos') {
+      if (!NI.form) niPintar();                                  // renderTab llega con cada foto del backend: con un formulario abierto no se toca
+      if (Date.now() - NI.cargado > 3000) niCargar();
     } else if (tab === 'obras') {
       const L = cubeList(), houses = L.filter(c => ROOMS.some(r => r.cubo === c.cubo && !r.annex)), annexes = L.filter(c => !houses.includes(c));
       body.innerHTML = '<h3 class="h">Edificio</h3><div class="sub">Crece con los cubos del backend</div><dl class="kv"><dt>Casa</dt><dd>' + houses.filter(c => c.alta).length + ' de ' + houses.length + ' salas abiertas</dd><dt>Pabellones</dt><dd>' + annexes.filter(c => LS[(lotForCubo(c.cubo) || {}).id] && LS[lotForCubo(c.cubo).id].state === 'built').length + ' de ' + annexes.length + ' construidos</dd><dt>Solares libres</dt><dd>' + LOTS.filter(l => LS[l.id].state === 'free' && !LS[l.id].cubo).length + ', con camino y cuerda puestos</dd><dt>Directores</dt><dd>' + AG.length + '</dd></dl><ul class="feed" style="margin-top:14px">' + LOTS.map(l => { const st = LS[l.id], c = st.cubo && CUBES[st.cubo]; return '<li><span class="who">' + esc(l.name) + '</span> ' + (st.state === 'built' ? esc(c ? c.nombre : '') : st.state === 'obra' ? 'en obra, ' + Math.round(st.p * 100) + ' %' : c ? 'reservado para ' + esc(c.nombre) + ', sin director dado de alta' : 'libre') + '<div class="meta"><button class="link" type="button" data-lot="' + esc(l.id) + '">Verlo</button></div></li>'; }).join('') + '</ul><p class="note" style="margin-top:10px">Un cubo nuevo en el catálogo pide su sitio; cuando su director se da de alta, se levanta su sala. Los solares libres esperan.</p>';
@@ -2597,9 +2723,10 @@ void main(){
         '<div class="box"><h3><span>Misión</span></h3><div style="font-size:13px">' + esc(c.mision || '') + '</div></div>' +
         '<dl class="kv"><dt>Salud</dt><dd><span class="dot ' + saludDot(sl.estado) + '"></span>' + esc(sl.estado || 'SIN DATOS') + (sl.detalle ? ' · ' + esc(sl.detalle) : '') + '</dd><dt>Autonomía</dt><dd>' + esc(c.autonomia || '—') + '</dd><dt>Grado</dt><dd>' + RANKS[a.rank || 0] + (c.ts_alta ? ' · de alta desde ' + esc(String(c.ts_alta).slice(0, 10)) : '') + '</dd><dt>Rendimiento</dt><dd>' + rendimientoTxt(c.rendimiento) + '</dd>' + (a.cubo === 'rrhh' && BK.rrhh ? '<dt>Cobertura</dt><dd>' + Math.round(BK.rrhh.mapa.cobertura * 100) + ' % de los cubos con director' + (BK.rrhh.mapa.faltantes.length ? ' · faltan ' + esc(BK.rrhh.mapa.faltantes.join(', ')) : '') + '</dd>' : '') + '<dt>Eventos 24 h</dt><dd class="mono">' + esc(sl.eventos_24h == null ? '—' : sl.eventos_24h) + '</dd>' + ((c.irreversibles || []).length ? '<dt>Puede pedir</dt><dd>' + esc(c.irreversibles.join(', ')) + '</dd>' : '') + '</dl>' +
         '<div class="box"><h3><span>Último hecho</span></h3><div style="font-size:13px">' + esc(a.last || (c.ultimo && c.ultimo.texto) || 'Nada desde que abriste esta ventana.') + '</div></div>' +
-        '<div class="acts"><button class="link" id="pf-chat" type="button">Hablar con el director</button><button class="link" id="pf-look" type="button">Seguir con la cámara</button></div></div>';
+        '<div class="acts"><button class="link" id="pf-chat" type="button">Hablar con el director</button><button class="link" id="pf-look" type="button">Seguir con la cámara</button>' + (a.id === 'inteligencia' ? '<button class="link" id="pf-nich" type="button">Ver los nichos</button>' : '') + '</div></div>';
       const pcv = document.getElementById('pf-c'); pcv.width = 18 * S; pcv.height = 30 * S; const pc = pcv.getContext('2d'); pc.imageSmoothingEnabled = false; pc.drawImage(charSprite(a.id, 'stand', 0, a.rank), 0, 0, 18 * S, 30 * S);
       document.getElementById('pf-chat').addEventListener('click', () => { window.open('/chat?empresa=' + encodeURIComponent(BK.empresa), '_blank', 'noopener'); });
+      const pn = document.getElementById('pf-nich'); if (pn) pn.addEventListener('click', () => { const t = document.querySelector('.tab[data-tab="nichos"]'); if (t) t.click(); });
       document.getElementById('pf-look').addEventListener('click', () => { follow = follow === a.id ? null : a.id; inscribe(follow ? 'La cámara sigue a ' + a.name + '.' : 'La cámara vuelve a ser tuya.'); });
     } else if (kind === 'lot') {
       const l = lotOf(id), st = LS[id], c = st.cubo && CUBES[st.cubo];

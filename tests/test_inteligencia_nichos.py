@@ -328,3 +328,18 @@ def test_parar_todo_pulsado_durante_la_tanda_la_detiene_antes_de_la_siguiente_pr
     assert _buscar(c, ciclos=3).json()["lanzada"] is True
     assert F.esperar(EMP, 20)
     assert len(llamadas) == 1 and "parar" in c.get(f"/api/apuestas/{EMP}").json()["ultima"]["motivo"].lower()
+
+
+def test_la_tarjeta_del_director_se_anula_si_entre_la_propuesta_y_el_si_se_activo_parar_todo(mundo, monkeypatch):
+    k, b, app, c, tmp = mundo
+    monkeypatch.setattr(F, "fabrica_real", _fabrica_falsa(tmp))
+    prop = ('Me pongo a buscar.\n[PROPUESTA]{"accion": "buscar_nichos", "clase": "IRREVERSIBLE-INTERNA", '
+            '"resumen": "Buscar nichos", "herramienta": "buscar_nichos", "argumentos": {"ciclos": 1}}[/PROPUESTA]')
+    monkeypatch.setattr(colmena, "_llm", lambda *a, **kw: prop)
+    ses = _sesion(c, "inteligencia")
+    _decir(c, ses, "busca nichos")
+    ap_id = [m for m in _hilo(c, ses)["mensajes"] if m["ap_id"]][0]["ap_id"]
+    fab = _fabrica_falsa(tmp)
+    monkeypatch.setattr(F, "fabrica_real", lambda e, kk, bb: {**fab(e, kk, bb), "nivel_autonomia": lambda: "CERO"})   # cambia antes del SI
+    r = c.post("/cmd/aprobar", json={"empresa": EMP, "id": ap_id, "quien": "operador"})
+    assert r.json()["estado"] == "ANULADA" and "CERO" in r.json()["mensaje"] and A.Apuestas(k, EMP).listar() == []

@@ -81,3 +81,24 @@ Decisiones de Ángel: K1, L1, M1 (decide él), N1; P1 y Q1 asumidas por su orden
 3. Un ciclo sigue siendo largo; el sello roto solo se comprueba entre ciclos.
 4. Si WebLLM cambia su API o el cap diario, la tanda para (429) y lo cuenta; no reintenta al día siguiente sola.
 5. Sin pantalla web de apuestas ni aviso en el feed al vencer un plazo.
+
+## 6. Fase B (2026-10-01): conectar la búsqueda al Mundo
+
+Motivo: Ángel pidió ver los nichos **dentro del juego** y poder preguntarle al director de Inteligencia «¿cómo van los nichos?», sin pasar por una consola. Hasta entonces el motor existía pero no estaba conectado a nadie.
+
+| Fase | Contenido | Resultado |
+|---|---|---|
+| B1 | `core/exploracion_fondo.py`: tanda en segundo plano, una por empresa, reserva atómica con sello, latido y descarte de reservas huérfanas | hecha |
+| B2 | Herramientas del director: `ver_nichos`, `leer_nicho` (LECTURA) y `buscar_nichos` (IRREVERSIBLE-INTERNA, solo con SÍ). Una tarjeta ANULADA ahora conserva y muestra su motivo | hecha |
+| B3 | `POST /cmd/apuestas/buscar`; `GET /api/apuestas` con `en_curso` y `ultima`; PARAR TODO del panel frena la tanda | hecha |
+| B4 | Pestaña «Nichos» en el Mundo + escenario e2e `10h` (búsqueda, título hostil literal, elegir→prueba→medir→podar, sello íntegro) | hecha |
+| B5 | Suite, e2e, revisión independiente, documentación | ver LINEA_BASE |
+
+### Revisión independiente de la fase B (verificada y corregida)
+- Una reserva huérfana tras reiniciar el panel dejaba el botón bloqueado hasta 9 h → ahora se descarta si su dueño murió o no hay latido en 45 min.
+- Una tanda tardía podía liberar o actualizar la reserva de otra → ahora solo con el sello propio.
+- La tarjeta del director no miraba nivel CERO ni PARAR TODO al aprobarse → ahora `lanzar` lo comprueba para **todas** las rutas y la tarjeta queda ANULADA con motivo.
+- Doble clic en «Confirmar» mandaba dos envíos → bloqueado mientras uno está en vuelo.
+- Dos tests probaban menos de lo que decían → añadida prueba de reserva atómica con 12 hilos; cada garantía nueva tiene su mutación.
+- Error visible en el formulario (antes el repintado lo ocultaba) y formulario que no se borra mientras escribes (cada foto del backend repintaba la pestaña).
+- Dejado como está (menor): `ultima.informe` muestra la ruta del informe a propósito, para que Ángel lo encuentre.

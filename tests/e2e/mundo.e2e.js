@@ -166,6 +166,47 @@ const info = page => page.evaluate(() => KAIZEN.info());
     ok((await req('GET', '/latido')).parado === false, 'el backend sigue parado');
   });
 
+  // (va ANTES del escenario 8: ese rompe el sello a proposito y con el sello roto Inteligencia queda en CERO, que es lo correcto)
+  await escenario('7b nichos: buscar desde el Mundo, leer el dosier (texto hostil literal), decidir y quedar sellado', async () => {
+    await page.reload(); await until(page, () => window.KAIZEN && KAIZEN.info().online === true, null, 30000);
+    await page.click('.tab[data-tab="nichos"]');
+    await until(page, () => /Todavía no se ha buscado nada/.test(document.getElementById('tabbody').textContent), null, 10000, 'no dice que aún no hay búsquedas');
+    ok(/No hay nichos todavía/.test(await page.locator('#tabbody').innerText()), 'el estado vacío no es honesto');
+    // sin token real, el botón explica qué falta y NO inventa nichos
+    await page.click('#ni-go'); await until(page, () => /external_api_admin enable|token|WEBLLM/i.test(document.querySelector('.ni-err') ? document.querySelector('.ni-err').textContent : ''), null, 10000, 'no explica qué falta para buscar');
+    ok(await page.locator('.ni-it').count() === 0, 'apareció algún nicho sin haber buscado');
+    await post('/_e2e/nichos_fabrica');
+    const abrirHostil = async () => { const t = page.locator('.ni-t', { hasText: 'Avisos de plazos' }); if ((await t.getAttribute('aria-expanded')) !== 'true') await t.click(); };
+    await page.click('#ni-go');
+    await until(page, () => document.querySelectorAll('.ni-it').length >= 5, null, 60000, 'no aparecieron los nichos de la búsqueda');
+    ok(!(await page.evaluate(() => window.__pwn)), 'se ejecutó HTML de un título');
+    ok((await page.locator('.ni-it').first().innerText()).length > 0, 'fila vacía');
+    ok(await page.locator('#tabbody img').count() === 0, 'el título hostil se interpretó como HTML');
+    ok(/<img src=x onerror/.test(await page.locator('#tabbody').innerText()), 'el título hostil no se ve literal');
+    await abrirHostil();
+    await until(page, () => /Evidencia/.test(document.querySelector('.ni-d') ? document.querySelector('.ni-d').textContent : ''), null, 10000, 'no se abre el dosier');
+    ok(/VERIFICADA|RECORDADA/.test(await page.locator('.ni-d').innerText()), 'el dosier no muestra las etiquetas de evidencia');
+    await page.click('[data-ni="elegir"]');
+    await until(page, () => /Elegida · 1/.test(document.getElementById('tabbody').textContent), null, 15000, 'no pasó a Elegida');
+    await abrirHostil();
+    await page.click('[data-ni="iniciar_prueba"]'); await page.click('[data-envia]');
+    await until(page, () => /En prueba · 1/.test(document.getElementById('tabbody').textContent), null, 15000, 'no pasó a En prueba');
+    await abrirHostil();
+    await page.click('[data-ni="registrar_medicion"]');
+    await page.fill('input[data-k="valor"]', '3'); await page.fill('input[data-k="referencia"]', 'hoja de respuestas');
+    await page.click('[data-envia]');
+    await until(page, () => /Medida · espera tu cierre · 1/.test(document.getElementById('tabbody').textContent), null, 15000, 'no pasó a Medida: ' + await page.evaluate(() => (document.querySelector('.ni-err') || {}).textContent || '(sin error visible) ' + document.querySelector('.ni-d').innerText.slice(-200)));
+    await abrirHostil();
+    ok(/La regla propone\s*\n?\s*PODADA/i.test(await page.locator('.ni-d').innerText()), 'no muestra lo que propone la regla');
+    await page.click('[data-dec="PODADA"]'); await page.click('[data-envia]');        // sin aprendizaje: debe rechazarlo
+    await until(page, () => !!document.querySelector('.ni-err'), null, 10000, 'cerrar sin aprendizaje no dio error');
+    for (const [k, v] of [['esperaba', 'diez respuestas'], ['paso', 'solo tres'], ['haria_distinto', 'otro canal']]) await page.fill('input[data-k="' + k + '"]', v);
+    await page.click('[data-envia]');
+    await until(page, () => /1 podadas/.test(document.getElementById('tabbody').textContent), null, 15000, 'no quedó podada');
+    const sello = await req('GET', '/api/sello/laboratorio'); ok(sello.integra === true, 'el sello se rompió');
+    return 'búsqueda desde el Mundo, dosier literal, elegir→prueba→medir→podar y sello íntegro';
+  });
+
   await escenario('8 sello: íntegro y después roto', async () => {
     await page.click('[data-tab="reg"]');
     await page.click('#t-sello'); await until(page, () => /intacto/.test((document.getElementById('reg-sello') || {}).textContent || ''), null, 8000, 'no dice íntegro');

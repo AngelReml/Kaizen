@@ -732,10 +732,6 @@ def crear_app(knowledge=None, *, token: str | None = None, mecha_s: int | None =
         deps = dict((st.fabrica_exploracion or EXF.fabrica_real)(empresa, k, bitacora))
         previo = deps.get("parar")
         deps["parar"] = lambda: bool(st.panico.activo) or bool(previo and previo())
-        nivel = deps.get("nivel_autonomia")
-        if nivel and nivel() == "CERO":
-            raise AP.ApuestaInvalida("Inteligencia esta en nivel CERO (solo lee): no puede buscar nichos. "
-                                     "Subele el nivel a BAJA desde Ajustes si quieres que busque.")
         return deps
 
     @app.post("/cmd/apuestas/buscar")

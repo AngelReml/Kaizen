@@ -153,8 +153,10 @@ EN_PRUEBA solo admite coste 0 hasta entonces.
 | M1: decide el operador; la regla solo propone | Implementado. Aviso de plazo vencido: un **número** en la foto del Mundo (no un evento). |
 | Diversidad §6 (coordenadas, novedad, cuotas, lentes rotativos, memoria, variación) | Implementado (`core/exploracion.py`). Umbrales y lentes son propuestas **sin calibrar con un modelo real**. |
 | Tanda con frenos e informe | Implementado; lanzador `herramientas/apuestas.py` y `lanzadores/NICHOS.cmd`. |
-| N1 `redactar_dosier` como herramienta de Inteligencia en el chat | **No implementado: desviación.** Los dosieres los escribe la tanda por código; el director de Inteligencia en el chat NO puede escribirlos. |
-| Pantalla web de apuestas | No: hay API (`/api/apuestas/{empresa}`), números en el Mundo y el CLI. |
+| N1 `redactar_dosier` como herramienta de Inteligencia en el chat | **No implementado: desviación.** Los dosieres los escribe la tanda por código; el director de Inteligencia en el chat NO puede escribirlos. Sí puede **verlos y lanzarlos** (siguiente fila). |
+| El director de Inteligencia y los nichos (B2) | Implementado: `ver_nichos` y `leer_nicho` (LECTURA: datos reales, nunca de memoria) y `buscar_nichos` (IRREVERSIBLE-INTERNA: propone una tarjeta y **solo con tu SÍ** lanza una tanda acotada, 1–20 vueltas, en segundo plano). Si falta el token o la API externa está apagada, la tarjeta queda ANULADA y **te dice qué hacer**. |
+| Pestaña «Nichos» en el Mundo (B3/B4) | Implementado: lista por estado (brote, elegida, en prueba, medida, crece), dosier legible con la evidencia etiquetada, botón «Buscar nichos» con estado en vivo y botones para elegir, descartar, probar, medir y cerrar. Texto de los modelos siempre escapado. PARAR TODO detiene la búsqueda antes de la siguiente pregunta. Una sola búsqueda a la vez por empresa. |
+| Pantalla web de apuestas | Sí, dentro del Mundo (fila anterior). La API sigue en `/api/apuestas/{empresa}` y el lanzar en `POST /cmd/apuestas/buscar`. |
 | Búsqueda `ddgs` en vivo | Código listo; **no se pudo probar en vivo desde la nube** (sin salida a DuckDuckGo). |
 | `NICHOS.cmd` | **No ejecutado en Windows** (se razonó la semántica de cmd). |
 | Calidad de las ideas con modelos reales | **Desconocida**: es lo que dirá la primera tanda real. |
@@ -166,3 +168,9 @@ EN_PRUEBA solo admite coste 0 hasta entonces.
 3. Doble clic en `lanzadores\NICHOS.cmd` → opción 1. Al acabar deja un informe `.md` y los dosieres quedan en estado DOSIER.
 4. Leer: opción 2 y 3; decidir: opciones 4 (elegir) y 5 (descartar). Probar, medir y cerrar: `python -X utf8 herramientas\apuestas.py probar|medir|cerrar ID ...`.
 Para dejarlo encendido toda la noche: `python -X utf8 herramientas\apuestas.py tanda --ciclos 6 --horas 8` (el PC no debe suspenderse). Con 100 preguntas/día de WebLLM caben unos 6–8 ciclos; al agotarse, para solo y lo dice.
+
+### Límites de la conexión con el Mundo (honesto)
+- Probado con un modelo y una búsqueda **simulados** (pytest y un navegador real contra el backend real). Con **modelos reales y `ddgs` reales no está probado**.
+- Si el proceso del panel se reinicia durante una búsqueda, la tanda se pierde; el candado de «en marcha» caduca solo (horas + 1).
+- La búsqueda del botón son 3 vueltas fijas; el director puede pedir otro número (1–20).
+- «Hablar con el director» sigue abriendo el chat de la Colmena en otra pestaña: dentro del Mundo aún no hay chat integrado.

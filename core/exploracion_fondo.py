@@ -30,6 +30,7 @@ HORAS_MAX = 48.0
 
 _LOCK_PROCESO = threading.Lock()          # reserva en almacenes sin transaccion (memoria)
 _HILOS: dict[str, threading.Thread] = {}  # empresa -> hilo vivo de ESTE proceso
+_ACTIVAS: set[str] = set()              # empresas con una tanda corriendo ahora en ESTE proceso (hilo o consola)
 
 
 class YaEnMarcha(RuntimeError):
@@ -75,27 +76,62 @@ def fabrica_real(empresa: str, k, bitacora) -> dict:
 
 # ── reserva y estado ────────────────────────────────────────────────────────
 
-def _reservar(k, empresa: str, *, ciclos: int, horas: float, ahora: datetime) -> None:
+LATIDO_MAX_S = 45 * 60            # sin señal de vida durante este tiempo, la reserva se da por muerta
+
+
+def _viva(r: dict | None, empresa: str, ahora: datetime) -> bool:
+    """¿Hay de verdad una tanda en marcha? La reserva caduca por hora, pero ademas se descarta si su dueño murio:
+    un reinicio del panel NO debe dejar el boton bloqueado horas."""
+    if not (r and r.get("activa") and r.get("hasta", "") > ahora.isoformat()):
+        return False
+    pid = r.get("pid")
+    if pid == os.getpid():
+        if empresa not in _ACTIVAS:
+            return False                                   # mi propia reserva, pero ya no corre nada: quedo huerfana
+    elif isinstance(pid, int) and os.name == "posix":
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False                                   # otro proceso que ya no existe
+        except OSError:
+            pass                                           # existe pero no es nuestro: se da por vivo
+    ultimo = r.get("latido") or r.get("desde", "")
+    return bool(ultimo) and ultimo > (ahora - timedelta(seconds=LATIDO_MAX_S)).isoformat()
+
+
+def _reservar(k, empresa: str, *, ciclos: int, horas: float, ahora: datetime) -> str:
+    """Reserva atomica. Devuelve el sello de la reserva: solo quien lo tiene puede actualizarla o liberarla."""
     with _tx(k):
         r = k.get(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO)
-        if r and r.get("activa") and r.get("hasta", "") > ahora.isoformat():
+        if _viva(r, empresa, ahora):
             raise YaEnMarcha(f"ya hay una busqueda de nichos en marcha desde {r.get('desde', '?')[:16]} "
-                             "(espera a que termine, o pulsa PARAR TODO)")
+                             "(espera a que termine; PARAR TODO la detiene antes de su siguiente pregunta)")
+        desde = ahora.isoformat()
         k.add(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO,
-              {"activa": True, "desde": ahora.isoformat(), "hasta": (ahora + timedelta(hours=horas + 1)).isoformat(),
+              {"activa": True, "desde": desde, "latido": desde, "hasta": (ahora + timedelta(hours=horas + 1)).isoformat(),
                "ciclos": ciclos, "ciclos_hechos": 0, "pid": os.getpid()})
+        return desde
 
 
-def _liberar(k, empresa: str) -> None:
+def _latir(k, empresa: str, sello: str) -> None:
     with _tx(k):
         r = k.get(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO) or {}
-        k.add(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO, {**r, "activa": False, "fin": _ahora().isoformat()})
+        if r.get("desde") == sello:                        # una reserva ajena no se toca
+            k.add(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO,
+                  {**r, "ciclos_hechos": r.get("ciclos_hechos", 0) + 1, "latido": _ahora().isoformat()})
+
+
+def _liberar(k, empresa: str, sello: str) -> None:
+    with _tx(k):
+        r = k.get(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO) or {}
+        if r.get("desde") == sello:                        # si ya es de otra tanda, no se pisa
+            k.add(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO, {**r, "activa": False, "fin": _ahora().isoformat()})
 
 
 def estado(k, empresa: str) -> dict:
     """{en_curso: {...}|None, ultima: {...}|None}. Solo datos (numeros, estados, rutas): ningun texto de apuestas."""
     r = k.get(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO)
-    vivo = bool(r and r.get("activa") and r.get("hasta", "") > _ahora().isoformat())
+    vivo = _viva(r, empresa, _ahora())
     return {"en_curso": ({"desde": r["desde"], "ciclos": r.get("ciclos"), "ciclos_hechos": r.get("ciclos_hechos", 0)}
                          if vivo else None),
             "ultima": k.get(empresa, E.COLECCION_ESTADO, CLAVE_ULTIMA)}
@@ -115,15 +151,15 @@ def correr(k, empresa: str, bitacora, deps: dict, *, ciclos: int = 3, horas: flo
     """Una tanda COMPLETA y sincrona (reserva, ejecucion, informe, resumen). La usan el hilo y la consola."""
     _validar(ciclos, horas)
     ahora = _ahora()
-    _reservar(k, empresa, ciclos=ciclos, horas=horas, ahora=ahora)
+    sello = _reservar(k, empresa, ciclos=ciclos, horas=horas, ahora=ahora)
+    _ACTIVAS.add(empresa)
     try:
         ap = A.Apuestas(k, empresa, bitacora=bitacora, reloj=reloj)
         ctx = E.Contexto(k=k, empresa=empresa, apuestas=ap, cliente=deps["cliente"], buscar=deps["buscar"],
                          bitacora=bitacora, reloj=reloj)
 
         def al_terminar(res: dict) -> None:
-            r = k.get(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO) or {}
-            k.add(empresa, E.COLECCION_ESTADO, CLAVE_EN_CURSO, {**r, "ciclos_hechos": r.get("ciclos_hechos", 0) + 1})
+            _latir(k, empresa, sello)
             if progreso:
                 progreso(res)
         t = E.ejecutar_tanda(ctx, ciclos=ciclos, horas_max=horas, parar=deps.get("parar"),
@@ -139,7 +175,8 @@ def correr(k, empresa: str, bitacora, deps: dict, *, ciclos: int = 3, horas: flo
                "rechazados_por_repeticion": t["rechazados_por_repeticion"], "informe": str(ruta)})
         return t, ruta
     finally:
-        _liberar(k, empresa)
+        _ACTIVAS.discard(empresa)
+        _liberar(k, empresa, sello)
 
 
 def lanzar(k, empresa: str, bitacora, *, ciclos: int = 3, horas: float = 8.0, fabrica=None, reloj=None,
@@ -150,6 +187,12 @@ def lanzar(k, empresa: str, bitacora, *, ciclos: int = 3, horas: float = 8.0, fa
     if estado(k, empresa)["en_curso"] is not None:
         raise YaEnMarcha("ya hay una busqueda de nichos en marcha (espera a que termine, o pulsa PARAR TODO)")
     deps = (fabrica or fabrica_real)(empresa, k, bitacora)             # falla AQUI si falta el token, etc.
+    nivel = deps.get("nivel_autonomia")
+    if nivel and nivel() == "CERO":
+        raise A.ApuestaInvalida("Inteligencia esta en nivel CERO (solo lee): no puede buscar nichos. "
+                                "Subele el nivel a BAJA desde Ajustes si quieres que busque.")
+    if deps.get("parar") and deps["parar"]():
+        raise A.ApuestaInvalida("TODO PARADO esta activo: reanuda antes de buscar.")
     ya = threading.Event()
     fallo: list[Exception] = []
 

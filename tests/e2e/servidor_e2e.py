@@ -131,6 +131,24 @@ def crear(datos: Path, mecha_s: int = 6, token: str | None = None):
                              clase=d.get("clase", "IRREVERSIBLE-INTERNA"), contenido_ref=d.get("ref", ""))
         return {"ok": True, "id": n["id"]}
 
+    @app.post("/_e2e/nichos_fabrica")
+    async def e2e_nichos_fabrica():
+        """Solo pruebas: sustituye el modelo y la busqueda web REALES por unos simulados (el resto del camino es el real:
+        tanda, vetos, novedad, cuotas, sellado). Un titulo es hostil a proposito: debe verse literal."""
+        import json as _json
+        sys.path.insert(0, str(RAIZ / "tests"))
+        from test_exploracion import ModeloFalso, buscar_falso, candidato
+
+        def proponer(m, u):
+            cs = [candidato(1000 * m.llamada_proponer + i) for i in range(8)]
+            if m.llamada_proponer == 1:                       # solo en la primera vuelta: un unico titulo hostil
+                cs[0]["titulo"] = "<img src=x onerror=window.__pwn=1> Avisos de plazos"
+            return _json.dumps({"candidatos": cs})
+        st.fabrica_exploracion = lambda empresa, kk, bb: {
+            "cliente": ModeloFalso(proponer=proponer), "buscar": buscar_falso, "parar": lambda: False,
+            "nivel_autonomia": lambda: "BAJA", "informes": datos / "informes"}
+        return {"ok": True}
+
     @app.post("/_e2e/romper_sello")
     async def e2e_romper():
         clave = sorted(k.all(EMPRESA, "evento"))[0]
