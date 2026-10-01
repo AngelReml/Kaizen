@@ -42,15 +42,17 @@ No hay ingresos previos ni cartera que operar; los cubos son mecanismos a la esp
 | Estación | Temporada | Ciclo de revisión de qué crece y qué se poda. |
 | Abono | Aprendizaje | Lo que queda registrado de cada apuesta, salga bien o mal. |
 
-Criterio **cubo vs servicio** (propuesto, a ratificar): es cubo lo que responde
+Criterio **cubo vs servicio** (RATIFICADO por Ángel, 2026-10-01): es cubo lo que responde
 "¿qué resultado de negocio produces?" (misión, director, KPIs con fuente);
 es servicio lo que responde "¿qué capacidad das a los demás?" (SLA, sin decidir negocio).
+Casos dudosos, **a decidir más adelante** (no se renombra ni se mueve nada ahora): **Calidad** y **RRHH**.
+Los otros 8 (Comercial, Marketing, Marca, Operaciones, Finanzas, Atención al cliente, Inteligencia, Legal) son cubos.
 
 ## 3. A1 — Monedero de semillas
 
-- **Tope por temporada: 50 € máximo** (decidido por Ángel, 2026-10-01). La duración de la temporada (propuesta: 3 meses) queda por confirmar.
+- **Tope por temporada: 50 € máximo. Temporada: 3 meses.** (Decidido por Ángel, 2026-10-01.)
 - Kaizen pide gastos dentro del tope mediante una **petición de financiación**.
-- Hasta **15 €** por petición: aprobación de un clic. Por encima: revisión completa. (Sugerencia; la decide Ángel.)
+- Hasta **15 €** por petición: aprobación de un clic. Por encima: revisión completa. (Decidido por Ángel.)
 - **Ángel paga**. Ningún agente mueve dinero. Cada gasto queda registrado (importe, concepto, activo comprado).
 - Toda petición lleva: qué se pide, **alternativa gratuita**, **qué señal valida** la apuesta,
   **criterio de muerte** (cuándo se abandona), **qué debe hacer Ángel**, y plan de reversión/reutilización.
@@ -105,8 +107,7 @@ la revisión corresponde a un gestor. Hasta esa puerta Kaizen investiga y prueba
 
 ## 8. Lo que queda abierto (no decidido)
 
-- Umbral de un clic (propuesta 15 €) y duración de la temporada (propuesta 3 meses).
-- Criterio cubo/servicio: ratificar o ajustar.
+- Calidad y RRHH: cubo o servicio (dudosos, se decide más adelante).
 - Autonomía (clases y niveles actuales vs. ajustes) — siguiente capa.
 - Estados de una apuesta (incluido el estado "aprendido") — siguiente capa.
 - Rol del Consejo (propuesta: ensambla un informe único, no decide) — siguiente capa.
