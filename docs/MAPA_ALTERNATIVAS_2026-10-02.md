@@ -27,3 +27,27 @@ Presupuesto de referencia: 50 € en total; regla vigente de 15 € y 3 meses po
 ## Limitaciones
 - Octask: la búsqueda no devolvió ninguna fuente independiente. Lo único que sabemos viene del vídeo promocional y de la propia web. Empresa y condiciones **sin verificar**.
 - Los precios proceden de comparativas de terceros, algunas con interés comercial (por ejemplo, un blog de un competidor).
+
+---
+
+# Segunda pasada (misma fecha): demanda, ventas salientes, ley y datos Web3
+Mismas reservas: resúmenes de terceros, varios con interés comercial, sin verificar en origen.
+
+## Validar demanda de un nicho
+- Método que repiten las fuentes: [confirmar que la gente busca, habla y paga por una solución; la demanda se valida cuando coinciden interés, intención y dinero](https://growwithsakib.com/validate-market-demand-niche/). Encaja con los campos `senal` y `senal_real` del dosier.
+- Gratis: Google Trends, el autocompletado y «la gente también pregunta» de Google, AnswerThePublic y foros donde la gente pide recomendaciones. De pago: Ahrefs, Semrush ([resumen](https://aicofounder.com/blog/best-market-research-tools-in-2026)).
+- **Veredicto:** con las herramientas gratuitas basta para las primeras apuestas. Ninguna sustituye hablar con compradores reales.
+
+## Ventas salientes y enriquecimiento de leads
+- Planes gratuitos según [esta comparativa](https://dupple.com/learn/best-ai-for-sales-prospecting): Clay 100 créditos/mes, Hunter 25 búsquedas y 50 verificaciones/mes, Apollo 50 créditos/mes.
+- De pago: Apollo Básico 49 $/usuario/mes, Hunter Starter 49 $/mes, Clay Launch 167 $/mes, Instantly desde 47 $/mes.
+- **Veredicto:** los de pago no caben en 50 €. Kaizen ya enriquece leads internamente; los planes gratis sirven como contraste o verificación puntual.
+
+## Ley: correo en frío B2B en España (¡importante para la planta comercial!)
+- Según [esta guía](https://overloop.com/blog/es/b2b-cold-email-espana-rgpd-aepd), hay dos normas: el RGPD (¿puedo tratar este dato?; el interés legítimo exige análisis documentado) y la LSSI art. 21 (¿puedo enviar esta comunicación?; prohíbe comunicaciones comerciales electrónicas no solicitadas o no autorizadas, con excepción para clientes previos y productos similares). La guía cita multas de la LSSI de hasta 150.000 € por infracción grave.
+- **Aviso de lectura crítica:** esa guía es de una empresa que vende herramientas de correo en frío, y su propio resumen («legal con condiciones: consentimiento previo o relación previa») deja dudoso que un primer correo sin relación previa encaje en la excepción. **No lo doy por resuelto.**
+- **Acción recomendada:** consultar a un gestor o abogado ANTES del primer envío real. Mientras tanto, el pipeline ya limita a 2 mensajes, respeta exclusiones y exige bloques legales. Otros canales (teléfono, formularios, presencial) podrían quedar fuera del art. 21, **sin verificar**.
+
+## Datos para Web3 (solo lectura)
+- [DefiLlama](https://github.com/api-evangelist/defillama): API pública gratuita, sin autenticación en la mayoría de endpoints (TVL, precios, volúmenes, comisiones, stablecoins, puentes) y sección de rendimientos (APY). Hay API Pro con más límite.
+- **Hueco:** la búsqueda no devolvió nada utilizable sobre Snapshot, Dework, Gitcoin ni Layer3. Quedan **por investigar**.
